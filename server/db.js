@@ -1125,6 +1125,7 @@ function adminHostFields(h) {
     amenities: parseAmenities(h.amenities),
     latitude: h.latitude,
     longitude: h.longitude,
+    ...matchingFields(h),
     media: hostMedia(h.id),
     status: h.status,
     verified: !!h.verified_at,
@@ -1133,6 +1134,22 @@ function adminHostFields(h) {
     updatedAt: h.updated_at
   };
 }
+
+/**
+ * The extra partner-panel fields. Shown to admins and to the profile's own
+ * owner; publicHostFields() builds its output key by key and never spreads
+ * this, so none of it can leak into a public response.
+ */
+function matchingFields(h) {
+  return {
+    credentials: h.credentials,
+    seekingPlaceTypes: parseAmenities(h.seeking_place_types),
+    capacityGuests: h.capacity_guests,
+    houseRules: h.house_rules,
+    acceptsExperienceTypes: parseAmenities(h.accepts_experience_types)
+  };
+}
+const jsonList = (v) => (v && v.length ? JSON.stringify(v) : null);
 
 /** Admin-only: who owns this profile. Never reaches a public response. */
 function ownerSummary(userId) {
@@ -1156,27 +1173,38 @@ export function hostMedia(hostId) {
  * them (another gallery row, or any profile photo), so re-adding the same
  * image elsewhere can never delete it out from under that other use.
  */
-export function setHostMedia(hostId, items, deleteFile) {
+/** Writes the gallery rows; the caller owns the transaction. Returns the paths that were replaced. */
+function writeHostMedia(hostId, items) {
   const before = db.prepare('SELECT path FROM host_media WHERE host_id = ?').all(hostId).map((r) => r.path);
   const ins = db.prepare('INSERT INTO host_media (host_id, path, caption, sort_order) VALUES (?, ?, ?, ?)');
+  db.prepare('DELETE FROM host_media WHERE host_id = ?').run(hostId);
+  items.forEach((it, i) => ins.run(hostId, it.photoPath, it.caption || null, i));
+  return before;
+}
+
+/** Unlinks files that lost their last reference (gallery row or profile photo). */
+function deleteOrphanedMedia(before, items, deleteFile) {
+  if (typeof deleteFile !== 'function') return;
+  const kept = new Set(items.map((it) => it.photoPath));
+  for (const path of before) {
+    if (kept.has(path)) continue;
+    const stillUsed = db.prepare('SELECT 1 FROM host_media WHERE path = ?').get(path)
+      || db.prepare('SELECT 1 FROM hosts WHERE photo_path = ?').get(path);
+    if (!stillUsed) deleteFile(path);
+  }
+}
+
+export function setHostMedia(hostId, items, deleteFile) {
+  let before;
   db.exec('BEGIN');
   try {
-    db.prepare('DELETE FROM host_media WHERE host_id = ?').run(hostId);
-    items.forEach((it, i) => ins.run(hostId, it.photoPath, it.caption || null, i));
+    before = writeHostMedia(hostId, items);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
-  if (typeof deleteFile === 'function') {
-    const kept = new Set(items.map((it) => it.photoPath));
-    for (const path of before) {
-      if (kept.has(path)) continue;
-      const stillUsed = db.prepare('SELECT 1 FROM host_media WHERE path = ?').get(path)
-        || db.prepare('SELECT 1 FROM hosts WHERE photo_path = ?').get(path);
-      if (!stillUsed) deleteFile(path);
-    }
-  }
+  deleteOrphanedMedia(before, items, deleteFile);
   return hostMedia(hostId);
 }
 
@@ -1292,14 +1320,19 @@ export function getHostAdmin(id) {
 export function createHost(v) {
   const info = db.prepare(
     `INSERT INTO hosts (slug, kind, display_name, photo_path, bio, expertise, instagram_handle, contact_phone,
-                        user_id, region, lodging_type, amenities, latitude, longitude, status, verified_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                        user_id, region, lodging_type, amenities, latitude, longitude, status, verified_at,
+                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(v.slug, v.kind || 'person', v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle,
     v.contactPhone, v.userId ?? null, v.region ?? null, v.lodgingType ?? null,
     v.amenities ? JSON.stringify(v.amenities) : null, v.latitude ?? null, v.longitude ?? null,
-    v.status || 'hidden', v.verified ? new Date().toISOString() : null);
+    v.status || 'hidden', v.verified ? new Date().toISOString() : null,
+    v.credentials ?? null, jsonList(v.seekingPlaceTypes), v.capacityGuests ?? null, v.houseRules ?? null,
+    jsonList(v.acceptsExperienceTypes));
   return getHostAdmin(Number(info.lastInsertRowid));
 }
+
+const keep = (next, prev) => (next === undefined ? prev : next);
 
 export function updateHost(id, v) {
   const existing = db.prepare('SELECT * FROM hosts WHERE id = ?').get(id);
@@ -1314,11 +1347,19 @@ export function updateHost(id, v) {
   db.prepare(
     `UPDATE hosts SET display_name = ?, photo_path = ?, bio = ?, expertise = ?, instagram_handle = ?,
        contact_phone = ?, region = ?, lodging_type = ?, amenities = ?, latitude = ?, longitude = ?,
-       status = ?, verified_at = ?, updated_at = datetime('now')
+       status = ?, verified_at = ?, credentials = ?, seeking_place_types = ?, capacity_guests = ?,
+       house_rules = ?, accepts_experience_types = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle, v.contactPhone,
     v.region ?? null, v.lodgingType ?? null, v.amenities ? JSON.stringify(v.amenities) : null,
-    v.latitude ?? null, v.longitude ?? null, v.status, verifiedAt, id);
+    v.latitude ?? null, v.longitude ?? null, v.status, verifiedAt,
+    // An absent key (older admin page) keeps what is stored instead of wiping it.
+    keep(v.credentials, existing.credentials),
+    v.seekingPlaceTypes === undefined ? existing.seeking_place_types : jsonList(v.seekingPlaceTypes),
+    keep(v.capacityGuests, existing.capacity_guests),
+    keep(v.houseRules, existing.house_rules),
+    v.acceptsExperienceTypes === undefined ? existing.accepts_experience_types : jsonList(v.acceptsExperienceTypes),
+    id);
   return getHostAdmin(id);
 }
 
@@ -1371,10 +1412,10 @@ export function pendingApplicationCount(userId) {
 export function createHostApplication(v, ipHash) {
   const info = db.prepare(
     `INSERT INTO host_applications (user_id, kind, full_name, instagram_handle, expertise,
-                                    region, lodging_type, description, ip_hash)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                    region, lodging_type, description, ip_hash, capacity_guests)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(v.userId, v.kind, v.fullName, v.instagramHandle, v.expertise ?? null,
-    v.region ?? null, v.lodgingType ?? null, v.description, ipHash);
+    v.region ?? null, v.lodgingType ?? null, v.description, ipHash, v.capacityGuests ?? null);
   return Number(info.lastInsertRowid);
 }
 
@@ -1396,6 +1437,7 @@ function applicationFields(a) {
     expertise: a.expertise,
     region: a.region,
     lodgingType: a.lodging_type,
+    capacityGuests: a.capacity_guests,
     description: a.description,
     status: a.status,
     adminNote: a.admin_note,
@@ -1475,10 +1517,10 @@ export function approveHostApplication(id, slug) {
       : null;
     const info = db.prepare(
       `INSERT INTO hosts (slug, kind, display_name, expertise, instagram_handle, contact_phone,
-                          user_id, region, lodging_type, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'hidden')`
+                          user_id, region, lodging_type, capacity_guests, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'hidden')`
     ).run(slug, a.kind || 'person', a.full_name, a.expertise, a.instagram_handle,
-      owner ? owner.phone : a.phone, a.user_id, a.region, a.lodging_type);
+      owner ? owner.phone : a.phone, a.user_id, a.region, a.lodging_type, a.capacity_guests ?? null);
     const hostId = Number(info.lastInsertRowid);
     db.prepare(
       `UPDATE host_applications SET status = 'approved', host_id = ?, reviewed_at = datetime('now') WHERE id = ?`
@@ -1498,4 +1540,333 @@ export function rejectHostApplication(id, adminNote) {
     `UPDATE host_applications SET status = 'rejected', admin_note = ?, reviewed_at = datetime('now') WHERE id = ?`
   ).run(adminNote || null, id);
   return getHostApplication(id);
+}
+
+// --- partner panel -----------------------------------------------------------
+//
+// Everything below is scoped by an owned host row: callers resolve the host
+// with ownedHost(userId, slug) FIRST (user id comes from the session, never
+// the client) and only then pass its id on. A non-owner gets null from it,
+// which the API turns into the same 404 an unknown slug gets.
+
+const parseJson = (raw, fallback) => {
+  try { return JSON.parse(raw); } catch { return fallback; }
+};
+
+/** The host with this slug, only if `userId` owns it. Otherwise null. */
+export function ownedHost(userId, slug) {
+  if (!userId || typeof slug !== 'string') return null;
+  return db.prepare('SELECT * FROM hosts WHERE slug = ? AND user_id = ?').get(slug, userId) || null;
+}
+
+/** What the revision payload is compared against: the same keys, from the live row. */
+export function revisionSnapshot(h) {
+  const base = {
+    displayName: h.display_name,
+    bio: h.bio,
+    photoPath: h.photo_path,
+    instagramHandle: h.instagram_handle
+  };
+  if (h.kind === 'place') {
+    return {
+      ...base,
+      region: h.region,
+      lodgingType: h.lodging_type,
+      amenities: parseAmenities(h.amenities).length ? parseAmenities(h.amenities) : null,
+      capacityGuests: h.capacity_guests,
+      houseRules: h.house_rules,
+      acceptsExperienceTypes: parseAmenities(h.accepts_experience_types).length ? parseAmenities(h.accepts_experience_types) : null,
+      latitude: h.latitude,
+      longitude: h.longitude,
+      media: hostMedia(h.id).map((m) => ({ photoPath: m.photoPath, caption: m.caption }))
+    };
+  }
+  return {
+    ...base,
+    expertise: h.expertise,
+    credentials: h.credentials,
+    seekingPlaceTypes: parseAmenities(h.seeking_place_types).length ? parseAmenities(h.seeking_place_types) : null
+  };
+}
+
+/** Every image path currently stored for a profile (photo + gallery). */
+export function currentHostPaths(h) {
+  const out = new Set(hostMedia(h.id).map((m) => m.photoPath));
+  if (h.photo_path) out.add(h.photo_path);
+  return out;
+}
+
+function revisionRow(r) {
+  return {
+    id: r.id,
+    status: r.status,
+    payload: parseJson(r.payload, {}),
+    adminNote: r.admin_note,
+    createdAt: r.created_at,
+    reviewedAt: r.reviewed_at
+  };
+}
+
+/** Owner's own view of a profile: includes their phone and exact pin, plus any pending edit. */
+export function partnerProfileView(h) {
+  const pending = db.prepare(`SELECT * FROM host_revisions WHERE host_id = ? AND status = 'pending'`).get(h.id);
+  const last = db.prepare(
+    `SELECT * FROM host_revisions WHERE host_id = ? AND status != 'pending' ORDER BY id DESC LIMIT 1`
+  ).get(h.id);
+  return {
+    profile: {
+      slug: h.slug,
+      kind: h.kind === 'place' ? 'place' : 'person',
+      displayName: h.display_name,
+      photoPath: h.photo_path,
+      bio: h.bio,
+      expertise: h.expertise,
+      instagramHandle: h.instagram_handle,
+      contactPhone: h.contact_phone,
+      region: h.region,
+      lodgingType: h.lodging_type,
+      amenities: parseAmenities(h.amenities),
+      latitude: h.latitude,
+      longitude: h.longitude,
+      ...matchingFields(h),
+      media: hostMedia(h.id),
+      status: h.status,
+      verified: !!h.verified_at
+    },
+    pendingRevision: pending ? revisionRow(pending) : null,
+    lastReview: last ? { status: last.status, adminNote: last.admin_note, reviewedAt: last.reviewed_at } : null
+  };
+}
+
+export function listPartnerProfiles(userId) {
+  return db.prepare(
+    `SELECT h.*, (SELECT COUNT(*) FROM host_revisions r WHERE r.host_id = h.id AND r.status = 'pending') AS pending_n
+     FROM hosts h WHERE h.user_id = ? ORDER BY h.created_at DESC`
+  ).all(userId).map((h) => ({
+    slug: h.slug,
+    kind: h.kind === 'place' ? 'place' : 'person',
+    displayName: h.display_name,
+    status: h.status,
+    verified: !!h.verified_at,
+    photoPath: h.photo_path,
+    hasPendingRevision: h.pending_n > 0
+  }));
+}
+
+const pendingPathsOf = (slug, payload) => {
+  const out = new Set();
+  const prefix = `/images/host-${slug}/pending/`;
+  const add = (p) => { if (typeof p === 'string' && p.startsWith(prefix)) out.add(p); };
+  add(payload.photoPath);
+  (payload.media || []).forEach((m) => add(m.photoPath));
+  return out;
+};
+
+/**
+ * Stores an owner's edit as the profile's one pending revision, replacing any
+ * earlier pending one. `hosts` is never touched here. Pending files the old
+ * revision referenced and the new one does not are deleted.
+ */
+export function submitRevision(host, userId, payload, deleteFile) {
+  let oldPaths = new Set();
+  let id;
+  db.exec('BEGIN');
+  try {
+    const old = db.prepare(`SELECT * FROM host_revisions WHERE host_id = ? AND status = 'pending'`).get(host.id);
+    if (old) {
+      oldPaths = pendingPathsOf(host.slug, parseJson(old.payload, {}));
+      db.prepare('DELETE FROM host_revisions WHERE id = ?').run(old.id);
+    }
+    id = Number(db.prepare(
+      'INSERT INTO host_revisions (host_id, user_id, payload) VALUES (?, ?, ?)'
+    ).run(host.id, userId, JSON.stringify(payload)).lastInsertRowid);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  const keep = pendingPathsOf(host.slug, payload);
+  for (const p of oldPaths) if (!keep.has(p)) deleteFile(p);
+  return revisionRow(db.prepare('SELECT * FROM host_revisions WHERE id = ?').get(id));
+}
+
+/** Removes the host's pending revision (and its pending files). True if there was one. */
+export function withdrawRevision(host, deleteFile) {
+  const old = db.prepare(`SELECT * FROM host_revisions WHERE host_id = ? AND status = 'pending'`).get(host.id);
+  if (!old) return false;
+  db.prepare('DELETE FROM host_revisions WHERE id = ?').run(old.id);
+  for (const p of pendingPathsOf(host.slug, parseJson(old.payload, {}))) deleteFile(p);
+  return true;
+}
+
+/**
+ * Applies a pending revision to its host in ONE transaction. Pending uploads
+ * are moved to the live folder first (ops.movePending) and the payload's
+ * paths rewritten, so the rows that go live already point at final files.
+ * Returns null if the revision is not pending.
+ */
+export function approveRevision(id, ops) {
+  const rev = db.prepare(`SELECT * FROM host_revisions WHERE id = ? AND status = 'pending'`).get(id);
+  if (!rev) return null;
+  const host = db.prepare('SELECT * FROM hosts WHERE id = ?').get(rev.host_id);
+  const payload = parseJson(rev.payload, {});
+  const prefix = `/images/host-${host.slug}/pending/`;
+  const moved = new Map();
+  const live = (p) => {
+    if (typeof p !== 'string' || !p.startsWith(prefix)) return p;
+    if (!moved.has(p)) moved.set(p, ops.movePending(p));
+    return moved.get(p);
+  };
+  const photoPath = live(payload.photoPath) || null;
+  const media = payload.media ? payload.media.map((m) => ({ photoPath: live(m.photoPath), caption: m.caption })) : null;
+
+  const oldPhoto = host.photo_path;
+  let before = [];
+  db.exec('BEGIN');
+  try {
+    if (host.kind === 'place') {
+      db.prepare(
+        `UPDATE hosts SET display_name = ?, bio = ?, photo_path = ?, instagram_handle = ?, region = ?, lodging_type = ?,
+           amenities = ?, capacity_guests = ?, house_rules = ?, accepts_experience_types = ?, latitude = ?, longitude = ?,
+           updated_at = datetime('now') WHERE id = ?`
+      ).run(payload.displayName, payload.bio ?? null, photoPath, payload.instagramHandle ?? null,
+        payload.region ?? null, payload.lodgingType ?? null, jsonList(payload.amenities),
+        payload.capacityGuests ?? null, payload.houseRules ?? null, jsonList(payload.acceptsExperienceTypes),
+        payload.latitude ?? null, payload.longitude ?? null, host.id);
+      if (media) before = writeHostMedia(host.id, media);
+    } else {
+      db.prepare(
+        `UPDATE hosts SET display_name = ?, bio = ?, photo_path = ?, instagram_handle = ?, expertise = ?,
+           credentials = ?, seeking_place_types = ?, updated_at = datetime('now') WHERE id = ?`
+      ).run(payload.displayName, payload.bio ?? null, photoPath, payload.instagramHandle ?? null,
+        payload.expertise ?? null, payload.credentials ?? null, jsonList(payload.seekingPlaceTypes), host.id);
+    }
+    db.prepare(
+      `UPDATE host_revisions SET status = 'approved', reviewed_at = datetime('now'), payload = ? WHERE id = ?`
+    ).run(JSON.stringify({ ...payload, photoPath, ...(media ? { media } : {}) }), id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  if (media) deleteOrphanedMedia(before, media, ops.deleteFile);
+  if (oldPhoto && oldPhoto !== photoPath) deleteOrphanedMedia([oldPhoto], media || [], ops.deleteFile);
+  return getHostAdmin(host.id);
+}
+
+export function rejectRevision(id, adminNote, deleteFile) {
+  const rev = db.prepare(`SELECT * FROM host_revisions WHERE id = ? AND status = 'pending'`).get(id);
+  if (!rev) return false;
+  const host = db.prepare('SELECT slug FROM hosts WHERE id = ?').get(rev.host_id);
+  db.prepare(
+    `UPDATE host_revisions SET status = 'rejected', admin_note = ?, reviewed_at = datetime('now') WHERE id = ?`
+  ).run(adminNote || null, id);
+  for (const p of pendingPathsOf(host.slug, parseJson(rev.payload, {}))) deleteFile(p);
+  return true;
+}
+
+/** Admin queue: each row carries the proposal and the live values to diff against. */
+export function listRevisionsAdmin(status) {
+  const rows = status
+    ? db.prepare('SELECT * FROM host_revisions WHERE status = ? ORDER BY created_at DESC').all(status)
+    : db.prepare(`SELECT * FROM host_revisions ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC LIMIT 200`).all();
+  return rows.map((r) => {
+    const h = db.prepare('SELECT * FROM hosts WHERE id = ?').get(r.host_id);
+    return {
+      ...revisionRow(r),
+      host: { id: h.id, slug: h.slug, kind: h.kind, displayName: h.display_name },
+      owner: r.user_id ? ownerSummary(r.user_id) : null,
+      current: revisionSnapshot(h)
+    };
+  });
+}
+
+export function pendingRevisionCount() {
+  return db.prepare(`SELECT COUNT(*) AS n FROM host_revisions WHERE status = 'pending'`).get().n;
+}
+
+/**
+ * Tours this profile is linked to, with their editions and booking counts.
+ * Counts only -- no traveler identity of any kind is read here.
+ */
+export function partnerExperiences(host) {
+  const today = todayIso();
+  const tours = db.prepare(
+    `SELECT t.id, t.name, t.status, th.role FROM tour_hosts th JOIN tours t ON t.id = th.tour_id
+     WHERE th.host_id = ? ORDER BY t.ordinal`
+  ).all(host.id);
+  return tours.map((t) => {
+    const editions = db.prepare('SELECT * FROM tour_dates WHERE tour_id = ? ORDER BY starts_on IS NULL, starts_on, id').all(t.id)
+      .map((d) => {
+        const c = db.prepare(
+          `SELECT COUNT(*) AS bookings, COALESCE(SUM(guests), 0) AS guests FROM bookings
+           WHERE tour_date_id = ? AND status = 'confirmed'`
+        ).get(d.id);
+        return {
+          label: d.label,
+          startsOn: d.starts_on,
+          endsOn: d.ends_on,
+          phase: !d.starts_on ? 'undated' : isPastEdition(d, today) ? 'past' : 'upcoming',
+          bookings: c.bookings,
+          guests: c.guests
+        };
+      });
+    return { tourId: t.id, name: t.name, tourStatus: t.status, role: t.role, editions };
+  });
+}
+
+// --- experience proposals ----------------------------------------------------
+
+export function openProposalCount(userId) {
+  return db.prepare(`SELECT COUNT(*) AS n FROM experience_proposals WHERE user_id = ? AND status = 'new'`).get(userId).n;
+}
+
+export function createProposal(userId, hostId, v) {
+  const info = db.prepare(
+    `INSERT INTO experience_proposals (user_id, host_id, title, description, preferred_months, wanted_counterpart_kind)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(userId, hostId, v.title, v.description, v.preferredMonths, v.wantedCounterpartKind);
+  return Number(info.lastInsertRowid);
+}
+
+function proposalFields(p, withAdmin) {
+  const h = db.prepare('SELECT id, slug, display_name, kind FROM hosts WHERE id = ?').get(p.host_id);
+  const out = {
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    preferredMonths: p.preferred_months,
+    wantedCounterpartKind: p.wanted_counterpart_kind,
+    status: p.status,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+    host: h ? { slug: h.slug, displayName: h.display_name, kind: h.kind } : null
+  };
+  if (withAdmin) {
+    out.adminNote = p.admin_note;
+    out.owner = p.user_id ? ownerSummary(p.user_id) : null;
+  }
+  return out;
+}
+
+/** Owner view: their own proposals and status; the admin note stays internal. */
+export function listUserProposals(userId) {
+  return db.prepare('SELECT * FROM experience_proposals WHERE user_id = ? ORDER BY id DESC').all(userId)
+    .map((p) => proposalFields(p, false));
+}
+
+export function listProposalsAdmin(status) {
+  const rows = status
+    ? db.prepare('SELECT * FROM experience_proposals WHERE status = ? ORDER BY id DESC').all(status)
+    : db.prepare('SELECT * FROM experience_proposals ORDER BY id DESC LIMIT 300').all();
+  return rows.map((p) => proposalFields(p, true));
+}
+
+export function updateProposalAdmin(id, { status, adminNote }) {
+  const p = db.prepare('SELECT * FROM experience_proposals WHERE id = ?').get(id);
+  if (!p) return null;
+  db.prepare(
+    `UPDATE experience_proposals SET status = ?, admin_note = ?, updated_at = datetime('now') WHERE id = ?`
+  ).run(status ?? p.status, adminNote === undefined ? p.admin_note : adminNote, id);
+  return proposalFields(db.prepare('SELECT * FROM experience_proposals WHERE id = ?').get(id), true);
 }

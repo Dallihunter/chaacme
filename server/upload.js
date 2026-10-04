@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import { mkdirSync, writeFileSync, unlinkSync, renameSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOST_SLUG_RE } from './util.js';
@@ -93,12 +93,8 @@ function parseMultipart(body, boundary) {
   return { fields, files };
 }
 
-/**
- * Handles POST /api/admin/upload. Caller is responsible for the bearer-token
- * admin check before invoking this — same as every other /api/admin/* route.
- * Returns { ok, status, error } or { ok: true, status, path }.
- */
-export async function handleUpload(req) {
+/** Reads and validates one uploaded image from a multipart request. */
+async function readImageUpload(req) {
   const contentType = req.headers['content-type'] || '';
   const boundaryMatch = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
   if (!contentType.startsWith('multipart/form-data') || !boundaryMatch) {
@@ -122,6 +118,55 @@ export async function handleUpload(req) {
 
   const detected = detectImageType(file.data);
   if (!detected) return { ok: false, status: 422, error: 'unsupported_file_type' };
+  return { ok: true, file, detected, fields: parsed.fields };
+}
+
+const MAX_PENDING_FILES = 40;
+
+/**
+ * A partner's own upload. The caller has already proved the user owns the
+ * host with this slug; the file lands in that host's pending folder and is
+ * not part of any public listing until an admin approves a revision using it.
+ */
+export async function handlePendingHostUpload(req, slug) {
+  if (!HOST_SLUG_RE.test(slug)) return { ok: false, status: 422, error: 'invalid_host_slug' };
+  const up = await readImageUpload(req);
+  if (!up.ok) return up;
+  const dir = join(FRONTEND_STATIC_DIR, `host-${slug}`, 'pending');
+  mkdirSync(dir, { recursive: true });
+  if (readdirSync(dir).length >= MAX_PENDING_FILES) return { ok: false, status: 429, error: 'too_many_pending_files' };
+  const filename = `${Date.now()}-${randomBytes(6).toString('hex')}.${up.detected.ext}`;
+  writeFileSync(join(dir, filename), up.file.data);
+  return { ok: true, status: 201, path: `/images/host-${slug}/pending/${filename}` };
+}
+
+const PENDING_PATH = /^\/images\/host-([a-z0-9-]+)\/pending\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)$/;
+
+/** Does this pending upload exist on disk? */
+export function pendingUploadExists(imagePath) {
+  const m = PENDING_PATH.exec(imagePath || '');
+  return !!m && existsSync(join(FRONTEND_STATIC_DIR, `host-${m[1]}`, 'pending', m[2]));
+}
+
+/** Moves a pending upload to the live folder; returns its public path. */
+export function movePendingUpload(imagePath) {
+  const m = PENDING_PATH.exec(imagePath || '');
+  if (!m) throw new Error('not a pending upload path');
+  renameSync(join(FRONTEND_STATIC_DIR, `host-${m[1]}`, 'pending', m[2]), join(FRONTEND_STATIC_DIR, `host-${m[1]}`, m[2]));
+  return `/images/host-${m[1]}/${m[2]}`;
+}
+
+/**
+ * Handles POST /api/admin/upload. Caller is responsible for the bearer-token
+ * admin check before invoking this — same as every other /api/admin/* route.
+ * Returns { ok, status, error } or { ok: true, status, path }.
+ */
+export async function handleUpload(req) {
+  const up = await readImageUpload(req);
+  if (!up.ok) return up;
+  const { detected } = up;
+  const parsed = { fields: up.fields };
+  const file = up.file;
 
   // Both ids are validated against a strict allowlist BEFORE they are used to
   // build any path, so a traversal attempt ("../x", "a/b", "host-../") can
@@ -154,7 +199,7 @@ export async function handleUpload(req) {
 // filename, no dots that could climb out of FRONTEND_STATIC_DIR. The host
 // alternative is the slug charset only (lowercase, digits, hyphen), so
 // "host-../" cannot match.
-const SAFE_UPLOAD_PATH = /^\/images\/(tour-[A-Za-z0-9_-]+|host-[a-z0-9-]+|uploads)\/[A-Za-z0-9_.-]+$/;
+const SAFE_UPLOAD_PATH = /^\/images\/(tour-[A-Za-z0-9_-]+|host-[a-z0-9-]+(?:\/pending)?|uploads)\/[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
 /** Deletes a file previously returned by handleUpload's `path`. Silently no-ops on anything that doesn't match that shape or is already gone. */
 export function deleteUploadedFile(imagePath) {

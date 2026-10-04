@@ -2,12 +2,12 @@ import * as db from './db.js';
 import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
-import { handleUpload, deleteUploadedFile } from './upload.js';
+import { handleUpload, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload } from './upload.js';
 import {
   json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie,
   normalisePhone, validateProfile, validateReview, validatePassword,
   validateHostProfile, validateHostApplication, validateHostMedia, validateUserName,
-  isValidHostSlug, validateEditionDates
+  isValidHostSlug, validateEditionDates, validateRevision, validateProposal, isPendingPathFor
 } from './util.js';
 
 function bearerOrCookieToken(req) {
@@ -300,6 +300,94 @@ export async function handleApi(req, res, url) {
     const user = requireUser(req, res);
     if (!user) return;
     return json(res, 200, { reviews: db.listUserReviews(user.id) });
+  }
+
+  // --- partner panel ------------------------------------------------------
+  //
+  // Every route resolves the profile through db.ownedHost(session user, slug)
+  // before doing anything else. A slug that does not exist and a slug that
+  // belongs to someone else both answer 404, so ownership cannot be probed.
+  // No route takes a user id from the client.
+  if (path.startsWith('/api/partner/')) {
+    const user = requireUser(req, res);
+    if (!user) return;
+    const owned = (slug) => db.ownedHost(user.id, slug);
+
+    if (path === '/api/partner/profiles' && method === 'GET') {
+      return json(res, 200, { profiles: db.listPartnerProfiles(user.id) });
+    }
+
+    if ((m = new RegExp(`^/api/partner/profiles/${SLUG}$`).exec(path)) && method === 'GET') {
+      const host = owned(m[1]);
+      if (!host) return json(res, 404, { error: 'not_found' });
+      return json(res, 200, db.partnerProfileView(host));
+    }
+
+    if ((m = new RegExp(`^/api/partner/profiles/${SLUG}/revision$`).exec(path)) && method === 'PUT') {
+      const host = owned(m[1]);
+      if (!host) return json(res, 404, { error: 'not_found' });
+      const body = await readJson(req, 64 * 1024);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      const check = validateRevision(body.value, {
+        kind: host.kind === 'place' ? 'place' : 'person',
+        slug: host.slug,
+        currentPaths: db.currentHostPaths(host)
+      });
+      if (!check.ok) return json(res, 422, { error: 'validation_failed', fields: check.errors });
+      // A pending path has to be a file this profile really uploaded and
+      // that still exists (not one an earlier revision already consumed).
+      const wanted = [check.value.photoPath, ...(check.value.media || []).map((x) => x.photoPath)];
+      for (const p of wanted) {
+        if (p && isPendingPathFor(host.slug, p) && !pendingUploadExists(p)) {
+          return json(res, 422, { error: 'validation_failed', fields: { photoPath: 'missing_upload' } });
+        }
+      }
+      // Counted only for edits that validated: each one is a real write.
+      if (!allow(`partner-rev:${user.id}`, 30, 60 * 60 * 1000)) return json(res, 429, { error: 'rate_limited' });
+      const revision = db.submitRevision(host, user.id, check.value, deleteUploadedFile);
+      return json(res, 201, { ok: true, revision });
+    }
+
+    if ((m = new RegExp(`^/api/partner/profiles/${SLUG}/revision$`).exec(path)) && method === 'DELETE') {
+      const host = owned(m[1]);
+      if (!host) return json(res, 404, { error: 'not_found' });
+      const removed = db.withdrawRevision(host, deleteUploadedFile);
+      return json(res, removed ? 200 : 404, removed ? { ok: true } : { error: 'not_found' });
+    }
+
+    if ((m = new RegExp(`^/api/partner/profiles/${SLUG}/upload$`).exec(path)) && method === 'POST') {
+      const host = owned(m[1]);
+      if (!host) return json(res, 404, { error: 'not_found' });
+      if (!allow(`partner-upload:${user.id}`, 40, 60 * 60 * 1000)) return json(res, 429, { error: 'rate_limited' });
+      const result = await handlePendingHostUpload(req, host.slug);
+      if (!result.ok) return json(res, result.status, { error: result.error });
+      return json(res, 201, { path: result.path });
+    }
+
+    if ((m = new RegExp(`^/api/partner/profiles/${SLUG}/experiences$`).exec(path)) && method === 'GET') {
+      const host = owned(m[1]);
+      if (!host) return json(res, 404, { error: 'not_found' });
+      return json(res, 200, { experiences: db.partnerExperiences(host) });
+    }
+
+    if (path === '/api/partner/proposals' && method === 'GET') {
+      return json(res, 200, { proposals: db.listUserProposals(user.id) });
+    }
+
+    if (path === '/api/partner/proposals' && method === 'POST') {
+      const body = await readJson(req);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      const host = owned(str(body.value.profileSlug));
+      if (!host) return json(res, 404, { error: 'not_found' });
+      const check = validateProposal(body.value);
+      if (!check.ok) return json(res, 422, { error: 'validation_failed', fields: check.errors });
+      if (!allow(`proposal:${user.id}`, 5, 24 * 60 * 60 * 1000)) return json(res, 429, { error: 'rate_limited' });
+      if (db.openProposalCount(user.id) >= 10) return json(res, 429, { error: 'too_many_open' });
+      const id = db.createProposal(user.id, host.id, check.value);
+      return json(res, 201, { ok: true, id });
+    }
+
+    return json(res, 404, { error: 'not_found' });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {
@@ -605,6 +693,59 @@ export async function handleApi(req, res, url) {
       const application = db.rejectHostApplication(Number(m[1]), note || null);
       if (!application) return json(res, 404, { error: 'not_pending' });
       return json(res, 200, { ok: true, application });
+    }
+
+    // --- admin: owner edits awaiting review --------------------------------
+    if (path === '/api/admin/host-revisions' && method === 'GET') {
+      const status = url.searchParams.get('status');
+      if (status && !['pending', 'approved', 'rejected'].includes(status)) {
+        return json(res, 422, { error: 'validation_failed', fields: { status: 'value' } });
+      }
+      return json(res, 200, { revisions: db.listRevisionsAdmin(status || null), pending: db.pendingRevisionCount() });
+    }
+
+    if ((m = new RegExp(`^/api/admin/host-revisions/${NUM}/approve$`).exec(path)) && method === 'POST') {
+      const host = db.approveRevision(Number(m[1]), { movePending: movePendingUpload, deleteFile: deleteUploadedFile });
+      if (!host) return json(res, 404, { error: 'not_pending' });
+      return json(res, 200, { ok: true, host });
+    }
+
+    if ((m = new RegExp(`^/api/admin/host-revisions/${NUM}/reject$`).exec(path)) && method === 'POST') {
+      const body = await readJson(req);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      const note = str(body.value.adminNote);
+      if (note.length > 2000) return json(res, 422, { error: 'validation_failed', fields: { adminNote: 'length' } });
+      if (!db.rejectRevision(Number(m[1]), note || null, deleteUploadedFile)) return json(res, 404, { error: 'not_pending' });
+      return json(res, 200, { ok: true });
+    }
+
+    // --- admin: experience proposals ---------------------------------------
+    if (path === '/api/admin/proposals' && method === 'GET') {
+      const status = url.searchParams.get('status');
+      if (status && !['new', 'in_discussion', 'accepted', 'declined'].includes(status)) {
+        return json(res, 422, { error: 'validation_failed', fields: { status: 'value' } });
+      }
+      return json(res, 200, { proposals: db.listProposalsAdmin(status || null) });
+    }
+
+    if ((m = new RegExp(`^/api/admin/proposals/${NUM}$`).exec(path)) && method === 'PUT') {
+      const body = await readJson(req);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      const patch = {};
+      if (body.value.status !== undefined) {
+        if (!['new', 'in_discussion', 'accepted', 'declined'].includes(body.value.status)) {
+          return json(res, 422, { error: 'validation_failed', fields: { status: 'value' } });
+        }
+        patch.status = body.value.status;
+      }
+      if (body.value.adminNote !== undefined) {
+        const note = str(body.value.adminNote);
+        if (note.length > 2000) return json(res, 422, { error: 'validation_failed', fields: { adminNote: 'length' } });
+        patch.adminNote = note || null;
+      }
+      const proposal = db.updateProposalAdmin(Number(m[1]), patch);
+      if (!proposal) return json(res, 404, { error: 'not_found' });
+      return json(res, 200, { proposal });
     }
 
     // --- admin: hosts -----------------------------------------------------

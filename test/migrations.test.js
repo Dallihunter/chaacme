@@ -11,12 +11,15 @@ const oldSchema = (db) => db.exec(`
     closed INTEGER NOT NULL DEFAULT 0
   );
   INSERT INTO tour_dates (tour_id, label, capacity, seats_taken) VALUES ('t', '۱۲ مهر', 12, 9);
+  CREATE TABLE hosts (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT, user_id INTEGER);
+  CREATE TABLE host_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER);
+  INSERT INTO hosts (slug) VALUES ('keep-me');
 `);
 
 test('upgrades an old tour_dates table without losing rows, then is a no-op', () => {
   const db = new DatabaseSync(':memory:');
   oldSchema(db);
-  assert.deepEqual(runMigrations(db, migrations), [1]);
+  assert.deepEqual(runMigrations(db, migrations), [1, 2]);
   assert.ok(hasColumn(db, 'tour_dates', 'starts_on'));
   assert.ok(hasColumn(db, 'tour_dates', 'ends_on'));
   const row = db.prepare('SELECT * FROM tour_dates').get();
@@ -24,7 +27,16 @@ test('upgrades an old tour_dates table without losing rows, then is a no-op', ()
   assert.equal(row.seats_taken, 9);
   assert.equal(row.starts_on, null); // no guessed years
   assert.deepEqual(runMigrations(db, migrations), []);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 1);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 2);
+  // partner panel: new columns/tables exist, existing rows untouched
+  for (const c of ['credentials', 'seeking_place_types', 'capacity_guests', 'house_rules', 'accepts_experience_types']) {
+    assert.ok(hasColumn(db, 'hosts', c), c);
+  }
+  assert.ok(hasColumn(db, 'host_applications', 'capacity_guests'));
+  assert.equal(db.prepare('SELECT slug FROM hosts').get().slug, 'keep-me');
+  for (const t of ['host_revisions', 'experience_proposals']) {
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sqlite_master WHERE name = ?').get(t).n, 1, t);
+  }
 });
 
 test('a failing migration rolls back and is not recorded', () => {

@@ -371,6 +371,49 @@ function validateAmenities(input, errors) {
   return out.length ? out : null;
 }
 
+
+const MAX_TAGS = 10;
+const MAX_TAG_LEN = 40;
+
+/**
+ * Short list of short strings (matching inputs). undefined = key absent (keep
+ * what is stored); null = cleared. Anything that is not an array of strings
+ * within the caps is a rejection, never a coercion.
+ */
+function validateTagList(input, errors, field) {
+  if (input === undefined) return undefined;
+  if (input === null) return null;
+  if (!Array.isArray(input)) { errors[field] = 'type'; return undefined; }
+  if (input.length > MAX_TAGS) { errors[field] = 'length'; return undefined; }
+  const out = [];
+  for (const raw of input) {
+    if (typeof raw !== 'string') { errors[field] = 'type'; return undefined; }
+    const v = raw.trim();
+    if (!v) continue;
+    if (v.length > MAX_TAG_LEN) { errors[field] = 'item_length'; return undefined; }
+    if (!out.includes(v)) out.push(v);
+  }
+  return out.length ? out : null;
+}
+
+/** Whole guests, 1-500. undefined = absent, null = cleared/empty. */
+function validateCapacity(input, errors, field = 'capacityGuests') {
+  if (input === undefined) return undefined;
+  if (input === null || input === '') return null;
+  const n = Number(input);
+  if (!Number.isInteger(n) || n < 1 || n > 500) { errors[field] = 'range'; return undefined; }
+  return n;
+}
+
+/** Optional capped text. undefined = absent, null = empty. */
+function optText(input, max, errors, field) {
+  if (input === undefined) return undefined;
+  if (input !== null && typeof input !== 'string') { errors[field] = 'type'; return undefined; }
+  const v = str(input);
+  if (v.length > max) { errors[field] = 'length'; return undefined; }
+  return v || null;
+}
+
 /** Admin-managed host profile fields. Slug and kind are both fixed at create time and validated separately. */
 export function validateHostProfile(input) {
   const errors = {};
@@ -413,6 +456,12 @@ export function validateHostProfile(input) {
 
   if (input.status !== undefined && !['active', 'hidden'].includes(input.status)) errors.status = 'value';
 
+  const credentials = optText(input.credentials, 600, errors, 'credentials');
+  const seekingPlaceTypes = validateTagList(input.seekingPlaceTypes, errors, 'seekingPlaceTypes');
+  const capacityGuests = validateCapacity(input.capacityGuests, errors);
+  const houseRules = optText(input.houseRules, 1000, errors, 'houseRules');
+  const acceptsExperienceTypes = validateTagList(input.acceptsExperienceTypes, errors, 'acceptsExperienceTypes');
+
   if (Object.keys(errors).length) return { ok: false, errors };
   // Place fields are dropped for a person and person fields for a place, so
   // a kind switch in the payload can never smuggle a value into a column the
@@ -433,6 +482,12 @@ export function validateHostProfile(input) {
       amenities: isPlace ? amenities : null,
       latitude: isPlace ? latitude : null,
       longitude: isPlace ? longitude : null,
+      // undefined (key absent) means "leave the stored value alone".
+      credentials: isPlace ? null : credentials,
+      seekingPlaceTypes: isPlace ? null : seekingPlaceTypes,
+      capacityGuests: isPlace ? capacityGuests : null,
+      houseRules: isPlace ? houseRules : null,
+      acceptsExperienceTypes: isPlace ? acceptsExperienceTypes : null,
       status: input.status === 'active' ? 'active' : 'hidden',
       verified: !!input.verified
     }
@@ -482,6 +537,7 @@ export function validateHostApplication(input) {
   } else if (expertise.length > 120) {
     errors.expertise = 'length';
   }
+  const capacityGuests = isPlace ? validateCapacity(input.capacityGuests, errors) : undefined;
 
   const instagram = normaliseInstagram(input.instagramHandle);
   if (instagram === false) errors.instagramHandle = 'format';
@@ -495,6 +551,7 @@ export function validateHostApplication(input) {
       expertise: isPlace ? null : (expertise || null),
       region: isPlace ? region : null,
       lodgingType: isPlace ? (lodgingType || null) : null,
+      capacityGuests: capacityGuests ?? null,
       description,
       instagramHandle: instagram || null
     }
@@ -510,6 +567,99 @@ export function validateUserName(input) {
   if (lastName.length < 1 || lastName.length > 60) errors.lastName = 'length';
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value: { firstName, lastName } };
+}
+
+
+// --- partner panel -----------------------------------------------------------
+
+/** Where an owner's pending uploads live: /images/host-<slug>/pending/<file>. */
+export function pendingPathPrefix(slug) {
+  return `/images/host-${slug}/pending/`;
+}
+const PENDING_FILE_RE = /^[A-Za-z0-9_.-]+$/;
+export function isPendingPathFor(slug, path) {
+  if (typeof path !== 'string') return false;
+  const prefix = pendingPathPrefix(slug);
+  return path.startsWith(prefix) && PENDING_FILE_RE.test(path.slice(prefix.length))
+    && !/^\.\.?$/.test(path.slice(prefix.length));
+}
+
+/**
+ * An owner's proposed edit to their own profile. Whitelist only: slug, kind,
+ * status, verification, contact phone and ownership are not editable here at
+ * all (unknown keys are ignored, never stored).
+ *
+ * Image paths are accepted only if they are already one of this profile's
+ * stored images, or sit in this profile's own pending upload folder, so a
+ * revision can never point a public page at an arbitrary or third-party path.
+ *
+ * ctx: { kind, slug, currentPaths: Set<string> }
+ */
+export function validateRevision(input, ctx) {
+  const errors = {};
+  const isPlace = ctx.kind === 'place';
+  const okPath = (p) => HOST_PHOTO_PATH_RE.test(p)
+    && (ctx.currentPaths.has(p) || isPendingPathFor(ctx.slug, p));
+
+  const displayName = str(input.displayName);
+  if (displayName.length < 1 || displayName.length > 80) errors.displayName = 'length';
+  const bio = optText(input.bio, 1500, errors, 'bio');
+  const photoPath = str(input.photoPath);
+  if (photoPath && !okPath(photoPath)) errors.photoPath = 'format';
+  const instagram = normaliseInstagram(input.instagramHandle);
+  if (instagram === false) errors.instagramHandle = 'format';
+
+  const value = { displayName, bio: bio ?? null, photoPath: photoPath || null, instagramHandle: instagram || null };
+
+  if (isPlace) {
+    value.region = optText(input.region, 120, errors, 'region') ?? null;
+    value.lodgingType = optText(input.lodgingType, 60, errors, 'lodgingType') ?? null;
+    value.amenities = validateAmenities(input.amenities, errors);
+    value.capacityGuests = validateCapacity(input.capacityGuests, errors) ?? null;
+    value.houseRules = optText(input.houseRules, 1000, errors, 'houseRules') ?? null;
+    value.acceptsExperienceTypes = validateTagList(input.acceptsExperienceTypes, errors, 'acceptsExperienceTypes') ?? null;
+    const latitude = coordinate(input.latitude, IRAN_BOUNDS.minLat, IRAN_BOUNDS.maxLat, errors, 'latitude');
+    const longitude = coordinate(input.longitude, IRAN_BOUNDS.minLng, IRAN_BOUNDS.maxLng, errors, 'longitude');
+    if ((latitude == null) !== (longitude == null)) errors.coordinates = 'incomplete';
+    value.latitude = latitude;
+    value.longitude = longitude;
+    if (input.media !== undefined) {
+      if (!Array.isArray(input.media)) errors.media = 'type';
+      else if (input.media.length > 24) errors.media = 'length';
+      else {
+        value.media = [];
+        input.media.forEach((raw, i) => {
+          const p = str(raw && raw.photoPath);
+          const caption = str(raw && raw.caption);
+          if (!okPath(p)) errors[`media.${i}.photoPath`] = 'format';
+          if (caption.length > 120) errors[`media.${i}.caption`] = 'length';
+          value.media.push({ photoPath: p, caption: caption || null });
+        });
+      }
+    }
+  } else {
+    value.expertise = optText(input.expertise, 120, errors, 'expertise') ?? null;
+    value.credentials = optText(input.credentials, 600, errors, 'credentials') ?? null;
+    value.seekingPlaceTypes = validateTagList(input.seekingPlaceTypes, errors, 'seekingPlaceTypes') ?? null;
+  }
+
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value };
+}
+
+/** "Propose an experience to chaacme". The host is resolved server-side from an owned slug. */
+export function validateProposal(input) {
+  const errors = {};
+  const title = str(input.title);
+  const description = str(input.description);
+  const preferredMonths = str(input.preferredMonths);
+  const kind = ['person', 'place', 'none'].includes(input.wantedCounterpartKind) ? input.wantedCounterpartKind : 'none';
+  if (input.wantedCounterpartKind !== undefined && kind !== input.wantedCounterpartKind) errors.wantedCounterpartKind = 'value';
+  if (title.length < 3 || title.length > 120) errors.title = 'length';
+  if (description.length < 10 || description.length > 2000) errors.description = 'length';
+  if (preferredMonths.length > 60) errors.preferredMonths = 'length';
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value: { title, description, preferredMonths: preferredMonths || null, wantedCounterpartKind: kind } };
 }
 
 // --- edition dates ---------------------------------------------------------
