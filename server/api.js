@@ -2,9 +2,9 @@ import * as db from './db.js';
 import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
-import { handleUpload, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload } from './upload.js';
+import { handleUpload, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
 import {
-  json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie,
+  json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie, legacyAdminCookieClear,
   normalisePhone, validateProfile, validateReview, validatePassword,
   validateHostProfile, validateHostApplication, validateHostMedia, validateUserName,
   isValidHostSlug, validateEditionDates, validateRevision, validateProposal, isPendingPathFor
@@ -364,6 +364,14 @@ export async function handleApi(req, res, url) {
       return json(res, 201, { path: result.path });
     }
 
+    // Owner preview of an upload still waiting for review. The file is not in
+    // the web root, so this is the only way a browser can see it.
+    if ((m = new RegExp(`^/api/partner/profiles/${SLUG}/pending/([A-Za-z0-9_-][A-Za-z0-9_.-]*)$`).exec(path)) && method === 'GET') {
+      const host = owned(m[1]);
+      if (!host) return json(res, 404, { error: 'not_found' });
+      return sendPendingUpload(res, host.slug, m[2]);
+    }
+
     if ((m = new RegExp(`^/api/partner/profiles/${SLUG}/experiences$`).exec(path)) && method === 'GET') {
       const host = owned(m[1]);
       if (!host) return json(res, 404, { error: 'not_found' });
@@ -524,14 +532,17 @@ export async function handleApi(req, res, url) {
       const token = username && password ? adminAuth.adminLogin(username, password) : null;
       if (!token) return json(res, 401, { error: 'invalid_credentials' });
 
-      res.setHeader('set-cookie', sessionCookie(token, {
-        name: 'chaacme_admin_session', maxAgeSeconds: adminAuth.ADMIN_SESSION_TTL_SECONDS
-      }));
+      // The current cookie, plus the deletion of the one older releases issued
+      // (Path=/, SameSite=None) so a browser never holds both.
+      res.setHeader('set-cookie', [
+        sessionCookie(token, { kind: 'admin', maxAgeSeconds: adminAuth.ADMIN_SESSION_TTL_SECONDS }),
+        legacyAdminCookieClear()
+      ]);
       return json(res, 200, { ok: true });
     }
     if (path === '/api/admin/logout' && method === 'POST') {
       adminAuth.revokeAdminSession(adminToken(req));
-      res.setHeader('set-cookie', sessionCookie('', { name: 'chaacme_admin_session', clear: true }));
+      res.setHeader('set-cookie', [sessionCookie('', { kind: 'admin', clear: true }), legacyAdminCookieClear()]);
       return json(res, 200, { ok: true });
     }
 
@@ -702,6 +713,12 @@ export async function handleApi(req, res, url) {
         return json(res, 422, { error: 'validation_failed', fields: { status: 'value' } });
       }
       return json(res, 200, { revisions: db.listRevisionsAdmin(status || null), pending: db.pendingRevisionCount() });
+    }
+
+    // Admin preview of an owner's pending upload (cookie-authenticated like the
+    // rest of /api/admin/*, so a plain <img src> works).
+    if ((m = new RegExp(`^/api/admin/host-pending/${SLUG}/([A-Za-z0-9_-][A-Za-z0-9_.-]*)$`).exec(path)) && method === 'GET') {
+      return sendPendingUpload(res, m[1], m[2]);
     }
 
     if ((m = new RegExp(`^/api/admin/host-revisions/${NUM}/approve$`).exec(path)) && method === 'POST') {

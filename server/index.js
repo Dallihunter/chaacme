@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { seed } from './db.js';
 import { handleApi } from './api.js';
 import { handleTourPage } from './pages.js';
-import { assertRuntimeConfig, describeRuntimeConfig, json } from './util.js';
+import { assertRuntimeConfig, describeRuntimeConfig, json, guardStateChange } from './util.js';
 
 const PORT = Number(process.env.PORT) || 3100;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -44,6 +44,15 @@ const server = createServer(async (req, res) => {
       return res.end();
     }
     if (url.pathname.startsWith('/api/')) {
+      // Cross-site request forgery guard: every POST/PUT/PATCH/DELETE must come
+      // from our own frontend (Origin/Referer allowlist) and carry the right
+      // Content-Type. Runs before any handler, so no route can forget it.
+      const gate = guardStateChange(req, url.pathname);
+      if (!gate.ok) {
+        // The body was not read; close the connection rather than leave it half-consumed.
+        res.setHeader('connection', 'close');
+        return json(res, gate.status, { error: gate.error });
+      }
       return await handleApi(req, res, url);
     }
     if (handleTourPage(req, res, url)) return;

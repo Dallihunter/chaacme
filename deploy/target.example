@@ -1,0 +1,29 @@
+# Where THIS deployment lives. Copy to deploy/target.local (gitignored, never
+# published) on every machine that deploys or administers it, and fill in the
+# real values. scripts/deploy-prod.sh reads it as plain KEY=VALUE data (it is
+# never sourced as shell); `scripts/deploy-prod.sh check` validates it.
+#
+# Allowed value characters: letters, digits and _ . / : @ + -   (no spaces or quotes)
+
+# --- read by scripts/deploy-prod.sh, on the production host (all required) ---
+RELEASE_DIR=/path/to/release-checkout
+WEB_ROOT=/path/to/frontend
+BACKUP_ROOT=/path/to/frontend-backups
+STATE_DB=/path/to/state/platform.db
+DB_BACKUP_DIR=/path/to/db-backups
+SERVICE=app.service
+BACKUP_SERVICE=app-db-backup.service
+APP_USER=app-user
+HEALTH_URL=http://127.0.0.1:3100/api/health
+SITE_HOST=www.example.com
+LOG=/path/to/deploy.log
+# Optional (defaults shown): the port nginx answers on locally, health wait in seconds.
+#SITE_PORT=80
+#HEALTH_TIMEOUT=20
+
+# --- used from the laptop (docs/DEPLOY.md, scripts/publish-mirror.sh) ---
+# The origin server. Never commit the real values: publish-mirror.sh refuses to
+# publish anything that contains them.
+ORIGIN_HOST=origin.example.invalid
+SSH_USER=deploy-user
+SERVER_REPO_PATH=/path/to/bare-repo.git

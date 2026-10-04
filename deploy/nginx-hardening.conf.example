@@ -1,0 +1,20 @@
+# These rules are LIVE (added 2026-10-04) inside the public server { } block of the
+# site's vhost, before `location /api/`. Kept here as the reference copy; to
+# re-apply on a rebuilt host: back the file up outside the web root, paste, `nginx -t`,
+# reload, then probe each rule (see docs/DEPLOY.md).
+#
+# Regex locations are tried before plain prefix locations, so these win over
+# `location /` and its SPA fallback (`try_files ... /index.html`), which would
+# otherwise answer 200 with the app shell for a missing file.
+
+# Partner uploads waiting for review live outside the web root; any URL shaped
+# like one answers 404. scripts/deploy-prod.sh gates every deploy on this.
+location ~* ^/images/.+/pending(/|$) { return 404; }
+
+# Backup / editor leftovers: index.html.bak-2026..., x.orig, x.old, x.swp, x~ ...
+# They are 404 even when the file really exists.
+location ~* \.(bak|orig|old|save|swp|swo|tmp|rej|copy)([^A-Za-z0-9][^/]*)?$ { return 404; }
+location ~* ~$ { return 404; }
+
+# Dotfiles (.git, .env, .htaccess, ...) except /.well-known/
+location ~ /\.(?!well-known) { return 404; }

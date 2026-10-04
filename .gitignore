@@ -1,6 +1,36 @@
-node_modules/
+# ---------------------------------------------------------------------------
+# Runtime state. The database is created and owned by the running app. In WAL
+# mode committed data would be split across the .db and its -wal/-shm siblings,
+# so ignoring only the .db would still leak rows (user phone numbers, bookings,
+# review text).
+# ---------------------------------------------------------------------------
+data/*.db
+data/*.db-wal
+data/*.db-shm
 *.db
-*.db-*
+*.db-wal
+*.db-shm
+
+# ---------------------------------------------------------------------------
+# Secrets. deploy/env.example is the tracked template and holds no values.
+# ---------------------------------------------------------------------------
 .env
 .env.*
+env
 !deploy/env.example
+*.pem
+*.key
+id_ed25519*
+id_rsa*
+
+# Local noise
+*.log
+.DS_Store
+node_modules/
+.claude/
+
+# ---------------------------------------------------------------------------
+# Per-deployment configuration. deploy/target.example is the tracked template.
+# target.local holds the real origin host, ssh user and server paths.
+# ---------------------------------------------------------------------------
+deploy/target.local

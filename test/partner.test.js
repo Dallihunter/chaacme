@@ -1,16 +1,20 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const dir = mkdtempSync(join(tmpdir(), 'chaacme-'));
 const PORT = 3900 + Math.floor(Math.random() * 400);
 const IMAGES = join(dir, 'images');
+const PENDING = join(dir, 'pending-uploads'); // default: beside the DB, outside the web root
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),
-  FRONTEND_STATIC_DIR: IMAGES, PORT: String(PORT), HOST: '127.0.0.1'
+  FRONTEND_STATIC_DIR: IMAGES, PORT: String(PORT), HOST: '127.0.0.1',
+  FRONTEND_ORIGIN: 'https://chaacme.test' // production-like: the write guard runs in allowlist mode
 });
+const ORIGIN = 'https://chaacme.test'; // what a browser on the real site sends
 
 const { server } = await import('../server/index.js');
 const db = await import('../server/db.js');
@@ -28,7 +32,7 @@ const mkUser = (n) => {
   return { id, token: auth.createSession(id) };
 };
 async function call(method, path, { token, admin, body, raw, headers = {} } = {}) {
-  const h = { ...headers };
+  const h = { origin: ORIGIN, ...headers };
   if (token) h.cookie = `chaacme_session=${token}`;
   if (admin) h.cookie = `chaacme_admin_session=${admin}`;
   let payload = raw;
@@ -71,7 +75,9 @@ test('/api/partner/* needs a login', async () => {
     ['PUT', '/api/partner/profiles/coach-a/revision'], ['DELETE', '/api/partner/profiles/coach-a/revision'],
     ['POST', '/api/partner/profiles/coach-a/upload'], ['GET', '/api/partner/profiles/coach-a/experiences'],
     ['GET', '/api/partner/proposals'], ['POST', '/api/partner/proposals']]) {
-    assert.equal((await call(m, p, { body: m === 'GET' ? undefined : {} })).status, 401, `${m} ${p}`);
+    // An upload route takes multipart (a JSON body there is 415 before auth is even looked at).
+    const opts = p.endsWith('/upload') ? multipart(PNG) : { body: m === 'GET' ? undefined : {} };
+    assert.equal((await call(m, p, opts)).status, 401, `${m} ${p}`);
   }
 });
 
@@ -172,6 +178,9 @@ test('uploads: pending folder, not public, traversal rejected, approval moves fi
   assert.match(up.data.path, /^\/images\/host-lodge-a\/pending\/[\w.-]+\.png$/);
   assert.equal((await call('POST', '/api/partner/profiles/lodge-a/upload', { token: A.token, ...multipart(Buffer.from('not an image at all')) })).status, 422);
   const pendingPath = up.data.path;
+  const pendingName = pendingPath.split('/').pop();
+  assert.equal(existsSync(join(PENDING, 'host-lodge-a', pendingName)), true, 'stored under the pending dir');
+  assert.equal(existsSync(join(IMAGES, 'host-lodge-a', 'pending')), false, 'nothing is written under the web root');
   const edit = (media, over = {}) => ({ displayName: 'Lodge A', region: 'گیلان', lodgingType: 'x', capacityGuests: 20,
     latitude: 36.234567, longitude: 52.765432, media, ...over });
   for (const evil of ['/images/host-lodge-a/pending/../../x.png', '/images/host-lodge-a/pending/..', '/images/host-coach-a/pending/x.png',
@@ -198,13 +207,59 @@ test('uploads: pending folder, not public, traversal rejected, approval moves fi
   assert.equal(gal.length, 1);
   assert.match(gal[0].photoPath, /^\/images\/host-lodge-a\/[\w.-]+\.png$/);
   assert.equal(existsSync(join(IMAGES, gal[0].photoPath.replace('/images/', ''))), true, 'moved to live folder');
-  assert.deepEqual(readdirSync(join(IMAGES, 'host-lodge-a', 'pending')).filter((f) => pendingPath.endsWith(f)), []);
+  assert.deepEqual(readdirSync(join(PENDING, 'host-lodge-a')).filter((f) => pendingPath.endsWith(f)), [], 'gone from pending after approval');
   assert.equal(db.getHostAdmin(place.id).capacityGuests, 20);
+});
+
+test('pending previews: only the owner and an admin can read them', async () => {
+  const up = await call('POST', '/api/partner/profiles/lodge-a/upload', { token: A.token, ...multipart(PNG) });
+  assert.equal(up.status, 201);
+  const name = up.data.path.split('/').pop();
+  const ownerUrl = `/api/partner/profiles/lodge-a/pending/${name}`;
+  const adminUrl = `/api/admin/host-pending/lodge-a/${name}`;
+  const get = (path, cookie) => fetch(base + path, { headers: cookie ? { cookie } : {} });
+
+  assert.equal((await get(ownerUrl)).status, 401, 'anonymous');
+  assert.equal((await get(ownerUrl, `chaacme_session=${B.token}`)).status, 404, 'another user cannot even tell it exists');
+  assert.equal((await get(adminUrl)).status, 401, 'anonymous on the admin route');
+  assert.equal((await get(adminUrl, `chaacme_session=${A.token}`)).status, 401, 'a user session is not an admin session');
+
+  for (const [url, cookie] of [[ownerUrl, `chaacme_session=${A.token}`], [adminUrl, `chaacme_admin_session=${admin}`]]) {
+    const r = await get(url, cookie);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('content-type'), 'image/png');
+    assert.match(r.headers.get('cache-control'), /private/);
+    assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+    assert.deepEqual(Buffer.from(await r.arrayBuffer()), PNG, 'bytes are served intact');
+  }
+  // a file that is not there, a name that is not a plain filename, and another profile's folder
+  assert.equal((await get('/api/partner/profiles/lodge-a/pending/ghost.png', `chaacme_session=${A.token}`)).status, 404);
+  assert.equal((await get('/api/partner/profiles/lodge-a/pending/..%2F..%2Ft.db', `chaacme_session=${A.token}`)).status, 404);
+  assert.equal((await get(`/api/partner/profiles/coach-a/pending/${name}`, `chaacme_session=${A.token}`)).status, 404, 'right owner, wrong profile folder');
+  assert.equal((await get('/api/admin/host-pending/lodge-a/..%2F..%2Ft.db', `chaacme_admin_session=${admin}`)).status, 404);
+  // the logical path is not a public URL either: the node service does not serve /images at all
+  assert.equal((await get(up.data.path)).status, 404);
+  // a text file dropped in the folder is never served as an image
+  const { writeFileSync } = await import('node:fs');
+  writeFileSync(join(PENDING, 'host-lodge-a', 'note.txt'), 'hello');
+  assert.equal((await get('/api/partner/profiles/lodge-a/pending/note.txt', `chaacme_session=${A.token}`)).status, 404);
+  await call('DELETE', '/api/partner/profiles/lodge-a/revision', { token: A.token });
+});
+
+test('PENDING_UPLOAD_DIR inside the web root is refused at startup', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const r = spawnSync(process.execPath, ['-e', "import('./server/upload.js')"], {
+    cwd: fileURLToPath(new URL('..', import.meta.url)),
+    env: { ...process.env, FRONTEND_STATIC_DIR: IMAGES, PENDING_UPLOAD_DIR: join(IMAGES, 'host-x', 'pending') },
+    encoding: 'utf8'
+  });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /must be outside FRONTEND_STATIC_DIR/);
 });
 
 test('rejecting a revision deletes its pending uploads', async () => {
   const up = await call('POST', '/api/partner/profiles/lodge-a/upload', { token: A.token, ...multipart(PNG) });
-  const file = join(IMAGES, 'host-lodge-a', 'pending', up.data.path.split('/').pop());
+  const file = join(PENDING, 'host-lodge-a', up.data.path.split('/').pop());
   assert.equal(existsSync(file), true);
   await call('PUT', '/api/partner/profiles/lodge-a/revision', { token: A.token,
     body: { displayName: 'L', region: 'r', media: [{ photoPath: up.data.path }] } });

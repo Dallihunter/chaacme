@@ -3550,10 +3550,19 @@
   }
   // The server only ever returns /images/... paths; this is the same shape
   // check as PHOTO_PATH_RE so a malformed value never becomes an <img src>.
+  // An upload still waiting for review is not under the public /images tree
+  // (the server keeps it outside the web root); the owner sees it through an
+  // authenticated route instead. The logical /images/host-<slug>/pending/<file>
+  // id is what gets stored and sent back; only the <img src> is rewritten.
+  const PENDING_IMG_RE = /^\/images\/host-([a-z0-9-]+)\/pending\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)$/;
+  function pImgSrc(path){
+    const m = PENDING_IMG_RE.exec(path);
+    return m ? '/api/partner/profiles/' + m[1] + '/pending/' + m[2] : path;
+  }
   function pThumb(path){
     const t = el('div', 'thumb');
     if(PHOTO_PATH_RE.test(String(path || ''))){
-      const img = document.createElement('img'); img.src = path; img.alt = ''; img.loading = 'lazy';
+      const img = document.createElement('img'); img.src = pImgSrc(path); img.alt = ''; img.loading = 'lazy';
       t.appendChild(img);
     }
     return t;

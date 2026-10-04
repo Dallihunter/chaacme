@@ -1,6 +1,7 @@
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 
 const dir = mkdtempSync(join(tmpdir(), 'chaacme-e2e-'));
@@ -8,9 +9,10 @@ const PORT = 3600 + Math.floor(Math.random() * 300);
 const IMAGES = join(dir, 'images');
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),
-  FRONTEND_STATIC_DIR: IMAGES, PORT: String(PORT), HOST: '127.0.0.1'
+  FRONTEND_STATIC_DIR: IMAGES, PORT: String(PORT), HOST: '127.0.0.1',
+  FRONTEND_ORIGIN: `http://127.0.0.1:${PORT}` // production-like: the write guard runs in allowlist mode
 });
-const repo = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
+const repo = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/$/, '');
 const { server } = await import(repo + '/server/index.js');
 const db = await import(repo + '/server/db.js');
 const auth = await import(repo + '/server/auth.js');
@@ -19,7 +21,7 @@ if (!server.listening) await new Promise((r) => server.once('listening', r));
 const O = `http://127.0.0.1:${PORT}`;
 const { chromium } = await import(process.env.PLAYWRIGHT_CORE || 'playwright-core');
 
-const outDir = join(homedir(), 'chaacme-verification', `${new Date().toISOString().slice(0, 10)}-partner-panel`);
+const outDir = process.env.E2E_OUT_DIR || join(homedir(), 'chaacme-verification', `${new Date().toISOString().slice(0, 10)}-partner-panel`);
 rmSync(outDir, { recursive: true, force: true }); mkdirSync(outDir, { recursive: true });
 
 db.seed();
@@ -41,7 +43,7 @@ const XSS = {
   desc: '<img src=x onerror=window.__xss=4> توضیح بلند کافی',
 };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
 async function newCtx(viewport, adminCookie) {
   const ctx = await browser.newContext({ viewport });
   if (adminCookie) await ctx.addCookies([{ name: 'chaacme_admin_session', value: adminTok, url: O }]);
@@ -66,7 +68,7 @@ async function page(ctx) {
   return p;
 }
 const shot = async (p, name) => { await p.waitForTimeout(800); return p.screenshot({ path: join(outDir, name + '.png'), fullPage: true }); };
-const admin = (m, path, body) => fetch(O + '/api/admin' + path, { method: m, headers: { cookie: `chaacme_admin_session=${adminTok}`, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }));
+const admin = (m, path, body) => fetch(O + '/api/admin' + path, { method: m, headers: { cookie: `chaacme_admin_session=${adminTok}`, origin: O, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }));
 const noXss = async (p, label) => {
   const v = await p.evaluate(() => window.__xss);
   assert.equal(v, undefined, `XSS executed on ${label}: ${v}`);
@@ -188,6 +190,15 @@ for (const [label, viewport] of [['desktop', { width: 1280, height: 900 }], ['mo
   await p2.waitForSelector('#partnerRoot form');
   await p2.locator('#partnerRoot form input[type=file]').nth(1).setInputFiles([pngFile, pngFile]);
   await p2.waitForFunction(() => document.querySelectorAll('#partnerRoot .gal-list .gal-item').length >= 2);
+  // pending uploads are previewed through the authenticated route and really decode
+  // (thumbnails are loading="lazy": scroll them into view or the browser never fetches them)
+  for (const img of await p2.locator('#partnerRoot .gal-list .gal-item img').all()) await img.scrollIntoViewIfNeeded();
+  await p2.waitForFunction(() => {
+    const imgs = [...document.querySelectorAll('#partnerRoot .gal-list .gal-item img')];
+    return imgs.length >= 2 && imgs.every((i) => i.complete && i.naturalWidth > 0);
+  });
+  const galSrcs = await p2.locator('#partnerRoot .gal-list .gal-item img').evaluateAll((els) => els.map((e) => e.getAttribute('src')));
+  assert.ok(galSrcs.every((x) => x.startsWith('/api/partner/profiles/lake-lodge/pending/')), 'owner preview src: ' + galSrcs.join(','));
   const num = p2.locator('#partnerRoot form input[type=number]');
   await num.nth(1).fill('36.5512345'); await num.nth(2).fill('52.9123456');
   await p2.locator('#partnerRoot .gal-list .gal-item input').first().fill('اتاق <b>1</b>');
@@ -205,6 +216,13 @@ for (const [label, viewport] of [['desktop', { width: 1280, height: 900 }], ['mo
   await ap.goto(O + '/admin#/revisions');
   await ap.waitForSelector('.app-card');
   assert.equal(await ap.locator('.app-card').count(), 2);
+  for (const img of await ap.locator('.rev-thumb img').all()) await img.scrollIntoViewIfNeeded();
+  await ap.waitForFunction(() => {
+    const imgs = [...document.querySelectorAll('.rev-thumb img')];
+    return imgs.length >= 1 && imgs.every((i) => i.complete && i.naturalWidth > 0);
+  });
+  const revSrcs = await ap.locator('.rev-thumb img').evaluateAll((els) => els.map((e) => e.getAttribute('src')));
+  assert.ok(revSrcs.every((x) => x.startsWith('/api/admin/host-pending/lake-lodge/')), 'admin preview src: ' + revSrcs.join(','));
   await shot(ap, `${label}-11-admin-revisions`);
   const cardTexts = await ap.locator('.rev-table').allTextContents();
   assert.ok(cardTexts.some((t) => t.includes('Gallery')), 'gallery diff shown');

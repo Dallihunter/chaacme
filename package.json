@@ -1,11 +1,16 @@
 {
   "name": "chaacme-platform",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "chaacme booking platform — API for the production frontend (design source in 'Chaacme design system refinement/'): tours, phone/OTP auth, bookings, reviews.",
   "engines": { "node": ">=22.5" },
   "scripts": {
-    "dev": "node server/index.js",
     "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "reseed": "node -e \"import('./server/db.js').then(m=>console.log(m.seed({force:true})))\"",
+    "smoke": "node scripts/smoke.js",
+    "admin:set-password": "node scripts/admin-set-password.mjs",
     "test": "node --test \"test/*.test.js\""
   }
 }

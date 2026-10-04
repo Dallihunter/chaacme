@@ -1,0 +1,12 @@
+# Paths that exist in the server repo but are NEVER published to the public
+# GitHub mirror (scripts/publish-mirror.sh). One git pathspec per line, relative
+# to the repo root; a directory excludes everything under it. '#' starts a comment.
+
+# Design source: original site photos and videos (people appear in them), a
+# 2 MB editor state file, and uploads. Not needed to build or test the backend.
+Chaacme design system refinement
+
+# Describe the production server: layout, backups, restore procedure, deploy
+# mechanics and the incident record. Server copy only.
+docs/DEPLOY.md
+docs/RESTORE.md

@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const dir = mkdtempSync(join(tmpdir(), 'chaacme-'));
 const PORT = 3400 + Math.floor(Math.random() * 400);
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),
-  FRONTEND_INDEX_FILE: new URL('../deploy/index.html', import.meta.url).pathname,
+  FRONTEND_INDEX_FILE: fileURLToPath(new URL('../deploy/index.html', import.meta.url)),
   SITE_ORIGIN: 'https://example.test/', PORT: String(PORT), HOST: '127.0.0.1'
 });
 

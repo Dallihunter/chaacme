@@ -1160,9 +1160,17 @@
     });
   }
 
+  // An owner's upload still waiting for review is kept outside the public
+  // /images tree; the admin previews it through an authenticated route.
+  var PENDING_IMG_RE = /^\/images\/host-([a-z0-9-]+)\/pending\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)$/;
+  function imgSrc(path){
+    var m = PENDING_IMG_RE.exec(String(path || ''));
+    return m ? '/api/admin/host-pending/' + m[1] + '/' + m[2] : path;
+  }
+
   function hostPhotoHtml(photoPath){
     return photoPath
-      ? '<img src="' + esc(photoPath) + '" alt="">'
+      ? '<img src="' + esc(imgSrc(photoPath)) + '" alt="">'
       : '<div class="ph">No photo</div>';
   }
 
@@ -1757,7 +1765,7 @@
     if (key === 'media'){
       return (v && v.length)
         ? '<span class="rev-thumbs">' + v.map(function(m){
-            return '<span class="rev-thumb" title="' + esc(m.caption || '') + '"><img src="' + esc(m.photoPath) + '" alt=""></span>';
+            return '<span class="rev-thumb" title="' + esc(m.caption || '') + '"><img src="' + esc(imgSrc(m.photoPath)) + '" alt=""></span>';
           }).join('') + '</span><div class="app-meta">' + v.length + ' image(s)</div>'
         : '<i>none</i>';
     }

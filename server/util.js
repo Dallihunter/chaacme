@@ -128,6 +128,12 @@ export function describeRuntimeConfig(env = process.env) {
       ? `OTP_PEPPER from environment (${pepper.length} chars, fingerprint ${fingerprint('pepper', pepper)})`
       : 'OTP_PEPPER NOT SET — there is no fallback; OTP issuance would throw',
     'ADMIN_TOKEN — no longer used; /api/admin/* now authenticates via POST /api/admin/login (see scripts/admin-set-password.mjs to create the account)',
+    (() => {
+      const pol = cookiePolicy(env);
+      const origins = allowedOrigins(env);
+      return `cookies: admin HttpOnly${pol.secure ? '; Secure' : ''}; SameSite=Strict; Path=${ADMIN_COOKIE_PATH} | user HttpOnly${pol.secure ? '; Secure' : ''}; SameSite=${pol.userSameSite}; Path=/`
+        + ` | state-changing /api requests must come from ${origins ? [...origins].join(', ') : 'the same host (FRONTEND_ORIGIN unset: local development only)'}`;
+    })(),
     smsWebhook
       ? `SMS_WEBHOOK_URL set — OTP codes are delivered by POSTing to it`
       : `SMS_WEBHOOK_URL NOT SET — OTP codes ${nodeEnv === 'production' ? 'cannot be delivered (see below)' : 'are logged to the console (dev only)'}`,
@@ -152,6 +158,17 @@ export function assertRuntimeConfig(env = process.env) {
   const pepper = (env.OTP_PEPPER || '').trim();
   const smsWebhook = (env.SMS_WEBHOOK_URL || '').trim();
   const production = env.NODE_ENV === 'production';
+
+  // Cookie hardening and the cross-site write guard must not be weakened in
+  // production. (The secure behaviour itself never depends on NODE_ENV; this
+  // only refuses the dev-only overrides when NODE_ENV says it is production.)
+  const cookies = cookiePolicy(env);
+  for (const note of cookies.notes) { if (cookies.overridden && production) problems.push(note); else warnings.push(note); }
+  if (!allowedOrigins(env)) {
+    const msg = 'FRONTEND_ORIGIN is not set: the cross-site write guard compares the Origin host with the request Host, '
+      + 'which DNS rebinding defeats. Set FRONTEND_ORIGIN to the site origin (https://...) outside local development.';
+    if (production) problems.push(msg); else warnings.push(msg);
+  }
 
   if (!salt) problems.push(MISSING('IP_HASH_SALT'));
   else if (salt.length < 16) {
@@ -213,6 +230,12 @@ export function assertRuntimeConfig(env = process.env) {
 
 // --- cookies -----------------------------------------------------------
 
+/**
+ * Parses the Cookie header. If a name appears more than once the FIRST one wins:
+ * browsers send the cookie with the longest (most specific) Path first, and the
+ * admin cookie exists both at its current Path=/api/admin and, until it expires,
+ * at the legacy Path=/ -- the current one must be the one that is read.
+ */
 export function parseCookies(req) {
   const header = req.headers?.cookie;
   const out = {};
@@ -222,26 +245,150 @@ export function parseCookies(req) {
     if (idx === -1) continue;
     const name = part.slice(0, idx).trim();
     const value = part.slice(idx + 1).trim();
-    if (name) out[name] = decodeURIComponent(value);
+    if (!name || Object.hasOwn(out, name)) continue;
+    try { out[name] = decodeURIComponent(value); } catch { out[name] = value; }
   }
   return out;
 }
 
-export function sessionCookie(token, { maxAgeSeconds, clear = false, name = 'chaacme_session' } = {}) {
-  // A cross-origin frontend (FRONTEND_ORIGIN set — see index.js) calls this
-  // API via fetch/XHR, not a top-level navigation, so SameSite=Lax would
-  // simply never be sent back and every request would look logged-out.
-  // SameSite=None is the only setting that works cross-site, and browsers
-  // require Secure alongside it (works on http://localhost as an exception
-  // in Chromium; anywhere else this needs real HTTPS).
-  const crossOrigin = !!(process.env.FRONTEND_ORIGIN || '').trim();
+export const USER_COOKIE = 'chaacme_session';
+export const ADMIN_COOKIE = 'chaacme_admin_session';
+// The admin panel is a same-origin page that only ever calls /api/admin/*, so
+// the admin cookie is never sent anywhere else.
+export const ADMIN_COOKIE_PATH = '/api/admin';
+
+const FALSE_WORDS = new Set(['false', '0', 'no', 'off']);
+
+/**
+ * Cookie attribute policy. The defaults are the secure ones and DO NOT depend on
+ * NODE_ENV or FRONTEND_ORIGIN (they used to: setting FRONTEND_ORIGIN switched the
+ * session cookie to SameSite=None, which is what let a cross-site page ride a
+ * logged-in session). The two overrides exist for local development only
+ * (plain-http dev servers); they are refused when NODE_ENV=production and warned
+ * about loudly otherwise.
+ *   admin cookie: HttpOnly; Secure; SameSite=Strict; Path=/api/admin   (SameSite never overridable)
+ *   user cookie:  HttpOnly; Secure; SameSite=Lax; Path=/
+ */
+export function cookiePolicy(env = process.env) {
+  const secureRaw = (env.COOKIE_SECURE ?? '').trim().toLowerCase();
+  const sameSiteRaw = (env.COOKIE_SAMESITE ?? '').trim().toLowerCase();
+  const secure = !FALSE_WORDS.has(secureRaw);                       // only an explicit "false" turns it off
+  const userSameSite = ['lax', 'strict', 'none'].includes(sameSiteRaw) ? sameSiteRaw : 'lax';
+  const notes = [];
+  if (!secure) notes.push('COOKIE_SECURE is off: session cookies are sent over plain HTTP (local development only)');
+  if (sameSiteRaw && !['lax', 'strict', 'none'].includes(sameSiteRaw)) notes.push(`COOKIE_SAMESITE=${sameSiteRaw} is not lax|strict|none and is ignored (using lax)`);
+  else if (userSameSite !== 'lax') notes.push(`COOKIE_SAMESITE=${userSameSite} weakens/changes the user session cookie (local development only)`);
+  if (userSameSite === 'none' && !secure) notes.push('SameSite=None without Secure is rejected by browsers');
+  return { secure, userSameSite, overridden: !secure || userSameSite !== 'lax', notes };
+}
+
+/** Builds a Set-Cookie header value for the user session or the admin session. */
+export function sessionCookie(token, { maxAgeSeconds, clear = false, kind = 'user' } = {}) {
+  const pol = cookiePolicy();
+  const admin = kind === 'admin';
   const parts = [
-    `${name}=${clear ? '' : encodeURIComponent(token)}`, 'Path=/', 'HttpOnly',
-    crossOrigin ? 'SameSite=None' : 'SameSite=Lax'
+    `${admin ? ADMIN_COOKIE : USER_COOKIE}=${clear ? '' : encodeURIComponent(token)}`,
+    `Path=${admin ? ADMIN_COOKIE_PATH : '/'}`, 'HttpOnly',
+    `SameSite=${admin ? 'Strict' : pol.userSameSite[0].toUpperCase() + pol.userSameSite.slice(1)}`
   ];
-  if (crossOrigin || process.env.NODE_ENV === 'production') parts.push('Secure');
+  if (pol.secure) parts.push('Secure');
   parts.push(clear ? 'Max-Age=0' : `Max-Age=${maxAgeSeconds}`);
   return parts.join('; ');
+}
+
+/**
+ * Deletes the admin cookie as it used to be issued (Path=/). Sent with every admin
+ * login and logout so a browser that still holds the old SameSite=None cookie
+ * drops it instead of sending it alongside the new one.
+ */
+export function legacyAdminCookieClear() {
+  const parts = [`${ADMIN_COOKIE}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
+  if (cookiePolicy().secure) parts.push('Secure');
+  parts.push('Max-Age=0');
+  return parts.join('; ');
+}
+
+// --- cross-site request forgery guard -----------------------------------------
+//
+// Every state-changing request to /api/* (POST/PUT/PATCH/DELETE) must come from
+// our own frontend. Cookies are SameSite-restricted, but that is a second layer:
+// this is the first. Nothing is exempt: the ZarinPal return is a GET (it changes
+// state only through its own authority/verify handshake, never through a cookie)
+// and so is not covered by, or in need of, this check.
+
+export const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+// The only two routes that take multipart/form-data (image uploads).
+const MULTIPART_ROUTES = [/^\/api\/admin\/upload$/, /^\/api\/partner\/profiles\/[a-z0-9-]+\/upload$/];
+
+/**
+ * Origins allowed to send state-changing requests: FRONTEND_ORIGIN and its
+ * www / non-www twin (https://chaacme.ir and https://www.chaacme.ir). Returns
+ * null when FRONTEND_ORIGIN is not set.
+ */
+export function allowedOrigins(env = process.env) {
+  const configured = (env.FRONTEND_ORIGIN || '').trim().replace(/\/+$/, '');
+  if (!configured) return null;
+  const out = new Set([configured]);
+  try {
+    const u = new URL(configured);
+    const host = u.hostname;
+    if (host.includes('.') && !/^[0-9.]+$/.test(host) && !host.includes(':')) {
+      const twin = host.startsWith('www.') ? host.slice(4) : `www.${host}`;
+      out.add(`${u.protocol}//${twin}${u.port ? `:${u.port}` : ''}`);
+    }
+  } catch { /* an unparsable FRONTEND_ORIGIN simply allows only itself */ }
+  return out;
+}
+
+function sameHost(origin, hostHeader) {
+  try { return !!hostHeader && new URL(origin).host.toLowerCase() === String(hostHeader).toLowerCase(); } catch { return false; }
+}
+
+/**
+ * Decides whether a state-changing request is from our frontend.
+ *  1. An Origin header, if present, must be in the allowlist (the string "null" is not).
+ *  2. With no Origin, the Referer's origin must be in the allowlist.
+ *  3. With neither, reject.
+ * With FRONTEND_ORIGIN unset (local development) "in the allowlist" means "has the
+ * same host as this request's Host header"; production must set FRONTEND_ORIGIN,
+ * because that fallback is defeated by DNS rebinding.
+ */
+export function checkWriteOrigin(req, env = process.env) {
+  const allowed = allowedOrigins(env);
+  const ok = (o) => (allowed ? allowed.has(o) : sameHost(o, req.headers?.host));
+  const origin = req.headers?.origin;
+  if (origin !== undefined) return ok(origin) ? { ok: true } : { ok: false, reason: 'origin_not_allowed' };
+  const referer = req.headers?.referer;
+  if (referer) {
+    let o;
+    try { o = new URL(referer).origin; } catch { return { ok: false, reason: 'referer_unparseable' }; }
+    return ok(o) ? { ok: true } : { ok: false, reason: 'referer_not_allowed' };
+  }
+  return { ok: false, reason: 'no_origin_or_referer' };
+}
+
+function mediaType(req) {
+  return String(req.headers?.['content-type'] || '').split(';')[0].trim().toLowerCase();
+}
+
+/**
+ * The whole guard for one request. Returns { ok: true } or { ok: false, status, error }.
+ * Origin first (403), then Content-Type (415): JSON endpoints accept only
+ * application/json, so a cross-site page cannot reach them with a "simple"
+ * request (no preflight); the two upload routes accept only multipart/form-data.
+ */
+export function guardStateChange(req, pathname, env = process.env) {
+  if (!STATE_CHANGING_METHODS.has(req.method) || !pathname.startsWith('/api/')) return { ok: true };
+  const origin = checkWriteOrigin(req, env);
+  if (!origin.ok) return { ok: false, status: 403, error: 'forbidden_origin', reason: origin.reason };
+  const type = mediaType(req);
+  if (MULTIPART_ROUTES.some((re) => re.test(pathname))) {
+    return type === 'multipart/form-data' ? { ok: true } : { ok: false, status: 415, error: 'unsupported_media_type' };
+  }
+  const cl = req.headers?.['content-length'];
+  const hasBody = (cl !== undefined && cl !== '0') || req.headers?.['transfer-encoding'] !== undefined;
+  if ((hasBody || type) && type !== 'application/json') return { ok: false, status: 415, error: 'unsupported_media_type' };
+  return { ok: true };
 }
 
 // --- rate limiting -----------------------------------------------------

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync, unlinkSync, renameSync, existsSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { mkdirSync, writeFileSync, unlinkSync, renameSync, copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOST_SLUG_RE } from './util.js';
 
@@ -10,6 +10,23 @@ const here = dirname(fileURLToPath(import.meta.url));
 // In production set FRONTEND_STATIC_DIR to wherever the frontend's static
 // tree actually is, e.g. /srv/chaacme-platform/frontend/images.
 export const FRONTEND_STATIC_DIR = (process.env.FRONTEND_STATIC_DIR || join(here, '..', '..', 'images')).trim();
+
+// Pending partner uploads are NOT public: nginx serves everything under the web
+// root straight off disk, so a file waiting for admin review must live outside
+// it. They sit beside the database (the service already owns that directory)
+// and reach a browser only through the authenticated preview routes below.
+// Approval moves the file into FRONTEND_STATIC_DIR/host-<slug>/.
+export const PENDING_UPLOAD_DIR = (process.env.PENDING_UPLOAD_DIR
+  || join(dirname(process.env.CHAACME_PLATFORM_DB || join(here, '..', 'data', 'platform.db')), 'pending-uploads')).trim();
+
+// Refuse to boot if the two trees overlap: that would silently re-expose every
+// pending file, which is exactly what keeping them apart is for.
+{
+  const rel = relative(resolve(FRONTEND_STATIC_DIR), resolve(PENDING_UPLOAD_DIR));
+  if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) {
+    throw new Error(`PENDING_UPLOAD_DIR (${PENDING_UPLOAD_DIR}) must be outside FRONTEND_STATIC_DIR (${FRONTEND_STATIC_DIR})`);
+  }
+}
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_BODY_BYTES = MAX_FILE_BYTES + 64 * 1024; // headroom for multipart framing + other form fields
@@ -125,14 +142,18 @@ const MAX_PENDING_FILES = 40;
 
 /**
  * A partner's own upload. The caller has already proved the user owns the
- * host with this slug; the file lands in that host's pending folder and is
- * not part of any public listing until an admin approves a revision using it.
+ * host with this slug; the file lands in that host's folder under
+ * PENDING_UPLOAD_DIR (outside the web root) and is not reachable by URL or part
+ * of any public listing until an admin approves a revision using it. The
+ * returned path is a logical id (/images/host-<slug>/pending/<file>), never a
+ * served URL: nginx answers 404 for it, and the UIs rewrite it to the
+ * authenticated preview route.
  */
 export async function handlePendingHostUpload(req, slug) {
   if (!HOST_SLUG_RE.test(slug)) return { ok: false, status: 422, error: 'invalid_host_slug' };
   const up = await readImageUpload(req);
   if (!up.ok) return up;
-  const dir = join(FRONTEND_STATIC_DIR, `host-${slug}`, 'pending');
+  const dir = join(PENDING_UPLOAD_DIR, `host-${slug}`);
   mkdirSync(dir, { recursive: true });
   if (readdirSync(dir).length >= MAX_PENDING_FILES) return { ok: false, status: 429, error: 'too_many_pending_files' };
   const filename = `${Date.now()}-${randomBytes(6).toString('hex')}.${up.detected.ext}`;
@@ -140,20 +161,58 @@ export async function handlePendingHostUpload(req, slug) {
   return { ok: true, status: 201, path: `/images/host-${slug}/pending/${filename}` };
 }
 
+const PENDING_FILE_NAME = /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 const PENDING_PATH = /^\/images\/host-([a-z0-9-]+)\/pending\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)$/;
+
+const pendingFile = (slug, file) => join(PENDING_UPLOAD_DIR, `host-${slug}`, file);
 
 /** Does this pending upload exist on disk? */
 export function pendingUploadExists(imagePath) {
   const m = PENDING_PATH.exec(imagePath || '');
-  return !!m && existsSync(join(FRONTEND_STATIC_DIR, `host-${m[1]}`, 'pending', m[2]));
+  return !!m && existsSync(pendingFile(m[1], m[2]));
 }
 
-/** Moves a pending upload to the live folder; returns its public path. */
+/** Moves a pending upload into the live (public) folder; returns its public path. */
 export function movePendingUpload(imagePath) {
   const m = PENDING_PATH.exec(imagePath || '');
   if (!m) throw new Error('not a pending upload path');
-  renameSync(join(FRONTEND_STATIC_DIR, `host-${m[1]}`, 'pending', m[2]), join(FRONTEND_STATIC_DIR, `host-${m[1]}`, m[2]));
+  const destDir = join(FRONTEND_STATIC_DIR, `host-${m[1]}`);
+  mkdirSync(destDir, { recursive: true });
+  const from = pendingFile(m[1], m[2]);
+  const to = join(destDir, m[2]);
+  try {
+    renameSync(from, to);
+  } catch (err) {
+    if (err.code !== 'EXDEV') throw err;
+    // The two directories are on different filesystems: copy, then unlink.
+    copyFileSync(from, to);
+    unlinkSync(from);
+  }
   return `/images/host-${m[1]}/${m[2]}`;
+}
+
+/**
+ * Streams one pending upload to a caller the API layer has ALREADY authorised
+ * (the owning partner, or an admin). Type comes from the file's own bytes,
+ * never from its name; the response is private and non-cacheable.
+ */
+export function sendPendingUpload(res, slug, file) {
+  const ok = HOST_SLUG_RE.test(slug) && PENDING_FILE_NAME.test(file);
+  let data = null;
+  if (ok) { try { data = readFileSync(pendingFile(slug, file)); } catch { data = null; } }
+  const detected = data && detectImageType(data);
+  if (!detected) {
+    res.writeHead(404, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end(JSON.stringify({ error: 'not_found' }));
+  }
+  res.writeHead(200, {
+    'content-type': detected.mime,
+    'content-length': data.length,
+    'cache-control': 'private, no-store',
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': "default-src 'none'"
+  });
+  res.end(data);
 }
 
 /**
@@ -199,11 +258,18 @@ export async function handleUpload(req) {
 // filename, no dots that could climb out of FRONTEND_STATIC_DIR. The host
 // alternative is the slug charset only (lowercase, digits, hyphen), so
 // "host-../" cannot match.
-const SAFE_UPLOAD_PATH = /^\/images\/(tour-[A-Za-z0-9_-]+|host-[a-z0-9-]+(?:\/pending)?|uploads)\/[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
+const SAFE_UPLOAD_PATH = /^\/images\/(tour-[A-Za-z0-9_-]+|host-[a-z0-9-]+|uploads)\/[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
 /** Deletes a file previously returned by handleUpload's `path`. Silently no-ops on anything that doesn't match that shape or is already gone. */
 export function deleteUploadedFile(imagePath) {
-  if (typeof imagePath !== 'string' || !SAFE_UPLOAD_PATH.test(imagePath)) return;
+  if (typeof imagePath !== 'string') return;
+  const pm = PENDING_PATH.exec(imagePath);
+  if (pm) {
+    // A pending upload: its file is under PENDING_UPLOAD_DIR, not the web root.
+    try { unlinkSync(pendingFile(pm[1], pm[2])); } catch { /* already gone */ }
+    return;
+  }
+  if (!SAFE_UPLOAD_PATH.test(imagePath)) return;
   const rel = imagePath.replace(/^\/images\//, '');
   try {
     unlinkSync(join(FRONTEND_STATIC_DIR, rel));
