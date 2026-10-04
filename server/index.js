@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { seed } from './db.js';
 import { handleApi } from './api.js';
+import { handleTourPage } from './pages.js';
 import { assertRuntimeConfig, describeRuntimeConfig, json } from './util.js';
 
 const PORT = Number(process.env.PORT) || 3100;
@@ -45,7 +46,8 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/')) {
       return await handleApi(req, res, url);
     }
-    return json(res, 404, { error: 'not_found', message: 'This service only serves /api/*.' });
+    if (handleTourPage(req, res, url)) return;
+    return json(res, 404, { error: 'not_found', message: 'This service only serves /api/* (and /tour/<slug> when FRONTEND_INDEX_FILE is set).' });
   } catch (err) {
     console.error('[chaacme-platform]', err);
     if (!res.headersSent) json(res, 500, { error: 'internal_error' });

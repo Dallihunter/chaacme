@@ -1533,7 +1533,7 @@
 <section class="page" id="page-booking">
   <section style="padding-top:170px;">
     <div class="wrap" style="max-width:640px;" dir="rtl">
-      <button class="tour-back" onclick="goTo('tour')">‹ بازگشت به صفحه تور</button>
+      <button class="tour-back" onclick="backToTour()">‹ بازگشت به صفحه تور</button>
       <div class="section-head" style="text-align:right; margin-bottom:8px;">
         <div class="eyebrow">Booking</div>
         <h2 lang="fa">رزرو تور</h2>
@@ -1817,8 +1817,25 @@
   // path for the rest of the session and every reload would land back on it
   // instead of the events page. 'not-found' is included because it is only
   // ever reached from one of those URLs, which should stay put so a refresh
-  // reproduces it.
-  const ROUTED_PAGES = ['become-host', 'host', 'not-found'];
+  // reproduces it. 'tour' is routed too (/tour/<slug>); openTour() owns its
+  // address-bar entry, and backToTour() restores it after the booking page
+  // (which drops the path to "/") sends the visitor back.
+  const ROUTED_PAGES = ['become-host', 'host', 'not-found', 'tour'];
+
+  // Default <title>/description, restored whenever we leave a tour page so a
+  // tour's title never lingers on another screen.
+  const DEFAULT_TITLE = document.title;
+  const descMeta = document.querySelector('meta[property="og:description"]');
+  const DEFAULT_DESC = descMeta ? descMeta.getAttribute('content') : '';
+  function setPageMeta(title, desc){
+    document.title = title || DEFAULT_TITLE;
+    ['meta[property="og:title"]', 'meta[name="twitter:title"]'].forEach(function(sel){
+      const m = document.querySelector(sel); if(m) m.setAttribute('content', title || DEFAULT_TITLE);
+    });
+    ['meta[property="og:description"]', 'meta[name="twitter:description"]'].forEach(function(sel){
+      const m = document.querySelector(sel); if(m) m.setAttribute('content', desc || DEFAULT_DESC);
+    });
+  }
 
   function goTo(name){
     const target = document.getElementById('page-' + name);
@@ -1826,6 +1843,7 @@
     if(ROUTED_PAGES.indexOf(name) === -1 && window.location.pathname !== '/'){
       history.replaceState(null, '', '/');
     }
+    if(name !== 'tour' && name !== 'booking') setPageMeta(null, null);
     pages.forEach(p => p.classList.remove('active'));
     target.classList.add('active');
     buttons.forEach(b => b.classList.toggle('active', b.dataset.page === name));
@@ -1996,14 +2014,32 @@
 
   let currentTour = null;
 
-  async function openTour(id){
+  // The booking page drops the address bar to "/", so returning to the tour
+  // puts its own URL back (replace, not push: it is the same page).
+  function backToTour(){
+    goTo('tour');
+    if(currentTour) history.replaceState(null, '', tourPath(currentTour.id));
+  }
+
+  // Tour ids double as URL slugs (same shape the admin enforces on create).
+  const TOUR_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const tourPath = id => '/tour/' + encodeURIComponent(id);
+
+  // updateUrl is false when the router calls this for a URL that is already in
+  // the address bar (direct load, back/forward), so history isn't doubled.
+  async function openTour(id, opts){
+    const updateUrl = !(opts && opts.updateUrl === false);
+    if(!TOUR_SLUG_RE.test(String(id || ''))){ goTo('not-found'); return; }
+    if(updateUrl && window.location.pathname !== tourPath(id)) history.pushState(null, '', tourPath(id));
     goTo('tour');
     try {
       const data = await apiGet('/tours/' + encodeURIComponent(id));
       currentTour = data.tour;
       renderTourDetail(data.tour);
+      setPageMeta(data.tour.name + ' — CHAACME', data.tour.description ? String(data.tour.description).slice(0, 160) : null);
     } catch(e){
       currentTour = null;
+      setPageMeta('این تجربه در دسترس نیست — CHAACME', null);
       document.getElementById('tourTitle').textContent = 'این تجربه در دسترس نیست';
       document.getElementById('tourDescription').textContent = '';
       renderTourHosts(null); // otherwise the previous tour's organizers stay on screen
@@ -2863,9 +2899,6 @@
       t.comingSoon ? 'به‌زودی' : [t.duration, t.priceLine].filter(Boolean).join(' · ')));
 
     if(!t.comingSoon && t.id){
-      // Tour detail has no URL of its own yet (bookmarkable /tour/<id> is a
-      // follow-up). goTo('tour') drops the address bar back to "/", so it is
-      // never left pointing at a profile the visitor has navigated away from.
       card.addEventListener('click', () => { openTour(t.id); });
     }
     return card;
@@ -3209,6 +3242,7 @@
   // load of /host/<slug> arrives here with the path intact.
 
   const HOST_PATH_RE = /^\/host\/([^/]+)\/?$/;
+  const TOUR_PATH_RE = /^\/tour\/([^/]+)\/?$/;
 
   function goHome(){
     history.replaceState(null, '', '/');
@@ -3224,6 +3258,13 @@
 
     const hostMatch = HOST_PATH_RE.exec(path);
     if(hostMatch){ openHost(decodeURIComponent(hostMatch[1])); return; }
+    const tourMatch = TOUR_PATH_RE.exec(path);
+    if(tourMatch){
+      let id = tourMatch[1];
+      try { id = decodeURIComponent(id); } catch(e){ /* leave raw; fails the slug check */ }
+      openTour(id, { updateUrl: false });
+      return;
+    }
     if(path === '/become-host' || path === '/become-host/'){ applyReset(); goTo('become-host'); return; }
     if(path === '/' || path === '') return; // home is already the active page on load
 
@@ -3248,14 +3289,14 @@
     if(!a || a.target || a.hasAttribute('download')) return;
     const href = a.getAttribute('href');
     if(!href || !href.startsWith('/')) return;
-    if(!HOST_PATH_RE.test(href) && href !== '/become-host') return;
+    if(!HOST_PATH_RE.test(href) && !TOUR_PATH_RE.test(href) && href !== '/become-host') return;
     ev.preventDefault();
     navigate(href);
   });
 
   window.addEventListener('popstate', function(){
     const path = window.location.pathname;
-    // Back out of /host/<slug> or /become-host and we are on "/" again, which
+    // Back out of /host/<slug>, /tour/<slug> or /become-host and we are on "/" again, which
     // applyRoute() deliberately ignores — so handle home explicitly here.
     if(path === '/' || path === ''){ goTo('home'); return; }
     applyRoute(path);
