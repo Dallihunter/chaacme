@@ -818,6 +818,46 @@
   .apply-gate{ max-width:560px; }
   .apply-gate-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:26px; }
 
+
+  .apply-steps{ max-width:600px; margin:0 0 34px; padding:0 22px 0 0; font-size:13.5px; line-height:2.1; color:var(--ink-soft); }
+  .kind-choice-big{ max-width:640px; }
+  .kind-choice-big .kind-opt{ padding:26px 22px 28px; }
+  .kind-choice-big .kind-opt b{ font-size:19px; }
+  .kind-choice-big .kind-opt.active{ border-width:2px; padding:25px 21px 27px; }
+  .apply-done{ max-width:600px; border:1px solid var(--ink); padding:26px 24px; }
+  .apply-done h3{ font-family:'Fraunces', serif; font-weight:400; font-size:20px; margin:0 0 12px; }
+  .apply-done p{ font-size:14px; line-height:2.05; color:var(--ink-soft); margin:0; }
+
+  /* ===== PARTNER PANEL ===== */
+  .partner-tabs{ display:flex; gap:22px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin-bottom:34px; }
+  .partner-tabs a{ padding:10px 2px; font-size:14px; color:var(--ink-faint); text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .partner-tabs a.active{ color:var(--ink); border-bottom-color:var(--ink); }
+  .partner-box{ max-width:720px; }
+  .partner-card{ border:1px solid var(--line); padding:18px 20px; margin-bottom:14px; }
+  .partner-card h3{ font-family:'Fraunces', serif; font-weight:400; font-size:17px; margin:0 0 8px; }
+  .partner-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .partner-banner{ border:1px solid var(--line); background:var(--paper); padding:14px 16px; font-size:13.5px; line-height:2; margin-bottom:22px; }
+  .partner-banner.warn{ border-color:#e3c9c6; color:#a3352b; background:#fdf7f6; }
+  .partner-published{ border:1px dashed var(--line); padding:14px 16px; margin-bottom:26px; font-size:13px; color:var(--ink-soft); line-height:2; }
+  .partner-published b{ color:var(--ink); font-weight:400; }
+  .partner-section-title{ font-family:'Fraunces', serif; font-size:16px; margin:34px 0 14px; padding-top:18px; border-top:1px solid var(--line-soft); }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  .chip{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:999px; padding:4px 6px 4px 12px; font-size:13px; }
+  .chip button{ border:0; background:none; cursor:pointer; font-size:15px; line-height:1; color:var(--ink-faint); padding:0 4px; }
+  .gal-list{ display:grid; gap:12px; margin-bottom:12px; }
+  .gal-item{ display:grid; grid-template-columns:84px 1fr auto; gap:12px; align-items:center; border:1px solid var(--line-soft); padding:8px; }
+  .gal-item .thumb{ width:84px; height:64px; background:var(--frame); overflow:hidden; }
+  .gal-item .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .gal-item input{ width:100%; padding:8px 10px; border:1px solid var(--line); font:inherit; font-size:13px; }
+  .gal-btns{ display:flex; gap:4px; }
+  .gal-btns button{ border:1px solid var(--line); background:var(--bg); cursor:pointer; width:30px; height:30px; font-size:14px; }
+  .small-btn{ font:inherit; font-size:13px; border:1px solid var(--line); background:var(--bg); padding:7px 14px; cursor:pointer; }
+  .small-btn:hover{ background:var(--paper); }
+  .phase{ font-size:11.5px; border:1px solid var(--line); border-radius:999px; padding:2px 10px; color:var(--ink-soft); }
+  .phase.past{ color:var(--ink-faint); }
+  .partner-form select{ width:100%; padding:12px 14px; border:1px solid var(--line); background:var(--bg); font:inherit; font-size:14.5px; border-radius:0; }
+  .partner-form .apply-field input[type=number]{ direction:ltr; text-align:left; }
+
   /* ===== PLACE PROFILE ===== */
   .place-facts{ display:flex; flex-wrap:wrap; gap:8px 10px; margin-bottom:18px; }
   .place-fact{
@@ -886,6 +926,7 @@
       </nav>
     </div>
     <div class="nav-right">
+      <a class="nav-auth" id="navPartnerBtn" href="/partner" style="display:none; text-decoration:none;" lang="fa">پنل همکار</a>
       <button class="nav-auth" id="navAuthBtn" onclick="goTo('login')">ثبت‌نام / ورود</button>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
         <span></span><span></span><span></span>
@@ -1691,13 +1732,19 @@
   <section style="padding-top:170px;">
     <div class="wrap">
       <div class="section-head" style="text-align:right; margin-bottom:28px;">
-        <div class="eyebrow">Become a Host</div>
-        <h2 lang="fa">برگزارکننده شوید</h2>
+        <div class="eyebrow">Partner with chaacme</div>
+        <h2 lang="fa">همکاری با چکمه</h2>
       </div>
-      <p lang="fa" style="font-size:15px; line-height:2.05; color:var(--ink-soft); max-width:560px; margin-bottom:38px;">
+      <p lang="fa" style="font-size:15px; line-height:2.05; color:var(--ink-soft); max-width:600px; margin-bottom:14px;">
         چکمه تجربه‌ها را با آدم‌ها و مکان‌ها می‌سازد: مربیان و راهنمایانی که برنامه را اجرا می‌کنند، و اقامتگاه‌ها و
-        فضاهایی که میزبان آن هستند. اگر یکی از این دو هستید، درخواست همکاری بفرستید.
+        فضاهایی که میزبان آن هستند. تیم چکمه این دو را کنار هم می‌گذارد، تجربه را طراحی و منتشر می‌کند و رزرو را
+        برعهده می‌گیرد.
       </p>
+      <ol class="apply-steps" lang="fa">
+        <li>نوع همکاری‌تان را انتخاب کنید و چند خط درباره‌ی خودتان بنویسید.</li>
+        <li>تیم چکمه درخواست را بررسی می‌کند و برایتان پروفایل می‌سازد.</li>
+        <li>از «پنل همکار» پروفایل کامل را می‌نویسید و می‌توانید ایده‌ی تجربه پیشنهاد بدهید.</li>
+      </ol>
 
       <!-- Logged out: nothing to fill in yet. A partner profile belongs to an
            account, so the account comes first. -->
@@ -1709,80 +1756,109 @@
         </div>
       </div>
 
-      <form class="apply-form" id="applyForm" autocomplete="off" style="display:none;">
-        <div class="apply-field">
-          <label lang="fa">چه چیزی را معرفی می‌کنید؟</label>
-          <div class="kind-choice">
-            <button type="button" class="kind-opt active" data-kind="person" id="applyKindPerson">
-              <b lang="fa">شخص</b><span lang="fa">مربی، راهنما، برگزارکننده</span>
-            </button>
-            <button type="button" class="kind-opt" data-kind="place" id="applyKindPlace">
-              <b lang="fa">مکان</b><span lang="fa">اقامتگاه، باغ، فضای برگزاری</span>
-            </button>
+      <div id="applyMain" style="display:none;">
+        <div class="kind-choice kind-choice-big" role="group" aria-label="نوع همکاری">
+          <button type="button" class="kind-opt" data-kind="person" id="applyKindPerson" aria-pressed="false">
+            <b lang="fa">برگزارکننده‌ام</b><span lang="fa">مربی، راهنما، هنرمند</span>
+          </button>
+          <button type="button" class="kind-opt" data-kind="place" id="applyKindPlace" aria-pressed="false">
+            <b lang="fa">میزبانم</b><span lang="fa">اقامتگاه، باغ، فضای برگزاری</span>
+          </button>
+        </div>
+
+        <form class="apply-form" id="applyForm" autocomplete="off" style="display:none;">
+          <div class="apply-field">
+            <label for="applyName" lang="fa" id="applyNameLabel">نام نمایشی</label>
+            <input type="text" id="applyName" maxlength="80" lang="fa">
+            <div class="apply-hint" lang="fa" id="applyNameHint">نامی که روی صفحه‌ی عمومی نمایش داده می‌شود.</div>
+            <div class="apply-error" id="applyNameErr"></div>
+          </div>
+
+          <div class="apply-field" id="applyExpertiseField">
+            <label for="applyExpertise" lang="fa">زمینه‌ی تخصص</label>
+            <input type="text" id="applyExpertise" maxlength="120" lang="fa" placeholder="مثلاً انیمال فلو، عکاسی، کوهنوردی">
+            <div class="apply-error" id="applyExpertiseErr"></div>
+          </div>
+
+          <div class="apply-field" id="applyLodgingField" style="display:none;">
+            <label for="applyLodging" lang="fa">نوع مکان</label>
+            <input type="text" id="applyLodging" maxlength="60" lang="fa" placeholder="مثلاً اقامتگاه بوم‌گردی">
+            <div class="apply-error" id="applyLodgingErr"></div>
+          </div>
+
+          <div class="apply-field" id="applyRegionField" style="display:none;">
+            <label for="applyRegion" lang="fa">منطقه</label>
+            <input type="text" id="applyRegion" maxlength="120" lang="fa" placeholder="مثلاً سه‌هزار، تنکابن، مازندران">
+            <div class="apply-hint" lang="fa">فقط منطقه — نشانی دقیق روی سایت منتشر نمی‌شود.</div>
+            <div class="apply-error" id="applyRegionErr"></div>
+          </div>
+
+          <div class="apply-field" id="applyCapacityField" style="display:none;">
+            <label for="applyCapacity" lang="fa">ظرفیت تقریبی (نفر)</label>
+            <input type="number" id="applyCapacity" min="1" max="500" inputmode="numeric" dir="ltr" style="text-align:left;">
+            <div class="apply-error" id="applyCapacityErr"></div>
+          </div>
+
+          <div class="apply-field">
+            <label for="applyInstagram" lang="fa">اینستاگرام (اختیاری)</label>
+            <input type="text" id="applyInstagram" maxlength="30" placeholder="username" dir="ltr" style="text-align:left;">
+            <div class="apply-hint" lang="fa">فقط نام کاربری، بدون @ و بدون لینک.</div>
+            <div class="apply-error" id="applyInstagramErr"></div>
+          </div>
+
+          <div class="apply-field">
+            <label for="applyDescription" lang="fa" id="applyDescriptionLabel">چه تجربه‌ای می‌خواهی برگزار کنی؟</label>
+            <textarea id="applyDescription" maxlength="2000" lang="fa"></textarea>
+            <div class="apply-error" id="applyDescriptionErr"></div>
+          </div>
+
+          <!-- Identity comes from the account, not from this form: a
+               submission can never claim to be someone else's phone number. -->
+          <div class="apply-field">
+            <label lang="fa">شماره تماس (از حساب شما)</label>
+            <div class="apply-readonly" id="applyAccountPhone" dir="ltr" style="text-align:left;">—</div>
+            <div class="apply-hint" lang="fa">شماره‌ی شما فقط برای تماس تیم چکمه درباره‌ی این درخواست استفاده می‌شود و نمایش داده نمی‌شود.</div>
+          </div>
+
+          <!-- Honeypot: a real person never sees or fills this. -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="applyWebsite">Website</label>
+            <input type="text" id="applyWebsite" name="website" tabindex="-1" autocomplete="off">
+          </div>
+
+          <button type="submit" class="btn-fa" id="applySubmit">ارسال درخواست</button>
+          <div class="apply-note" lang="fa" id="applyNote"></div>
+        </form>
+
+        <div class="apply-done" id="applyDone" style="display:none;" role="status">
+          <h3 lang="fa">درخواست شما ثبت شد</h3>
+          <p lang="fa">تیم چکمه درخواست را بررسی می‌کند و در صورت نیاز با شماره‌ی حساب شما تماس می‌گیرد.
+            بعد از تأیید، پروفایل شما ساخته می‌شود و از «پنل همکار» می‌توانید آن را کامل کنید: عکس، توضیحات، گالری و بقیه‌ی جزئیات.
+            هر تغییر قبل از انتشار توسط تیم چکمه بازبینی می‌شود.</p>
+          <div class="apply-gate-actions">
+            <a href="/partner" class="btn-fa" style="text-decoration:none; display:inline-block;">رفتن به پنل همکار</a>
+            <button type="button" class="btn-fa btn-ghost" id="applyAnother">ارسال درخواست دیگر</button>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+</section>
 
-        <div class="apply-field">
-          <label for="applyName" lang="fa" id="applyNameLabel">نام نمایشی</label>
-          <input type="text" id="applyName" maxlength="80" lang="fa">
-          <div class="apply-hint" lang="fa" id="applyNameHint">نامی که روی صفحه‌ی عمومی نمایش داده می‌شود.</div>
-          <div class="apply-error" id="applyNameErr"></div>
-        </div>
-
-        <!-- Identity comes from the account, not from this form: a submission
-             can never claim to be someone else's name or phone number. -->
-        <div class="apply-field">
-          <label lang="fa">حساب شما</label>
-          <div class="apply-readonly" id="applyAccountName" lang="fa">—</div>
-        </div>
-
-        <div class="apply-field">
-          <label lang="fa">شماره تماس</label>
-          <div class="apply-readonly" id="applyAccountPhone" dir="ltr" style="text-align:left;">—</div>
-          <div class="apply-hint" lang="fa">شماره‌ی شما فقط برای تماس تیم چکمه درباره‌ی این درخواست استفاده می‌شود و نمایش داده نمی‌شود.</div>
-        </div>
-
-        <div class="apply-field" id="applyExpertiseField">
-          <label for="applyExpertise" lang="fa">زمینه‌ی تخصص (اختیاری)</label>
-          <input type="text" id="applyExpertise" maxlength="120" lang="fa" placeholder="مثلاً کوهنوردی، عکاسی، آشپزی">
-          <div class="apply-error" id="applyExpertiseErr"></div>
-        </div>
-
-        <div class="apply-field" id="applyLodgingField" style="display:none;">
-          <label for="applyLodging" lang="fa">نوع مکان (اختیاری)</label>
-          <input type="text" id="applyLodging" maxlength="60" lang="fa" placeholder="مثلاً اقامتگاه بوم‌گردی">
-          <div class="apply-error" id="applyLodgingErr"></div>
-        </div>
-
-        <div class="apply-field" id="applyRegionField" style="display:none;">
-          <label for="applyRegion" lang="fa">منطقه</label>
-          <input type="text" id="applyRegion" maxlength="120" lang="fa" placeholder="مثلاً سه‌هزار، تنکابن، مازندران">
-          <div class="apply-hint" lang="fa">فقط منطقه — نشانی دقیق روی سایت منتشر نمی‌شود.</div>
-          <div class="apply-error" id="applyRegionErr"></div>
-        </div>
-
-        <div class="apply-field">
-          <label for="applyInstagram" lang="fa">اینستاگرام (اختیاری)</label>
-          <input type="text" id="applyInstagram" maxlength="30" placeholder="username" dir="ltr" style="text-align:left;">
-          <div class="apply-hint" lang="fa">فقط نام کاربری، بدون @ و بدون لینک.</div>
-          <div class="apply-error" id="applyInstagramErr"></div>
-        </div>
-
-        <div class="apply-field">
-          <label for="applyDescription" lang="fa" id="applyDescriptionLabel">چه تجربه‌ای می‌خواهید برگزار کنید؟</label>
-          <textarea id="applyDescription" maxlength="2000" lang="fa"></textarea>
-          <div class="apply-error" id="applyDescriptionErr"></div>
-        </div>
-
-        <!-- Honeypot: a real person never sees or fills this. -->
-        <div class="hp-field" aria-hidden="true">
-          <label for="applyWebsite">Website</label>
-          <input type="text" id="applyWebsite" name="website" tabindex="-1" autocomplete="off">
-        </div>
-
-        <button type="submit" class="btn-fa" id="applySubmit">ارسال درخواست</button>
-        <div class="apply-note" lang="fa" id="applyNote"></div>
-      </form>
+<!-- ============ PARTNER PANEL (/partner...) ============ -->
+<section class="page" id="page-partner">
+  <section style="padding-top:170px;">
+    <div class="wrap" dir="rtl">
+      <div class="section-head" style="text-align:right; margin-bottom:22px;">
+        <div class="eyebrow">Partner panel</div>
+        <h2 lang="fa">پنل همکار</h2>
+      </div>
+      <nav class="partner-tabs" id="partnerTabs" lang="fa" style="display:none;">
+        <a href="/partner" data-tab="dashboard">پروفایل‌ها</a>
+        <a href="/partner/experiences" data-tab="experiences">تجربه‌های من</a>
+        <a href="/partner/propose" data-tab="propose">پیشنهاد یک تجربه</a>
+      </nav>
+      <div id="partnerRoot"></div>
     </div>
   </section>
 </section>
@@ -1820,7 +1896,7 @@
   // reproduces it. 'tour' is routed too (/tour/<slug>); openTour() owns its
   // address-bar entry, and backToTour() restores it after the booking page
   // (which drops the path to "/") sends the visitor back.
-  const ROUTED_PAGES = ['become-host', 'host', 'not-found', 'tour'];
+  const ROUTED_PAGES = ['become-host', 'host', 'not-found', 'tour', 'partner'];
 
   // Default <title>/description, restored whenever we leave a tour page so a
   // tour's title never lingers on another screen.
@@ -2279,11 +2355,15 @@
   // unexpected.
   let pendingAfterAuth = null;
 
+  let sessionChecked = false;
   function setCurrentUser(user){
     currentUser = user;
+    sessionChecked = true;
     updateAccountPage();
     updateNavAuth();
     applyUpdateGate();
+    refreshPartnerNav();
+    if(document.getElementById('page-partner').classList.contains('active') && !(user && pendingAfterAuth)) renderPartner(window.location.pathname);
     if(user && pendingAfterAuth){
       const target = pendingAfterAuth;
       pendingAfterAuth = null;
@@ -2301,7 +2381,9 @@
       setCurrentUser(data.user);
     } catch(e){
       currentUser = null;
+      sessionChecked = true;
       updateNavAuth();
+      if(document.getElementById('page-partner').classList.contains('active')) renderPartner(window.location.pathname);
     }
   }
 
@@ -2563,6 +2645,15 @@
       return;
     }
 
+    if(profiles.length){
+      const lk = el('div', 'acct-item-meta');
+      lk.lang = 'fa';
+      const pa = document.createElement('a');
+      pa.href = '/partner';
+      pa.textContent = 'ورود به پنل همکار';
+      lk.appendChild(pa);
+      box.appendChild(lk);
+    }
     profiles.forEach(h => {
       const active = h.status === 'active';
       box.appendChild(acctItem(
@@ -3089,12 +3180,12 @@
   }
 
   // --- Become a partner: application form ---------------------------------
-  // Two kinds share one form. Only the fields that mean something for the
-  // chosen kind are shown, and only those are sent — the server drops the
-  // rest anyway, so showing them would just invite people to fill in
-  // something that is never stored.
-  const APPLY_FIELDS = ['Name', 'Instagram', 'Expertise', 'Description', 'Region', 'Lodging'];
-  let applyKind = 'person';
+  // Two kinds share one form, shown only after one of the two big cards is
+  // chosen. Only the fields that mean something for the chosen kind are shown
+  // and sent — the server drops the rest anyway, so showing them would just
+  // invite people to fill in something that is never stored.
+  const APPLY_FIELDS = ['Name', 'Instagram', 'Expertise', 'Description', 'Region', 'Lodging', 'Capacity'];
+  let applyKind = null;
 
   function applyClearErrors(){
     APPLY_FIELDS.forEach(f => {
@@ -3106,22 +3197,25 @@
   }
 
   function applySetKind(kind){
-    applyKind = kind === 'place' ? 'place' : 'person';
+    applyKind = kind === 'place' ? 'place' : (kind === 'person' ? 'person' : null);
     const isPlace = applyKind === 'place';
-    document.querySelectorAll('#applyForm .kind-opt').forEach(function(btn){
+    document.querySelectorAll('#applyMain .kind-opt').forEach(function(btn){
       btn.classList.toggle('active', btn.dataset.kind === applyKind);
       btn.setAttribute('aria-pressed', btn.dataset.kind === applyKind ? 'true' : 'false');
     });
+    document.getElementById('applyForm').style.display = applyKind ? '' : 'none';
+    document.getElementById('applyDone').style.display = 'none';
     document.getElementById('applyNameLabel').textContent = isPlace ? 'نام مکان' : 'نام نمایشی';
     document.getElementById('applyNameHint').textContent = isPlace
       ? 'نامی که مکان با آن روی سایت معرفی می‌شود.'
       : 'نامی که روی صفحه‌ی عمومی نمایش داده می‌شود.';
     document.getElementById('applyDescriptionLabel').textContent = isPlace
-      ? 'مکان را توصیف کنید'
-      : 'چه تجربه‌ای می‌خواهید برگزار کنید؟';
+      ? 'چه چیزی این مکان را خاص می‌کند؟'
+      : 'چه تجربه‌ای می‌خواهی برگزار کنی؟';
     document.getElementById('applyExpertiseField').style.display = isPlace ? 'none' : '';
-    document.getElementById('applyLodgingField').style.display = isPlace ? '' : 'none';
-    document.getElementById('applyRegionField').style.display = isPlace ? '' : 'none';
+    ['Lodging', 'Region', 'Capacity'].forEach(function(f){
+      document.getElementById('apply' + f + 'Field').style.display = isPlace ? '' : 'none';
+    });
     applyClearErrors();
   }
 
@@ -3129,14 +3223,12 @@
   // reason and the two ways out of it — not a form that will 401.
   function applyUpdateGate(){
     const gate = document.getElementById('applyGate');
-    const form = document.getElementById('applyForm');
-    if(!gate || !form) return;
+    const main = document.getElementById('applyMain');
+    if(!gate || !main) return;
     const signedIn = !!currentUser;
     gate.style.display = signedIn ? 'none' : '';
-    form.style.display = signedIn ? '' : 'none';
+    main.style.display = signedIn ? '' : 'none';
     if(signedIn){
-      document.getElementById('applyAccountName').textContent =
-        (currentUser.firstName || '') + ' ' + (currentUser.lastName || '');
       document.getElementById('applyAccountPhone').textContent = toFaNum(currentUser.phone || '');
     }
   }
@@ -3144,8 +3236,7 @@
   function applyReset(){
     const form = document.getElementById('applyForm');
     if(form) form.reset();
-    applySetKind('person');
-    applyClearErrors();
+    applySetKind(null);
     applyUpdateGate();
   }
 
@@ -3156,6 +3247,7 @@
     expertise: { id: 'applyExpertiseErr', msg: 'زمینه‌ی تخصص طولانی‌تر از حد مجاز است.' },
     lodgingType: { id: 'applyLodgingErr', msg: 'نوع مکان طولانی‌تر از حد مجاز است.' },
     region: { id: 'applyRegionErr', msg: 'منطقه را وارد کنید (حداکثر ۱۲۰ نویسه).' },
+    capacityGuests: { id: 'applyCapacityErr', msg: 'ظرفیت باید عددی بین ۱ تا ۵۰۰ باشد.' },
     description: { id: 'applyDescriptionErr', msg: 'توضیحات را کامل‌تر بنویسید (حداقل ۱۰ و حداکثر ۲۰۰۰ نویسه).' }
   };
 
@@ -3171,6 +3263,8 @@
     if(isPlace){
       base.region = document.getElementById('applyRegion').value.trim();
       base.lodgingType = document.getElementById('applyLodging').value.trim();
+      const cap = document.getElementById('applyCapacity').value.trim();
+      if(cap) base.capacityGuests = Number(cap);
     } else {
       base.expertise = document.getElementById('applyExpertise').value.trim();
     }
@@ -3179,6 +3273,7 @@
 
   async function submitApplication(ev){
     if(ev) ev.preventDefault();
+    if(!applyKind) return;
     applyClearErrors();
     const btn = document.getElementById('applySubmit');
     const note = document.getElementById('applyNote');
@@ -3186,12 +3281,13 @@
     try {
       await apiPost('/host-applications', applyPayload());
       // The API answers the same way for a genuine submission, a duplicate and
-      // a honeypot hit, so this message is all we can honestly say.
+      // a honeypot hit, so the success text promises nothing beyond "received".
       document.getElementById('applyForm').reset();
-      // Clears the field errors too, so the note below must come after it.
-      applySetKind(applyKind);
-      note.className = 'apply-note ok';
-      note.textContent = 'درخواست شما ثبت شد. تیم چکمه بررسی می‌کند و در صورت نیاز تماس می‌گیرد.';
+      document.getElementById('applyForm').style.display = 'none';
+      document.querySelectorAll('#applyMain .kind-opt').forEach(function(b){ b.classList.remove('active'); });
+      document.getElementById('applyDone').style.display = '';
+      document.getElementById('applyDone').scrollIntoView({ block: 'nearest' });
+      applyKind = null;
     } catch(e){
       if(e.status === 401){
         // The session expired between loading the page and submitting it.
@@ -3219,9 +3315,11 @@
     }
   }
 
-  document.querySelectorAll('#applyForm .kind-opt').forEach(function(btn){
+  document.querySelectorAll('#applyMain .kind-opt').forEach(function(btn){
     btn.addEventListener('click', function(){ applySetKind(btn.dataset.kind); });
   });
+  const applyAnotherBtn = document.getElementById('applyAnother');
+  if(applyAnotherBtn) applyAnotherBtn.addEventListener('click', function(){ applyReset(); });
 
   function applyGateGo(page){
     pendingAfterAuth = '/become-host';
@@ -3234,6 +3332,559 @@
 
   const applyFormEl = document.getElementById('applyForm');
   if(applyFormEl) applyFormEl.addEventListener('submit', submitApplication);
+
+  // --- Partner panel (/partner, /partner/profile/<slug>, /partner/experiences, /partner/propose) ---
+  // Everything rendered here comes from the owner-scoped /api/partner/* and
+  // /api/me/* endpoints, and every piece of server text is put on the page
+  // with textContent (el()) — never innerHTML. The server re-checks ownership
+  // on every request; this UI only decides what to show.
+  const PARTNER_PATH_RE = /^\/partner(?:\/(experiences|propose)|\/profile\/([a-z0-9-]+))?\/?$/;
+  const PARTNER_STATUS_FA = { active: 'فعال', hidden: 'پنهان' };
+  const ROLE_FA = { lead: 'برگزارکننده', co_host: 'همراه برگزارکننده', venue: 'محل برگزاری' };
+  const PHASE_FA = { upcoming: 'پیشِ رو', past: 'برگزار شده', undated: 'تاریخ مشخص نشده' };
+  const PROPOSAL_STATUS_FA = { new: 'جدید', in_discussion: 'در حال گفتگو', accepted: 'پذیرفته شد', declined: 'در این مرحله ممکن نشد' };
+  const COUNTERPART_FA = { none: 'فرقی نمی‌کند', person: 'یک برگزارکننده', place: 'یک مکان' };
+  let partnerOwns = false;
+  let partnerRenderId = 0;
+
+  function pApi(method, path, body){
+    const opts = { method: method, credentials: 'same-origin', headers: {} };
+    if(body instanceof FormData){ opts.body = body; }
+    else if(body !== undefined){ opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    return fetch('/api' + path, opts).then(async function(res){
+      let data = null;
+      try { data = await res.json(); } catch(e){ /* no body */ }
+      if(!res.ok){
+        const err = new Error((data && data.error) || 'http_' + res.status);
+        err.status = res.status; err.data = data;
+        throw err;
+      }
+      return data;
+    });
+  }
+
+  async function refreshPartnerNav(){
+    const btn = document.getElementById('navPartnerBtn');
+    partnerOwns = false;
+    if(currentUser){
+      try { partnerOwns = ((await apiGet('/me/profiles')).profiles || []).length > 0; } catch(e){ /* keep false */ }
+    }
+    if(btn) btn.style.display = partnerOwns ? '' : 'none';
+  }
+
+  function faText(node, text){ node.lang = 'fa'; node.textContent = text; return node; }
+  function pBox(){ const b = el('div', 'partner-box'); b.lang = 'fa'; return b; }
+  function pLink(href, text, cls){ const a = el('a', cls || null, text); a.href = href; return a; }
+  function pPill(text, warn){ const p = el('span', 'acct-pill' + (warn ? ' warn' : ''), text); p.lang = 'fa'; return p; }
+
+  function partnerSetTab(tab){
+    document.querySelectorAll('#partnerTabs a').forEach(function(a){ a.classList.toggle('active', a.dataset.tab === tab); });
+  }
+
+  function partnerMessage(root, text, linkHref, linkText, onClick){
+    root.replaceChildren();
+    const box = pBox();
+    box.appendChild(faText(el('p', 'auth-sub'), text));
+    if(linkHref){
+      const a = pLink(linkHref, linkText, 'btn-fa');
+      a.style.cssText = 'text-decoration:none; display:inline-block;';
+      if(onClick) a.addEventListener('click', onClick);
+      box.appendChild(a);
+    }
+    root.appendChild(box);
+  }
+
+  async function renderPartner(path){
+    const root = document.getElementById('partnerRoot');
+    const tabs = document.getElementById('partnerTabs');
+    if(!root) return;
+    const myId = ++partnerRenderId;
+    const m = PARTNER_PATH_RE.exec(path || window.location.pathname) || [];
+    tabs.style.display = 'none';
+    if(!currentUser){
+      if(!sessionChecked){ root.replaceChildren(); return; }
+      partnerMessage(root, 'برای ورود به پنل همکار ابتدا وارد حساب‌تان شوید.', '#', 'ورود به حساب', function(ev){
+        ev.preventDefault(); pendingAfterAuth = '/partner'; goTo('login');
+      });
+      return;
+    }
+    let profiles = [], applications = [];
+    try {
+      const [p, a] = await Promise.all([apiGet('/me/profiles'), apiGet('/me/applications')]);
+      profiles = p.profiles || []; applications = a.applications || [];
+    } catch(e){
+      partnerMessage(root, 'بارگذاری پنل ممکن نشد. لطفاً دوباره تلاش کنید.');
+      return;
+    }
+    if(myId !== partnerRenderId) return;
+    partnerOwns = profiles.length > 0;
+    const navBtn = document.getElementById('navPartnerBtn');
+    if(navBtn) navBtn.style.display = partnerOwns ? '' : 'none';
+
+    if(!profiles.length){
+      root.replaceChildren();
+      const box = pBox();
+      const pending = applications.filter(function(a){ return a.status === 'pending'; });
+      if(pending.length){
+        box.appendChild(faText(el('p', 'auth-sub'), 'درخواست همکاری شما در حال بررسی است. بعد از تأیید تیم چکمه، پروفایل شما اینجا ظاهر می‌شود.'));
+        pending.forEach(function(a){
+          box.appendChild(acctItem(a.name || '', [{ text: KIND_FA[a.kind] || a.kind }, { text: 'در حال بررسی', warn: true }],
+            ['ارسال‌شده در ' + toFaNum(String(a.createdAt || '').slice(0, 10))]));
+        });
+      } else {
+        box.appendChild(faText(el('p', 'auth-sub'), 'پنل همکار برای برگزارکنندگان و میزبانانی است که پروفایلشان توسط چکمه ساخته شده است. هنوز پروفایلی به حساب شما وصل نیست.'));
+      }
+      const a = pLink('/become-host', 'درخواست همکاری با چکمه', 'btn-fa');
+      a.style.cssText = 'text-decoration:none; display:inline-block; margin-top:18px;';
+      box.appendChild(a);
+      root.appendChild(box);
+      return;
+    }
+
+    tabs.style.display = '';
+    if(m[2]){ partnerSetTab('dashboard'); return renderPartnerProfile(root, m[2], myId); }
+    if(m[1] === 'experiences'){ partnerSetTab('experiences'); return renderPartnerExperiences(root, profiles, myId); }
+    if(m[1] === 'propose'){ partnerSetTab('propose'); return renderPartnerPropose(root, profiles, myId); }
+    partnerSetTab('dashboard');
+    renderPartnerDashboard(root, profiles, applications);
+  }
+
+  function renderPartnerDashboard(root, profiles, applications){
+    root.replaceChildren();
+    const box = pBox();
+    profiles.forEach(function(h){
+      const card = el('div', 'partner-card');
+      const top = el('div', 'acct-item-top');
+      top.appendChild(faText(el('h3'), h.displayName || ''));
+      top.appendChild(pPill(KIND_FA[h.kind] || h.kind));
+      top.appendChild(pPill(PARTNER_STATUS_FA[h.status] || h.status, h.status !== 'active'));
+      if(h.verified) top.appendChild(pPill('تأییدشده'));
+      if(h.hasPendingRevision) top.appendChild(pPill('تغییرات در انتظار بازبینی', true));
+      card.appendChild(top);
+      if(h.status !== 'active'){
+        card.appendChild(faText(el('div', 'acct-item-meta'), 'این پروفایل تا زمانی که تیم چکمه آن را فعال کند روی سایت دیده نمی‌شود.'));
+      }
+      const actions = el('div', 'partner-actions');
+      if(PARTNER_SLUG_RE.test(String(h.slug || ''))){
+        const edit = pLink('/partner/profile/' + h.slug, 'ویرایش پروفایل', 'btn-fa');
+        edit.style.cssText = 'text-decoration:none; display:inline-block;';
+        actions.appendChild(edit);
+        if(h.status === 'active'){
+          const view = pLink('/host/' + h.slug, 'صفحه‌ی عمومی', 'btn-fa btn-ghost');
+          view.style.cssText = 'text-decoration:none; display:inline-block;';
+          actions.appendChild(view);
+        }
+      }
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+    applications.filter(function(a){ return a.status === 'pending'; }).forEach(function(a){
+      box.appendChild(acctItem(a.name || '', [{ text: KIND_FA[a.kind] || a.kind }, { text: 'درخواست در حال بررسی', warn: true }],
+        ['ارسال‌شده در ' + toFaNum(String(a.createdAt || '').slice(0, 10))]));
+    });
+    root.appendChild(box);
+  }
+  const PARTNER_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+  // --- small form builders -------------------------------------------------
+  function pField(label, control, hint, name){
+    const wrap = el('div', 'apply-field');
+    const lab = el('label', null, label); lab.lang = 'fa';
+    wrap.appendChild(lab);
+    wrap.appendChild(control);
+    if(hint) wrap.appendChild(faText(el('div', 'apply-hint'), hint));
+    const err = el('div', 'apply-error'); err.dataset.f = name || '';
+    wrap.appendChild(err);
+    return wrap;
+  }
+  function pInput(value, max, opts){
+    const i = document.createElement('input');
+    i.type = (opts && opts.type) || 'text';
+    if(max) i.maxLength = max;
+    if(opts && opts.min != null) i.min = opts.min;
+    if(opts && opts.max != null) i.max = opts.max;
+    if(opts && opts.step) i.step = opts.step;
+    if(opts && opts.ltr){ i.dir = 'ltr'; i.style.textAlign = 'left'; }
+    i.lang = 'fa';
+    i.value = value == null ? '' : String(value);
+    return i;
+  }
+  function pTextarea(value, max){
+    const t = document.createElement('textarea');
+    t.maxLength = max; t.lang = 'fa';
+    t.value = value == null ? '' : value;
+    return t;
+  }
+  function chipsInput(initial, max, maxLen){
+    const wrap = el('div');
+    const list = el('div', 'chips');
+    const input = pInput('', maxLen);
+    const add = el('button', 'small-btn', 'افزودن'); add.type = 'button'; add.lang = 'fa';
+    const row = el('div'); row.style.cssText = 'display:flex; gap:8px;';
+    row.appendChild(input); row.appendChild(add);
+    let items = (initial || []).slice(0, max);
+    function paint(){
+      list.replaceChildren();
+      items.forEach(function(t, idx){
+        const chip = el('span', 'chip'); chip.lang = 'fa';
+        chip.appendChild(document.createTextNode(t));
+        const x = el('button', null, '×'); x.type = 'button'; x.setAttribute('aria-label', 'حذف');
+        x.addEventListener('click', function(){ items.splice(idx, 1); paint(); });
+        chip.appendChild(x);
+        list.appendChild(chip);
+      });
+    }
+    function commit(){
+      const v = input.value.trim();
+      if(v && items.length < max && items.indexOf(v) === -1) items.push(v);
+      input.value = '';
+      paint();
+    }
+    add.addEventListener('click', commit);
+    input.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter' || ev.key === ','){ ev.preventDefault(); commit(); }
+    });
+    wrap.appendChild(list); wrap.appendChild(row);
+    paint();
+    return { node: wrap, get: function(){ commit(); return items.slice(); } };
+  }
+  // The server only ever returns /images/... paths; this is the same shape
+  // check as PHOTO_PATH_RE so a malformed value never becomes an <img src>.
+  function pThumb(path){
+    const t = el('div', 'thumb');
+    if(PHOTO_PATH_RE.test(String(path || ''))){
+      const img = document.createElement('img'); img.src = path; img.alt = ''; img.loading = 'lazy';
+      t.appendChild(img);
+    }
+    return t;
+  }
+  async function pUpload(slug, file){
+    const fd = new FormData(); fd.append('file', file);
+    return (await pApi('POST', '/partner/profiles/' + slug + '/upload', fd)).path;
+  }
+
+  const PROFILE_ERR_FA = {
+    length: 'طول متن مجاز نیست.', range: 'مقدار خارج از محدوده است.', format: 'قالب مقدار درست نیست.',
+    type: 'مقدار نامعتبر است.', item_length: 'یکی از موارد بیش از حد طولانی است.', incomplete: 'عرض و طول جغرافیایی را با هم وارد کنید.',
+    missing_upload: 'یکی از تصویرها پیدا نشد؛ دوباره بارگذاری کنید.'
+  };
+
+  async function renderPartnerProfile(root, slug, myId){
+    root.replaceChildren();
+    let view;
+    try { view = await pApi('GET', '/partner/profiles/' + encodeURIComponent(slug)); }
+    catch(e){
+      if(myId !== partnerRenderId) return;
+      // Someone else's slug and a missing one are indistinguishable on purpose.
+      partnerMessage(root, 'این پروفایل پیدا نشد یا به حساب شما تعلق ندارد.', '/partner', 'بازگشت به پنل');
+      return;
+    }
+    if(myId !== partnerRenderId) return;
+    const prof = view.profile;
+    const isPlace = prof.kind === 'place';
+    const pending = view.pendingRevision;
+    const src = pending ? Object.assign({}, prof, pending.payload) : prof;
+    const box = pBox();
+    box.appendChild(faText(el('h3', 'acct-subhead'), prof.displayName));
+    const head = el('div', 'acct-item-top');
+    head.appendChild(pPill(KIND_FA[prof.kind] || prof.kind));
+    head.appendChild(pPill(PARTNER_STATUS_FA[prof.status] || prof.status, prof.status !== 'active'));
+    box.appendChild(head);
+
+    const banner = el('div', 'partner-banner'); banner.lang = 'fa';
+    if(pending){
+      banner.textContent = 'تغییرات ارسال‌شده‌ی شما در انتظار بازبینی تیم چکمه است. تا تأیید، نسخه‌ی منتشرشده در سایت تغییری نمی‌کند. فرم زیر نسخه‌ی در انتظار را نشان می‌دهد؛ ارسال دوباره آن را جایگزین می‌کند.';
+    } else if(view.lastReview && view.lastReview.status === 'rejected'){
+      banner.className = 'partner-banner warn';
+      banner.textContent = 'آخرین تغییرات شما پذیرفته نشد' + (view.lastReview.adminNote ? ': ' + view.lastReview.adminNote : '.');
+    } else {
+      banner.textContent = 'هر تغییری که ذخیره کنید ابتدا توسط تیم چکمه بازبینی می‌شود و بعد منتشر می‌شود.';
+    }
+    box.appendChild(banner);
+    if(pending){
+      const wd = el('button', 'small-btn', 'پس‌گرفتن تغییرات در انتظار'); wd.type = 'button'; wd.lang = 'fa';
+      wd.addEventListener('click', async function(){
+        wd.disabled = true;
+        try { await pApi('DELETE', '/partner/profiles/' + slug + '/revision'); } catch(e){ /* reload shows truth */ }
+        renderPartnerProfile(root, slug, ++partnerRenderId);
+      });
+      box.appendChild(wd);
+    }
+
+    // What is live right now, kept visible next to the edit form.
+    const pubBox = el('div', 'partner-published'); pubBox.lang = 'fa';
+    const pubLine = function(label, value){
+      const d = el('div'); d.appendChild(el('b', null, label + ': ')); d.appendChild(document.createTextNode(value || '—')); pubBox.appendChild(d);
+    };
+    pubBox.appendChild(el('div', null, 'نسخه‌ی منتشرشده'));
+    pubLine('نام', prof.displayName);
+    pubLine('درباره', (prof.bio || '').slice(0, 160));
+    if(isPlace){
+      pubLine('منطقه', prof.region); pubLine('نوع مکان', prof.lodgingType);
+      pubLine('ظرفیت', prof.capacityGuests ? toFaNum(prof.capacityGuests) + ' نفر' : '');
+      pubLine('گالری', toFaNum((prof.media || []).length) + ' تصویر');
+    } else {
+      pubLine('تخصص', prof.expertise);
+    }
+    box.appendChild(pubBox);
+
+    const form = el('form', 'apply-form partner-form'); form.autocomplete = 'off'; form.style.maxWidth = '620px';
+    form.noValidate = true;
+
+    // photo
+    let photoPath = src.photoPath || null;
+    const photoWrap = el('div');
+    const photoPrev = el('div', 'gal-item'); photoPrev.style.gridTemplateColumns = '84px 1fr';
+    const photoCtl = el('div');
+    const photoFile = document.createElement('input'); photoFile.type = 'file'; photoFile.accept = 'image/jpeg,image/png,image/webp';
+    const photoMsg = faText(el('div', 'apply-hint'), '');
+    function paintPhoto(){
+      photoPrev.replaceChildren(pThumb(photoPath), photoCtl);
+    }
+    const photoClear = el('button', 'small-btn', 'حذف عکس'); photoClear.type = 'button'; photoClear.lang = 'fa';
+    photoClear.addEventListener('click', function(){ photoPath = null; paintPhoto(); });
+    photoFile.addEventListener('change', async function(){
+      if(!photoFile.files[0]) return;
+      photoMsg.textContent = 'در حال بارگذاری…';
+      try { photoPath = await pUpload(slug, photoFile.files[0]); photoMsg.textContent = 'بارگذاری شد؛ بعد از تأیید چکمه منتشر می‌شود.'; paintPhoto(); }
+      catch(e){ photoMsg.textContent = e.status === 422 || e.status === 413 ? 'فقط تصویر JPG، PNG یا WebP تا ۵ مگابایت.' : 'بارگذاری ممکن نشد.'; }
+      photoFile.value = '';
+    });
+    photoCtl.appendChild(photoFile); photoCtl.appendChild(photoClear); photoCtl.appendChild(photoMsg);
+    paintPhoto();
+    photoWrap.appendChild(photoPrev);
+    form.appendChild(pField(isPlace ? 'تصویر شاخص' : 'عکس شما', photoWrap, null, 'photoPath'));
+
+    const fName = pInput(src.displayName, 80);
+    form.appendChild(pField(isPlace ? 'نام مکان' : 'نام نمایشی', fName, null, 'displayName'));
+    const fBio = pTextarea(src.bio, 1500);
+    form.appendChild(pField('درباره', fBio, 'تا ۱۵۰۰ نویسه.', 'bio'));
+    const fIg = pInput(src.instagramHandle, 30, { ltr: true });
+    form.appendChild(pField('اینستاگرام', fIg, 'فقط نام کاربری، بدون @ و بدون لینک.', 'instagramHandle'));
+
+    let fExpertise, fCred, chipsSeeking, fLodging, fRegion, fCap, chipsAmen, fRules, chipsAccept, fLat, fLng, gallery;
+    if(!isPlace){
+      fExpertise = pInput(src.expertise, 120);
+      form.appendChild(pField('زمینه‌ی تخصص', fExpertise, null, 'expertise'));
+      fCred = pTextarea(src.credentials, 600);
+      form.appendChild(pField('سوابق و گواهینامه‌ها', fCred, 'تا ۶۰۰ نویسه. فقط تیم چکمه این بخش را می‌بیند.', 'credentials'));
+      chipsSeeking = chipsInput(src.seekingPlaceTypes, 10, 40);
+      form.appendChild(pField('چه نوع مکانی می‌خواهید؟', chipsSeeking.node, 'مثلاً «اقامتگاه جنگلی». فقط برای تیم چکمه و هنگام جور کردن برنامه‌ها استفاده می‌شود و منتشر نمی‌شود.', 'seekingPlaceTypes'));
+    } else {
+      fLodging = pInput(src.lodgingType, 60);
+      form.appendChild(pField('نوع مکان', fLodging, null, 'lodgingType'));
+      fRegion = pInput(src.region, 120);
+      form.appendChild(pField('منطقه', fRegion, null, 'region'));
+      fCap = pInput(src.capacityGuests, null, { type: 'number', min: 1, max: 500, ltr: true });
+      form.appendChild(pField('ظرفیت (نفر)', fCap, 'عددی بین ۱ تا ۵۰۰.', 'capacityGuests'));
+      chipsAmen = chipsInput(src.amenities, 20, 40);
+      form.appendChild(pField('امکانات', chipsAmen.node, 'مثلاً «آب گرم»، «آتش‌گاه».', 'amenities'));
+      fRules = pTextarea(src.houseRules, 1000);
+      form.appendChild(pField('قوانین اقامتگاه', fRules, 'تا ۱۰۰۰ نویسه.', 'houseRules'));
+      chipsAccept = chipsInput(src.acceptsExperienceTypes, 10, 40);
+      form.appendChild(pField('چه تجربه‌هایی را می‌پذیرید؟', chipsAccept.node, 'مثلاً «ریتریت حرکتی»، «کارگاه هنری». فقط برای تیم چکمه است و منتشر نمی‌شود.', 'acceptsExperienceTypes'));
+
+      form.appendChild(faText(el('div', 'partner-section-title'), 'موقعیت روی نقشه'));
+      fLat = pInput(src.latitude, null, { type: 'number', step: 'any', ltr: true });
+      fLng = pInput(src.longitude, null, { type: 'number', step: 'any', ltr: true });
+      const geoRow = el('div', 'acct-edit-row');
+      const f1 = pField('عرض جغرافیایی', fLat, null, 'latitude');
+      const f2 = pField('طول جغرافیایی', fLng, null, 'longitude');
+      geoRow.appendChild(f1); geoRow.appendChild(f2);
+      form.appendChild(geoRow);
+      form.appendChild(faText(el('div', 'apply-hint'), 'مختصات دقیقی که اینجا وارد می‌کنید فقط برای شما و تیم چکمه قابل مشاهده است. روی سایت فقط موقعیت تقریبی نمایش داده می‌شود.'));
+      const coordErr = el('div', 'apply-error'); coordErr.dataset.f = 'coordinates'; form.appendChild(coordErr);
+
+      form.appendChild(faText(el('div', 'partner-section-title'), 'گالری'));
+      gallery = (src.media || []).map(function(m){ return { photoPath: m.photoPath, caption: m.caption || '' }; });
+      const galList = el('div', 'gal-list');
+      const galErr = el('div', 'apply-error'); galErr.dataset.f = 'media';
+      const paintGallery = function(){
+        galList.replaceChildren();
+        gallery.forEach(function(item, idx){
+          const row = el('div', 'gal-item');
+          row.appendChild(pThumb(item.photoPath));
+          const cap = pInput(item.caption, 120); cap.placeholder = 'توضیح کوتاه تصویر';
+          cap.addEventListener('input', function(){ item.caption = cap.value; });
+          row.appendChild(cap);
+          const btns = el('div', 'gal-btns');
+          const mk = function(txt, label, fn){ const b = el('button', null, txt); b.type = 'button'; b.setAttribute('aria-label', label); b.addEventListener('click', fn); return b; };
+          btns.appendChild(mk('↑', 'بالا', function(){ if(idx > 0){ gallery.splice(idx - 1, 0, gallery.splice(idx, 1)[0]); paintGallery(); } }));
+          btns.appendChild(mk('↓', 'پایین', function(){ if(idx < gallery.length - 1){ gallery.splice(idx + 1, 0, gallery.splice(idx, 1)[0]); paintGallery(); } }));
+          btns.appendChild(mk('×', 'حذف', function(){ gallery.splice(idx, 1); paintGallery(); }));
+          row.appendChild(btns);
+          galList.appendChild(row);
+        });
+        if(!gallery.length) galList.appendChild(faText(el('div', 'empty-note'), 'هنوز تصویری در گالری نیست.'));
+      };
+      paintGallery();
+      form.appendChild(galList);
+      const galFile = document.createElement('input'); galFile.type = 'file'; galFile.accept = 'image/jpeg,image/png,image/webp'; galFile.multiple = true;
+      const galMsg = faText(el('div', 'apply-hint'), 'JPG، PNG یا WebP، هر کدام تا ۵ مگابایت و حداکثر ۲۴ تصویر.');
+      galFile.addEventListener('change', async function(){
+        const files = Array.prototype.slice.call(galFile.files);
+        for(const f of files){
+          if(gallery.length >= 24){ galMsg.textContent = 'حداکثر ۲۴ تصویر.'; break; }
+          galMsg.textContent = 'در حال بارگذاری…';
+          try { gallery.push({ photoPath: await pUpload(slug, f), caption: '' }); galMsg.textContent = 'بارگذاری شد؛ بعد از تأیید چکمه منتشر می‌شود.'; }
+          catch(e){ galMsg.textContent = 'بارگذاری یک تصویر ممکن نشد (فقط JPG، PNG یا WebP تا ۵ مگابایت).'; }
+        }
+        galFile.value = '';
+        paintGallery();
+      });
+      form.appendChild(galFile); form.appendChild(galMsg); form.appendChild(galErr);
+    }
+
+    const submit = el('button', 'btn-fa', 'ارسال برای بازبینی'); submit.type = 'submit'; submit.lang = 'fa';
+    const note = el('div', 'apply-note'); note.lang = 'fa';
+    form.appendChild(submit); form.appendChild(note);
+
+    form.addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      form.querySelectorAll('.apply-error').forEach(function(n){ n.textContent = ''; });
+      note.textContent = ''; note.className = 'apply-note';
+      const body = { displayName: fName.value.trim(), bio: fBio.value.trim(), photoPath: photoPath || '', instagramHandle: fIg.value.trim() };
+      if(isPlace){
+        Object.assign(body, {
+          lodgingType: fLodging.value.trim(), region: fRegion.value.trim(),
+          capacityGuests: fCap.value.trim() === '' ? null : Number(fCap.value),
+          amenities: chipsAmen.get(), houseRules: fRules.value.trim(), acceptsExperienceTypes: chipsAccept.get(),
+          latitude: fLat.value.trim() === '' ? null : Number(fLat.value),
+          longitude: fLng.value.trim() === '' ? null : Number(fLng.value),
+          media: gallery.map(function(g){ return { photoPath: g.photoPath, caption: g.caption.trim() }; })
+        });
+      } else {
+        Object.assign(body, { expertise: fExpertise.value.trim(), credentials: fCred.value.trim(), seekingPlaceTypes: chipsSeeking.get() });
+      }
+      submit.disabled = true;
+      try {
+        await pApi('PUT', '/partner/profiles/' + slug + '/revision', body);
+        await renderPartnerProfile(root, slug, ++partnerRenderId);
+        const n2 = root.querySelector('.partner-banner');
+        if(n2) n2.textContent = 'تغییرات برای بازبینی ارسال شد. بعد از تأیید تیم چکمه منتشر می‌شود.';
+      } catch(e){
+        note.className = 'apply-note bad';
+        if(e.status === 422 && e.data && e.data.fields){
+          let unplaced = false;
+          Object.keys(e.data.fields).forEach(function(f){
+            const key = f.indexOf('media.') === 0 ? 'media' : f;
+            const node = form.querySelector('.apply-error[data-f="' + key + '"]');
+            const msg = PROFILE_ERR_FA[e.data.fields[f]] || 'مقدار نامعتبر است.';
+            if(node) node.textContent = msg; else unplaced = true;
+          });
+          note.textContent = 'لطفاً موارد مشخص‌شده را اصلاح کنید.' + (unplaced ? '' : '');
+        } else if(e.status === 429){ note.textContent = 'تعداد ارسال‌ها زیاد بوده است. کمی بعد دوباره تلاش کنید.'; }
+        else if(e.status === 401){ note.textContent = 'نشست شما تمام شده است؛ دوباره وارد شوید.'; }
+        else { note.textContent = 'ارسال ممکن نشد. دوباره تلاش کنید.'; }
+      } finally { submit.disabled = false; }
+    });
+    box.appendChild(form);
+    root.appendChild(box);
+  }
+
+  async function renderPartnerExperiences(root, profiles, myId){
+    root.replaceChildren();
+    const box = pBox();
+    box.appendChild(faText(el('p', 'auth-sub'), 'تجربه‌هایی که پروفایل شما در آن‌ها حضور دارد. فقط تعداد رزروها نمایش داده می‌شود، نه اطلاعات مسافران.'));
+    root.appendChild(box);
+    let any = false;
+    for(const h of profiles){
+      let list = [];
+      try { list = (await pApi('GET', '/partner/profiles/' + h.slug + '/experiences')).experiences || []; } catch(e){ continue; }
+      if(myId !== partnerRenderId) return;
+      if(!list.length) continue;
+      any = true;
+      box.appendChild(faText(el('div', 'partner-section-title'), h.displayName));
+      list.forEach(function(t){
+        const card = el('div', 'partner-card');
+        const top = el('div', 'acct-item-top');
+        top.appendChild(faText(el('h3'), t.name));
+        top.appendChild(pPill(ROLE_FA[t.role] || t.role));
+        card.appendChild(top);
+        if(!t.editions.length) card.appendChild(faText(el('div', 'acct-item-meta'), 'هنوز تاریخی برای این تجربه ثبت نشده است.'));
+        t.editions.forEach(function(e){
+          const line = el('div', 'acct-item-top');
+          line.appendChild(faText(el('span'), e.startsOn ? toFaNum(e.startsOn) : (e.label || '')));
+          const ph = el('span', 'phase' + (e.phase === 'past' ? ' past' : ''), PHASE_FA[e.phase] || ''); ph.lang = 'fa';
+          line.appendChild(ph);
+          line.appendChild(faText(el('span', 'acct-item-meta'), toFaNum(e.bookings) + ' رزرو · ' + toFaNum(e.guests) + ' نفر'));
+          card.appendChild(line);
+        });
+        box.appendChild(card);
+      });
+    }
+    if(!any) box.appendChild(faText(el('div', 'empty-note'), 'هنوز پروفایل شما به تجربه‌ای وصل نشده است. از «پیشنهاد یک تجربه» ایده‌تان را برای چکمه بفرستید.'));
+  }
+
+  async function renderPartnerPropose(root, profiles, myId){
+    root.replaceChildren();
+    const box = pBox();
+    box.appendChild(faText(el('p', 'auth-sub'), 'ایده‌ی یک تجربه دارید؟ آن را برای تیم چکمه بفرستید. چکمه فعلاً خودش برنامه‌ها را کنار هم می‌گذارد و با شما تماس می‌گیرد.'));
+    const form = el('form', 'apply-form partner-form'); form.autocomplete = 'off'; form.noValidate = true; form.style.maxWidth = '620px';
+    const sel = document.createElement('select'); sel.lang = 'fa';
+    profiles.forEach(function(h){ const o = document.createElement('option'); o.value = h.slug; o.textContent = h.displayName; sel.appendChild(o); });
+    if(profiles.length > 1) form.appendChild(pField('از طرف کدام پروفایل؟', sel, null, 'profileSlug'));
+    const title = pInput('', 120);
+    form.appendChild(pField('عنوان', title, 'مثلاً «سه روز انیمال فلو در جنگل».', 'title'));
+    const desc = pTextarea('', 2000);
+    form.appendChild(pField('توضیح', desc, 'برنامه، مخاطب و آنچه از چکمه یا مکان انتظار دارید.', 'description'));
+    const months = pInput('', 60);
+    form.appendChild(pField('ماه‌های مناسب (اختیاری)', months, null, 'preferredMonths'));
+    const cp = document.createElement('select'); cp.lang = 'fa';
+    Object.keys(COUNTERPART_FA).forEach(function(k){ const o = document.createElement('option'); o.value = k; o.textContent = COUNTERPART_FA[k]; cp.appendChild(o); });
+    form.appendChild(pField('همکار دلخواه', cp, 'اگر ترجیح می‌دهید با یک برگزارکننده یا یک مکان جور شوید.', 'wantedCounterpartKind'));
+    const submit = el('button', 'btn-fa', 'ارسال پیشنهاد'); submit.type = 'submit'; submit.lang = 'fa';
+    const note = el('div', 'apply-note'); note.lang = 'fa';
+    form.appendChild(submit); form.appendChild(note);
+    box.appendChild(form);
+
+    const listWrap = el('div');
+    box.appendChild(faText(el('div', 'partner-section-title'), 'پیشنهادهای من'));
+    box.appendChild(listWrap);
+    const paintList = async function(){
+      listWrap.replaceChildren();
+      let items = [];
+      try { items = (await pApi('GET', '/partner/proposals')).proposals || []; } catch(e){ return; }
+      if(!items.length){ listWrap.appendChild(faText(el('div', 'empty-note'), 'هنوز پیشنهادی نفرستاده‌اید.')); return; }
+      items.forEach(function(p){
+        const card = el('div', 'partner-card');
+        const top = el('div', 'acct-item-top');
+        top.appendChild(faText(el('h3'), p.title));
+        top.appendChild(pPill(PROPOSAL_STATUS_FA[p.status] || p.status, p.status === 'declined'));
+        card.appendChild(top);
+        if(p.host) card.appendChild(faText(el('div', 'acct-item-meta'), 'از طرف: ' + p.host.displayName + ' · ' + toFaNum(String(p.createdAt || '').slice(0, 10))));
+        card.appendChild(faText(el('div', 'acct-item-meta'), p.description));
+        listWrap.appendChild(card);
+      });
+    };
+    form.addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      form.querySelectorAll('.apply-error').forEach(function(n){ n.textContent = ''; });
+      note.textContent = ''; note.className = 'apply-note';
+      submit.disabled = true;
+      try {
+        await pApi('POST', '/partner/proposals', {
+          profileSlug: sel.value, title: title.value.trim(), description: desc.value.trim(),
+          preferredMonths: months.value.trim(), wantedCounterpartKind: cp.value
+        });
+        title.value = ''; desc.value = ''; months.value = ''; cp.value = 'none';
+        note.className = 'apply-note ok'; note.textContent = 'پیشنهاد شما ثبت شد. تیم چکمه آن را بررسی می‌کند.';
+        await paintList();
+      } catch(e){
+        note.className = 'apply-note bad';
+        if(e.status === 422 && e.data && e.data.fields){
+          Object.keys(e.data.fields).forEach(function(f){
+            const node = form.querySelector('.apply-error[data-f="' + f + '"]');
+            if(node) node.textContent = PROFILE_ERR_FA[e.data.fields[f]] || 'مقدار نامعتبر است.';
+          });
+          note.textContent = 'لطفاً موارد مشخص‌شده را اصلاح کنید (عنوان ۳ تا ۱۲۰ و توضیح ۱۰ تا ۲۰۰۰ نویسه).';
+        } else if(e.status === 429){ note.textContent = 'تعداد پیشنهادها زیاد شده است. کمی بعد دوباره تلاش کنید.'; }
+        else { note.textContent = 'ارسال ممکن نشد. دوباره تلاش کنید.'; }
+      } finally { submit.disabled = false; }
+    });
+    root.appendChild(box);
+    paintList();
+  }
 
   // --- Path router ---------------------------------------------------------
   // Only the two new pages have real URLs; every existing page still switches
@@ -3266,6 +3917,7 @@
       return;
     }
     if(path === '/become-host' || path === '/become-host/'){ applyReset(); goTo('become-host'); return; }
+    if(PARTNER_PATH_RE.test(path)){ goTo('partner'); renderPartner(path); return; }
     if(path === '/' || path === '') return; // home is already the active page on load
 
     // Any other unknown path is not a missing host — it is a bad URL, so send
@@ -3289,7 +3941,7 @@
     if(!a || a.target || a.hasAttribute('download')) return;
     const href = a.getAttribute('href');
     if(!href || !href.startsWith('/')) return;
-    if(!HOST_PATH_RE.test(href) && !TOUR_PATH_RE.test(href) && href !== '/become-host') return;
+    if(!HOST_PATH_RE.test(href) && !TOUR_PATH_RE.test(href) && !PARTNER_PATH_RE.test(href) && href !== '/become-host') return;
     ev.preventDefault();
     navigate(href);
   });

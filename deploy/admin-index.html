@@ -200,6 +200,14 @@
   #toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 20px; font-size:13.5px; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
   #toast.show{ opacity:1; }
   #toast.err{ background:var(--danger); }
+
+  .rev-table td, .rev-table th{ vertical-align:top; }
+  .rev-k{ white-space:nowrap; color:var(--ink-faint); }
+  .rev-old{ background:#fdf7f6; }
+  .rev-new{ background:#f4faf4; }
+  .rev-thumbs{ display:flex; flex-wrap:wrap; gap:6px; }
+  .rev-thumb, .rev-thumbs .host-photo, .rev-thumbs .ph{ width:64px; height:48px; overflow:hidden; display:inline-block; background:#eee; }
+  .rev-thumb img, .rev-thumbs img{ width:100%; height:100%; object-fit:cover; display:block; }
 </style>
 </head>
 <body>
@@ -272,7 +280,8 @@
   // App state + tiny hash router
   // ---------------------------------------------------------------------
   const state = { admin: null, tours: [], bookings: [], bookingsFilter: '', busy: false,
-                  hosts: [], applications: [], applicationsFilter: '', hostsFilter: '' };
+                  hosts: [], applications: [], applicationsFilter: '', hostsFilter: '',
+                  revisionsFilter: 'pending', proposalsFilter: '' };
   const app = document.getElementById('app');
 
   function route(){
@@ -285,6 +294,8 @@
     if (hash === 'hosts/new') { renderHostEditor(null, 'person'); return; }
     if (hash === 'hosts/new?kind=place') { renderHostEditor(null, 'place'); return; }
     if (hash === 'applications') { renderApplications(); return; }
+    if (hash === 'revisions') { renderRevisions(); return; }
+    if (hash === 'proposals') { renderProposals(); return; }
     const mh = /^hosts\/(\d+)\/edit$/.exec(hash);
     if (mh) { renderHostEditor(Number(mh[1])); return; }
     const m = /^tours\/([^/]+)\/edit$/.exec(hash);
@@ -312,6 +323,8 @@
           '<a href="#/tours">Tours</a>' +
           '<a href="#/hosts">Organizers</a>' +
           '<a href="#/applications">Applications</a>' +
+          '<a href="#/revisions">بازبینی تغییرات</a>' +
+          '<a href="#/proposals">پیشنهادهای تجربه</a>' +
           '<a href="#/bookings">رزروها و پرداخت‌ها</a>' +
           '<span class="who">' + esc(state.admin ? state.admin.username : '') + '</span>' +
           '<a id="logoutLink">Log out</a>' +
@@ -1163,6 +1176,7 @@
       host = { slug:'', kind: newKind === 'place' ? 'place' : 'person', displayName:'', bio:'',
                expertise:'', instagramHandle:'', contactPhone:'', photoPath:'', region:'',
                lodgingType:'', amenities:[], latitude:null, longitude:null, media:[],
+               credentials:'', seekingPlaceTypes:[], capacityGuests:null, houseRules:'', acceptsExperienceTypes:[],
                owner:null, status:'hidden', verified:false };
     } else {
       try {
@@ -1186,11 +1200,31 @@
         '<input type="text" id="h_lodging" value="' + esc(host.lodgingType || '') + '" placeholder="اقامتگاه بوم‌گردی" maxlength="60"></div>' +
       '<div class="field"><label>Region</label>' +
         '<input type="text" id="h_region" value="' + esc(host.region || '') + '" placeholder="سه‌هزار، تنکابن، مازندران" maxlength="120">' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>';
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>' +
+      '<div class="field"><label>Capacity (guests)</label>' +
+        '<input type="number" id="h_capacity" min="1" max="500" value="' + esc(host.capacityGuests == null ? '' : host.capacityGuests) + '" dir="ltr">' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">1–500. Not shown publicly yet.</p></div>' +
+      '<div class="field"><label>House rules</label><textarea id="h_rules" rows="4" maxlength="1000">' + esc(host.houseRules || '') + '</textarea>' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Max 1000 characters. Not shown publicly yet.</p></div>';
 
     const personFields =
       '<div class="field"><label>Expertise</label>' +
-        '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>';
+        '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>' +
+      '<div class="field"><label>Credentials</label><textarea id="h_credentials" rows="4" maxlength="600">' + esc(host.credentials || '') + '</textarea>' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters. Not shown publicly.</p></div>';
+
+    // Matching inputs: stored, edited by the owner in the partner panel too,
+    // and NEVER part of a public response. They will drive pairing later.
+    const matchingPanel =
+      '<section class="panel"><h2>فقط برای چکمه — Matching (never public)</h2>' +
+        (isPlace
+          ? '<div class="field"><label>Accepts experience types</label>' +
+              '<textarea id="h_accepts" rows="3" placeholder="ریتریت حرکتی، کارگاه هنری، اقامت گروهی">' + esc((host.acceptsExperienceTypes || []).join('، ')) + '</textarea></div>'
+          : '<div class="field"><label>Seeking place types</label>' +
+              '<textarea id="h_seeking" rows="3" placeholder="اقامتگاه جنگلی، باغ">' + esc((host.seekingPlaceTypes || []).join('، ')) + '</textarea></div>') +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Separate items with a comma or «،». At most 10 items of 40 characters. ' +
+        'These are internal matching inputs — they are not returned by any public endpoint.</p>' +
+      '</section>';
 
     app.innerHTML = shell(
       '<div class="editor-head"><h1>' + (isNew ? ('New ' + (isPlace ? 'place' : 'person')) : esc(host.displayName)) + '</h1>' +
@@ -1235,6 +1269,7 @@
       '</section>' +
 
       (isPlace ? amenitiesPanelHtml() + locationPanelHtml(host) : '') +
+      matchingPanel +
 
       '<section class="panel"><h2>' + (isPlace ? 'Cover photo' : 'Photo') + '</h2>' +
         '<div class="host-photo-box">' +
@@ -1468,6 +1503,10 @@
     });
   }
 
+  function splitTags(text){
+    return String(text || '').split(/[,،\n]/).map(function(t){ return t.trim(); }).filter(Boolean);
+  }
+
   function hostPatchFromForm(ed){
     const patch = {
       kind: ed.host.kind,
@@ -1487,8 +1526,13 @@
       // and a half-filled pair is a 422 rather than a guess at the other half.
       patch.latitude = (document.getElementById('h_lat').value || '').trim();
       patch.longitude = (document.getElementById('h_lng').value || '').trim();
+      patch.capacityGuests = (document.getElementById('h_capacity').value || '').trim();
+      patch.houseRules = (document.getElementById('h_rules').value || '').trim();
+      patch.acceptsExperienceTypes = splitTags(document.getElementById('h_accepts').value);
     } else {
       patch.expertise = (document.getElementById('h_expertise').value || '').trim();
+      patch.credentials = (document.getElementById('h_credentials').value || '').trim();
+      patch.seekingPlaceTypes = splitTags(document.getElementById('h_seeking').value);
     }
     return patch;
   }
@@ -1508,6 +1552,11 @@
     instagramHandle: 'Instagram handle is not valid — username only, no @ or link.',
     contactPhone: 'Contact phone is not a valid Iranian mobile number.',
     photoPath: 'Photo path is not one of our uploads. Re-upload the image.',
+    credentials: 'Credentials are too long (max 600 characters).',
+    capacityGuests: 'Capacity must be a whole number from 1 to 500.',
+    houseRules: 'House rules are too long (max 1000 characters).',
+    seekingPlaceTypes: 'Seeking types: at most 10 items of at most 40 characters.',
+    acceptsExperienceTypes: 'Accepted types: at most 10 items of at most 40 characters.',
     status: 'Status must be hidden or active.',
     slug: 'Slug must be 2–40 lowercase letters, digits or hyphens.'
   };
@@ -1608,7 +1657,7 @@
           '<div class="app-meta">' +
             (a.instagramHandle ? 'Instagram: <span dir="ltr">@' + esc(a.instagramHandle) + '</span> · ' : '') +
             (a.kind === 'place'
-              ? [a.lodgingType, a.region].filter(Boolean).map(esc).join(' · ')
+              ? [a.lodgingType, a.region, a.capacityGuests ? ('ظرفیت ~' + a.capacityGuests + ' نفر') : ''].filter(Boolean).map(esc).join(' · ')
               : esc(a.expertise || '')) +
           '</div>' +
           '<div class="app-desc">' + esc(a.description) + '</div>' +
@@ -1690,6 +1739,184 @@
       else toast('Reject failed', true);
       btn.disabled = false;
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // Owner edits awaiting review (host_revisions)
+  // ---------------------------------------------------------------------
+  const REV_LABELS = {
+    displayName: 'Name', bio: 'Bio / description', photoPath: 'Photo', instagramHandle: 'Instagram',
+    expertise: 'Expertise', credentials: 'Credentials', seekingPlaceTypes: 'Seeking place types (internal)',
+    region: 'Region', lodgingType: 'Lodging type', amenities: 'Amenities', capacityGuests: 'Capacity',
+    houseRules: 'House rules', acceptsExperienceTypes: 'Accepts experience types (internal)',
+    latitude: 'Latitude (exact, private)', longitude: 'Longitude (exact, private)', media: 'Gallery'
+  };
+
+  function revValueHtml(key, v){
+    if (key === 'photoPath') return v ? '<span class="rev-thumbs">' + hostPhotoHtml(v) + '</span>' : '<i>—</i>';
+    if (key === 'media'){
+      return (v && v.length)
+        ? '<span class="rev-thumbs">' + v.map(function(m){
+            return '<span class="rev-thumb" title="' + esc(m.caption || '') + '"><img src="' + esc(m.photoPath) + '" alt=""></span>';
+          }).join('') + '</span><div class="app-meta">' + v.length + ' image(s)</div>'
+        : '<i>none</i>';
+    }
+    if (Array.isArray(v)) return v.length ? v.map(esc).join('، ') : '<i>—</i>';
+    if (v == null || v === '') return '<i>—</i>';
+    return esc(String(v));
+  }
+
+  function revSame(key, a, b){
+    if (key === 'media'){
+      const norm = function(x){ return JSON.stringify((x || []).map(function(m){ return [m.photoPath, m.caption || null]; })); };
+      return norm(a) === norm(b);
+    }
+    return JSON.stringify(a == null || a === '' ? null : a) === JSON.stringify(b == null || b === '' ? null : b);
+  }
+
+  async function renderRevisions(){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+    let list = [];
+    try {
+      const qs = state.revisionsFilter ? ('?status=' + encodeURIComponent(state.revisionsFilter)) : '';
+      list = (await api('/admin/host-revisions' + qs)).revisions;
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('Could not load revisions', true);
+    }
+    const filterOptions = ['pending', 'approved', 'rejected', ''].map(function(v){
+      return '<option value="' + v + '"' + (state.revisionsFilter === v ? ' selected' : '') + '>' + (v || 'All') + '</option>';
+    }).join('');
+    const cards = list.map(function(r){
+      const keys = Object.keys(r.payload).filter(function(k){ return REV_LABELS[k]; });
+      const changed = keys.filter(function(k){ return !revSame(k, r.current[k], r.payload[k]); });
+      const rows = changed.map(function(k){
+        return '<tr><td class="rev-k">' + esc(REV_LABELS[k]) + '</td>' +
+          '<td class="rev-old">' + revValueHtml(k, r.current[k]) + '</td>' +
+          '<td class="rev-new">' + revValueHtml(k, r.payload[k]) + '</td></tr>';
+      }).join('');
+      const pending = r.status === 'pending';
+      return (
+        '<div class="app-card" data-id="' + r.id + '">' +
+          '<div class="app-top"><b>' + esc(r.host.displayName) + '</b>' +
+            '<span class="badge ' + esc(r.host.kind) + '">' + esc(KIND_LABEL[r.host.kind] || r.host.kind) + '</span>' +
+            '<span class="badge ' + esc(r.status) + '">' + esc(r.status) + '</span>' +
+            '<span class="app-meta">' + esc(String(r.createdAt || '').slice(0, 16).replace('T', ' ')) + '</span></div>' +
+          '<div class="app-meta">Owner: ' + (r.owner ? esc(r.owner.firstName + ' ' + r.owner.lastName) + ' · <span dir="ltr">' + esc(r.owner.phone) + '</span>' : '<i>—</i>') +
+            ' · <a href="#/hosts/' + r.host.id + '/edit">open profile</a></div>' +
+          (changed.length
+            ? '<table class="tours rev-table"><thead><tr><th>Field</th><th>Current</th><th>Proposed</th></tr></thead><tbody>' + rows + '</tbody></table>'
+            : '<div class="app-meta"><i>No field differs from the live profile.</i></div>') +
+          (r.adminNote ? '<div class="app-meta">Note: ' + esc(r.adminNote) + '</div>' : '') +
+          (pending
+            ? '<div class="app-actions"><button class="btn small primary rev-approve">Approve &amp; apply</button>' +
+              '<button class="btn small danger rev-reject">Reject</button></div>'
+            : '') +
+        '</div>'
+      );
+    }).join('');
+    app.innerHTML = shell(
+      '<div class="list-head"><h1>بازبینی تغییرات</h1></div>' +
+      '<div class="filter-row"><label>Status</label><select id="revFilter">' + filterOptions + '</select></div>' +
+      (list.length ? cards : '<div class="empty">Nothing here.</div>')
+    );
+    bindLogout();
+    document.getElementById('revFilter').addEventListener('change', function(){ state.revisionsFilter = this.value; renderRevisions(); });
+    app.querySelectorAll('.rev-approve').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        btn.disabled = true;
+        try {
+          await api('/admin/host-revisions/' + Number(btn.closest('.app-card').dataset.id) + '/approve', { method:'POST', body: {} });
+          toast('Applied to the profile');
+          renderRevisions();
+        } catch(e){
+          if (e.status === 401){ state.admin = null; renderLogin(); return; }
+          toast(e.status === 404 ? 'No longer pending' : 'Approve failed', true);
+          btn.disabled = false;
+        }
+      });
+    });
+    app.querySelectorAll('.rev-reject').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const note = prompt('Reject this edit?\n\nOptional note (the owner will see it):');
+        if (note === null) return;
+        btn.disabled = true;
+        try {
+          await api('/admin/host-revisions/' + Number(btn.closest('.app-card').dataset.id) + '/reject', { method:'POST', body: { adminNote: note } });
+          toast('Rejected');
+          renderRevisions();
+        } catch(e){
+          if (e.status === 401){ state.admin = null; renderLogin(); return; }
+          toast(e.status === 404 ? 'No longer pending' : 'Reject failed', true);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Experience proposals
+  // ---------------------------------------------------------------------
+  const PROPOSAL_STATUSES = ['new', 'in_discussion', 'accepted', 'declined'];
+  async function renderProposals(){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+    let list = [];
+    try {
+      const qs = state.proposalsFilter ? ('?status=' + encodeURIComponent(state.proposalsFilter)) : '';
+      list = (await api('/admin/proposals' + qs)).proposals;
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('Could not load proposals', true);
+    }
+    const filterOptions = [''].concat(PROPOSAL_STATUSES).map(function(v){
+      return '<option value="' + v + '"' + (state.proposalsFilter === v ? ' selected' : '') + '>' + (v || 'All') + '</option>';
+    }).join('');
+    const cards = list.map(function(p){
+      return (
+        '<div class="app-card" data-id="' + p.id + '">' +
+          '<div class="app-top"><b>' + esc(p.title) + '</b>' +
+            (p.host ? '<span class="badge ' + esc(p.host.kind) + '">' + esc(KIND_LABEL[p.host.kind] || p.host.kind) + '</span>' : '') +
+            '<span class="badge ' + esc(p.status) + '">' + esc(p.status) + '</span>' +
+            '<span class="app-meta">' + esc(String(p.createdAt || '').slice(0, 16).replace('T', ' ')) + '</span></div>' +
+          '<div class="app-meta">From: ' + (p.host ? esc(p.host.displayName) : '—') +
+            (p.owner ? ' · ' + esc(p.owner.firstName + ' ' + p.owner.lastName) + ' · <span dir="ltr">' + esc(p.owner.phone) + '</span>' : '') + '</div>' +
+          '<div class="app-meta">Wants: ' + esc(p.wantedCounterpartKind) + (p.preferredMonths ? ' · Months: ' + esc(p.preferredMonths) : '') + '</div>' +
+          '<div class="app-desc">' + esc(p.description) + '</div>' +
+          '<div class="app-actions">' +
+            '<div class="field"><label>Status</label><select class="prop-status">' +
+              PROPOSAL_STATUSES.map(function(v){ return '<option value="' + v + '"' + (p.status === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') +
+            '</select></div>' +
+            '<div class="field" style="flex:1"><label>Internal note</label><input type="text" class="prop-note" maxlength="2000" value="' + esc(p.adminNote || '') + '"></div>' +
+            '<button class="btn small primary prop-save">Save</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+    app.innerHTML = shell(
+      '<div class="list-head"><h1>پیشنهادهای تجربه</h1></div>' +
+      '<div class="filter-row"><label>Status</label><select id="propFilter">' + filterOptions + '</select></div>' +
+      (list.length ? cards : '<div class="empty">No proposals.</div>')
+    );
+    bindLogout();
+    document.getElementById('propFilter').addEventListener('change', function(){ state.proposalsFilter = this.value; renderProposals(); });
+    app.querySelectorAll('.prop-save').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const card = btn.closest('.app-card');
+        btn.disabled = true;
+        try {
+          await api('/admin/proposals/' + Number(card.dataset.id), { method:'PUT',
+            body: { status: card.querySelector('.prop-status').value, adminNote: card.querySelector('.prop-note').value } });
+          toast('Saved');
+          renderProposals();
+        } catch(e){
+          if (e.status === 401){ state.admin = null; renderLogin(); return; }
+          toast('Save failed', true);
+          btn.disabled = false;
+        }
+      });
+    });
   }
 
   // ---------------------------------------------------------------------
