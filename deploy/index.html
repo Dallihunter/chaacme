@@ -1,0 +1,3273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAACME — Experience Design & Curated Journeys</title>
+<!-- Static OG/Twitter tags for the homepage shell only — crawlers (Instagram,
+     WhatsApp, Telegram) don't execute JS and must see these in the initial
+     HTML. Intentionally not per-route/per-tour; this is the narrow pass. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CHAACME">
+<meta property="og:title" content="CHAACME — Tours & Curated Journeys">
+<meta property="og:description" content="Book the journey. Live the experience.">
+<meta property="og:url" content="https://chaacme.ir/">
+<meta property="og:image" content="https://chaacme.ir/images/cover-app-chaacme.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CHAACME — Tours & Curated Journeys">
+<meta name="twitter:description" content="Book the journey. Live the experience.">
+<meta name="twitter:image" content="https://chaacme.ir/images/cover-app-chaacme.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&family=Vazirmatn:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --paper:#fafaf9;
+    --ink:#0a0a0a;
+    --ink-soft:#4a4a4a;
+    --ink-faint:#8a8a86;
+    --line:#dcdcd8;
+    --line-soft:#ececea;
+    --frame:#161615;
+    --maxw:1180px;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    font-weight:400;
+    overflow-x:hidden;
+  }
+
+  [lang="fa"], .fa{
+    font-family:'Vazirmatn','Inter',sans-serif;
+    direction:rtl;
+    text-align:right;
+    unicode-bidi:isolate;
+  }
+
+  .en-inline{ font-family:'Inter',sans-serif; direction:ltr; unicode-bidi:isolate; display:inline-block;}
+
+  h1,h2,h3,.display{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+
+  .eyebrow{
+    font-family:'Inter',sans-serif;
+    font-size:11.5px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    font-weight:500;
+  }
+
+  a{ color:inherit; text-decoration:none; }
+
+  .wrap{
+    max-width:var(--maxw);
+    margin:0 auto;
+    padding:0 40px;
+  }
+
+  /* ===== NAV ===== */
+  header.site-nav{
+    position:fixed; top:0; left:0; right:0;
+    z-index:1000;
+    background:rgba(255,255,255,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav-inner{
+    max-width:var(--maxw);
+    margin:0 auto;
+    padding:20px 40px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .nav-left{ display:flex; align-items:center; gap:46px; }
+  .nav-right{ display:flex; align-items:center; gap:14px; }
+  .logo{
+    font-family:'Fraunces', serif;
+    font-size:20px;
+    font-weight:500;
+    letter-spacing:0.02em;
+    cursor:pointer;
+  }
+  nav.links{
+    display:flex;
+    gap:32px;
+  }
+  nav.links button{
+    background:none; border:none; cursor:pointer;
+    font-family:'Vazirmatn','Inter',sans-serif;
+    font-size:14px;
+    color:var(--ink-soft);
+    padding:4px 0;
+    position:relative;
+  }
+  nav.links button::after{
+    content:'';
+    position:absolute; left:0; right:0; bottom:-2px;
+    height:1px; background:var(--ink);
+    transform:scaleX(0);
+    transform-origin:left;
+    transition:transform .35s ease;
+  }
+  nav.links button:hover::after,
+  nav.links button.active::after{ transform:scaleX(1); }
+  nav.links button.active{ color:var(--ink); }
+
+  .nav-auth{
+    background:var(--paper);
+    border:none;
+    border-radius:8px;
+    padding:10px 20px;
+    font-family:'Vazirmatn','Inter',sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  .nav-auth:hover{ background:var(--line-soft); color:var(--ink); }
+
+  .nav-toggle{ display:none; background:none; border:none; cursor:pointer; }
+  .nav-toggle span{ display:block; width:22px; height:1px; background:var(--ink); margin:5px 0; }
+
+  /* ===== PAGES ===== */
+  .page{ display:none; }
+  .page.active{ display:block; animation:fadein .5s ease; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  section{ padding:120px 0 100px; border-bottom:1px solid var(--line-soft); }
+  section:last-child{ border-bottom:none; }
+
+  /* ===== HERO (video background) ===== */
+  .hero{
+    position:relative;
+    width:100%;
+    height:88vh;
+    min-height:640px;
+    overflow:hidden;
+    background:linear-gradient(160deg,#201f1d 0%, #0a0a0a 75%);
+  }
+  .hero-media{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+  }
+  .hero-scrim{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,.14) 42%, rgba(0,0,0,.62) 100%);
+  }
+
+  .upcoming-panel{
+    position:absolute; z-index:3;
+    left:40px; right:40px; bottom:32px;
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(8px);
+    padding:22px 24px 16px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);
+    direction:rtl;
+  }
+  .up-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; }
+  .up-title{ font-family:'Fraunces', serif; font-size:19px; }
+  .up-all{
+    font-size:12px; color:var(--ink-soft); background:none; border:none; cursor:pointer;
+    font-family:'Vazirmatn','Inter',sans-serif;
+  }
+  .up-all:hover{ color:var(--ink); }
+
+  /* ===== INTRO TEXT BLOCK ===== */
+  .intro-block{
+    max-width:760px;
+    margin:0 auto;
+    text-align:right;
+  }
+  .intro-block p{
+    font-size:17px;
+    line-height:2.05;
+    color:var(--ink-soft);
+    margin-bottom:22px;
+  }
+
+  /* ===== CATEGORY LIST (What we create) ===== */
+  .section-head{
+    text-align:center;
+    margin-bottom:64px;
+  }
+  .section-head h2{
+    font-size:clamp(30px,4vw,44px);
+    margin-top:14px;
+  }
+  .section-head .fa-sub{
+    font-size:16px;
+    color:var(--ink-soft);
+    margin-top:16px;
+    max-width:560px;
+    margin-left:auto; margin-right:auto;
+  }
+
+  .cat-list{ max-width:820px; margin:0 auto; }
+  .cat-row{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    gap:40px;
+    align-items:start;
+    padding:32px 0;
+    border-top:1px solid var(--line-soft);
+  }
+  .cat-list .cat-row:last-child{ border-bottom:1px solid var(--line-soft); }
+  .cat-row .cat-name{
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    letter-spacing:0.01em;
+  }
+  .cat-row .cat-desc{
+    font-size:15.5px;
+    line-height:1.95;
+    color:var(--ink-soft);
+  }
+
+  .cta-line{ text-align:center; margin-top:70px; }
+  .btn{
+    display:inline-block;
+    border:1px solid var(--ink);
+    padding:15px 34px;
+    font-size:11.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    transition:background .25s ease, color .25s ease;
+  }
+  .btn:hover{ background:var(--ink); color:#fff; }
+
+  .btn-fa{
+    display:inline-block;
+    border:1px solid var(--ink);
+    padding:14px 32px;
+    font-family:'Vazirmatn','Inter',sans-serif;
+    font-size:13.5px;
+    background:none;
+    cursor:pointer;
+    transition:background .25s ease, color .25s ease;
+  }
+  .btn-fa:hover{ background:var(--ink); color:#fff; }
+
+  /* ===== UPCOMING TOUR TICKETS (reused inside the hero panel) ===== */
+  .tour-strip{
+    display:flex;
+    overflow-x:auto;
+    scroll-snap-type:x proximity;
+    padding-bottom:6px;
+    margin:0 -14px;
+    padding-inline:14px;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .tour-strip::-webkit-scrollbar{ display:none; }
+  .tour-ticket{
+    flex:0 0 288px;
+    display:flex; flex-direction:column;
+    border:1px solid var(--line);
+    background:#fff;
+    scroll-snap-align:start;
+    margin-inline-end:16px;
+  }
+  .tour-ticket:last-child{ margin-inline-end:0; }
+  .tt-main{ display:flex; }
+  .tt-date{
+    flex:0 0 70px;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:20px 6px;
+  }
+  .tt-day{ font-family:'Fraunces', serif; font-size:25px; }
+  .tt-month{ font-size:12px; color:var(--ink-faint); margin-top:2px; }
+  .tt-body{
+    flex:1;
+    padding:18px 18px 18px 4px;
+    border-inline-start:1px dashed var(--line);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .tt-tag{ font-size:11.5px; color:var(--ink-faint); }
+  .tt-name{ font-family:'Fraunces', serif; font-size:15.5px; line-height:1.5; }
+  .tt-seats{ font-size:12px; color:var(--ink-soft); margin-top:auto; }
+  .tt-cta{
+    display:block; width:100%;
+    border:none; border-top:1px solid var(--line-soft);
+    background:none; cursor:pointer;
+    font-family:'Vazirmatn','Inter',sans-serif;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    padding:12px 0;
+    transition:color .2s ease, background .2s ease;
+  }
+  .tour-ticket:hover .tt-cta{ color:var(--ink); background:var(--paper); }
+
+  /* ===== EXPERIENCES LIST PAGE ===== */
+  .exp-search{
+    position:relative;
+    max-width:640px;
+    margin:0 auto 20px;
+  }
+  .exp-search input{
+    width:100%;
+    background:var(--paper);
+    border:1px solid var(--line);
+    padding:16px 44px 16px 16px;
+    font-family:'Vazirmatn','Inter',sans-serif;
+    font-size:14.5px;
+    color:var(--ink);
+    text-align:right;
+  }
+  .exp-search input::placeholder{ color:var(--ink-faint); }
+  .exp-search input:focus{ outline:none; border-color:var(--ink); }
+  .exp-search .search-icon{
+    position:absolute; top:50%; right:16px; transform:translateY(-50%);
+    width:16px; height:16px; color:var(--ink-faint); pointer-events:none;
+  }
+
+  .exp-filters{
+    display:flex; gap:12px; justify-content:center;
+    margin-bottom:56px;
+    direction:rtl;
+  }
+  .exp-filter{
+    border:1px solid var(--line);
+    background:none;
+    padding:10px 20px;
+    font-family:'Vazirmatn','Inter',sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:background .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .exp-filter:hover, .exp-filter.active{ border-color:var(--ink); color:var(--ink); }
+
+  .exp-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:36px 28px;
+    direction:rtl;
+  }
+  .exp-card{ cursor:pointer; }
+  .exp-card .frame{ aspect-ratio:4/3; margin-bottom:16px; }
+  .exp-card .tags{ margin-bottom:8px; }
+  .exp-card h3{ font-size:17px; margin-bottom:6px; }
+  .exp-card .exp-meta{ font-size:13px; color:var(--ink-faint); }
+  .exp-card.exp-soon{ cursor:default; }
+  .exp-card.exp-soon .frame{ opacity:0.5; }
+  .exp-card.exp-soon h3{ color:var(--ink-faint); }
+
+  /* ===== FILM FRAME (photo placeholder) ===== */
+  .frame{
+    position:relative;
+    aspect-ratio:16/10;
+    background:var(--paper);
+    border:1px solid var(--frame);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .frame::before, .frame::after{
+    content:''; position:absolute; width:14px; height:14px;
+    border-color:var(--ink-faint);
+  }
+  .frame .corner{ position:absolute; width:14px; height:14px; }
+  .frame .corner.tl{ top:8px; left:8px; border-top:1px solid var(--ink); border-left:1px solid var(--ink); }
+  .frame .corner.br{ bottom:8px; right:8px; border-bottom:1px solid var(--ink); border-right:1px solid var(--ink); }
+  .frame .frame-index{
+    position:absolute; top:10px; right:14px;
+    font-size:10.5px; letter-spacing:0.08em; color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+  }
+  .frame .frame-label{
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+
+  /* ===== EXPERIENCE CASE ===== */
+  .case{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:56px;
+    align-items:center;
+    padding:64px 0;
+    border-top:1px solid var(--line-soft);
+  }
+  .case:nth-child(even) .frame-col{ order:2; }
+  .case .tags{
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--ink-faint); margin-bottom:16px;
+  }
+  .case h3{ font-size:26px; margin-bottom:16px; }
+  .case .case-fa{ font-size:15.5px; line-height:2; color:var(--ink-soft); }
+  .case .case-en-title{ font-size:13px; letter-spacing:0.05em; color:var(--ink-faint); margin-bottom:6px; text-transform:uppercase; }
+
+  /* ===== X-BLOCKS (Brands/Corporates/Embassies) ===== */
+  .x-block{ padding:56px 0; border-top:1px solid var(--line-soft); }
+  .x-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:24px; flex-wrap:wrap;
+    margin-bottom:28px;
+  }
+  .x-head h3{ font-size:26px; }
+  .x-head .x-fa{ font-size:15px; color:var(--ink-soft); max-width:420px; text-align:right; }
+  .tag-grid{
+    display:flex; flex-wrap:wrap; gap:12px 14px;
+  }
+  .tag-pill{
+    font-size:12px; letter-spacing:0.04em;
+    border:1px solid var(--line);
+    padding:8px 16px;
+    color:var(--ink-soft);
+  }
+
+  /* ===== PARTNERSHIP GRID ===== */
+  .p-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--line-soft);
+    border:1px solid var(--line-soft);
+  }
+  .p-cell{ background:#fff; padding:34px 26px; }
+  .p-cell .eyebrow{ margin-bottom:14px; }
+  .p-cell p{ font-size:14.5px; line-height:1.9; color:var(--ink-soft); }
+
+  /* ===== WHY GRID ===== */
+  .why-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:48px 40px;
+  }
+  .why-cell .why-name{ font-family:'Fraunces', serif; font-size:19px; margin-bottom:10px; }
+  .why-cell p{ font-size:14.5px; line-height:1.9; color:var(--ink-soft); }
+
+  /* ===== CONTACT / CLOSING ===== */
+  .closing{
+    text-align:center; padding:170px 0 150px;
+  }
+  .closing h2{
+    font-size:clamp(28px,4.4vw,46px);
+    max-width:760px; margin:0 auto;
+    line-height:1.25;
+  }
+  .closing .cw{
+    font-family:'Fraunces', serif; font-size:26px; margin-top:60px;
+  }
+  .closing .ctag{ font-style:italic; color:var(--ink-soft); font-family:'Fraunces', serif; margin-top:10px; }
+  .lines{ margin-top:46px; }
+  .lines div{ font-size:15px; color:var(--ink-soft); letter-spacing:0.02em; margin-bottom:6px; }
+  .contact-links{ margin-top:56px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .contact-links a{ font-size:13px; letter-spacing:0.06em; text-transform:uppercase; border-bottom:1px solid var(--ink); padding-bottom:2px; }
+  .contact-note{ margin-top:30px; font-size:13px; color:var(--ink-faint); }
+
+  footer{ padding:36px 0; text-align:center; }
+  footer p{ font-size:11px; letter-spacing:0.08em; color:var(--ink-faint); text-transform:uppercase; }
+
+  @media (max-width:860px){
+    .wrap{ padding:0 22px; }
+    .nav-inner{ padding:18px 22px; }
+    section{ padding:80px 0 64px; }
+    .hero{ height:auto; min-height:46vh; overflow:visible; }
+    .upcoming-panel{
+      position:static;
+      left:auto; right:auto; bottom:auto;
+      margin:0 16px;
+      box-shadow:none;
+      border-top:1px solid var(--line-soft);
+    }
+    .cat-row{ grid-template-columns:1fr; gap:10px; }
+    .exp-grid{ grid-template-columns:repeat(2,1fr); gap:24px 16px; }
+    .exp-filters{ justify-content:flex-start; }
+    .case{ grid-template-columns:1fr; }
+    .case:nth-child(even) .frame-col{ order:0; }
+    .x-head .x-fa{ text-align:right; max-width:none; }
+    .p-grid{ grid-template-columns:repeat(2,1fr); }
+    .why-grid{ grid-template-columns:1fr; }
+    nav.links{
+      display:none;
+      position:absolute; top:100%; left:0; right:0;
+      background:#fff; border-bottom:1px solid var(--line-soft);
+      flex-direction:column; align-items:flex-end; padding:16px 22px 24px; gap:18px;
+    }
+    nav.links.open{ display:flex; }
+    .nav-toggle{ display:block; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    .page.active{ animation:none; }
+  }
+
+  :focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
+
+  /* ===== AUTH / LOGIN & SIGNUP ===== */
+  .auth-shell{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    min-height:100vh;
+  }
+  .auth-visual{ position:relative; background:var(--paper); }
+  .auth-visual .frame{ position:absolute; inset:0; aspect-ratio:auto; height:100%; border:none; }
+  .auth-panel{
+    display:flex; flex-direction:column; justify-content:center;
+    padding:150px 72px 60px;
+    direction:rtl;
+  }
+  .auth-step{ display:none; max-width:420px; }
+  .auth-step.active{ display:block; animation:fadein .4s ease; }
+  .auth-step h2{ font-size:clamp(23px,3vw,29px); margin-bottom:14px; }
+  .auth-step .auth-sub{ font-size:14.5px; color:var(--ink-soft); line-height:1.9; margin-bottom:26px; }
+
+  .auth-note{
+    display:flex; gap:10px; align-items:flex-start;
+    background:var(--paper); border:1px solid var(--line-soft);
+    padding:14px 16px; font-size:13px; color:var(--ink-soft); line-height:1.85;
+    margin-bottom:28px;
+  }
+  .auth-note .note-icon{
+    flex:0 0 18px; width:18px; height:18px; border-radius:50%;
+    background:var(--ink); color:#fff; font-size:11px;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .auth-label{ font-size:12.5px; color:var(--ink-faint); margin-bottom:8px; display:block; }
+  .auth-input{
+    width:100%; border:1px solid var(--line); background:none;
+    padding:15px 16px; font-family:'Vazirmatn','Inter',sans-serif; font-size:15px;
+    color:var(--ink); margin-bottom:22px; text-align:right;
+  }
+  .auth-input::placeholder{ color:var(--ink-faint); }
+  .auth-input:focus{ outline:none; border-color:var(--ink); }
+  .auth-row{ display:flex; gap:14px; }
+  .auth-row .auth-input{ flex:1; }
+
+  .auth-submit{ width:100%; text-align:center; }
+  .auth-submit:disabled{
+    cursor:not-allowed;
+    background:var(--paper); color:var(--ink-faint); border-color:var(--line-soft);
+  }
+  .auth-submit:disabled:hover{ background:var(--paper); color:var(--ink-faint); }
+
+  .auth-terms{ font-size:12px; color:var(--ink-faint); margin-top:18px; text-align:center; }
+  .auth-link{ background:none; border:none; color:var(--ink); text-decoration:underline; cursor:pointer; font-size:inherit; font-family:inherit; padding:0; }
+
+  .otp-boxes{ display:flex; gap:10px; margin-bottom:22px; direction:ltr; }
+  .otp-boxes input{
+    width:52px; height:58px; text-align:center;
+    border:1px solid var(--line); font-size:20px;
+    font-family:'Vazirmatn','Inter',sans-serif;
+  }
+  .otp-boxes input:focus{ outline:none; border-color:var(--ink); }
+
+  .auth-resend{ font-size:13px; color:var(--ink-faint); margin-bottom:14px; }
+  .auth-demo-note{
+    margin-top:22px; padding:12px 14px;
+    background:var(--paper); border:1px dashed var(--line);
+    font-size:12px; line-height:1.9; color:var(--ink-soft);
+  }
+  .auth-success{ text-align:center; }
+  .auth-success .frame-label{ display:none; }
+
+  @media (max-width:860px){
+    .auth-shell{ grid-template-columns:1fr; min-height:0; }
+    .auth-visual{ height:220px; }
+    .auth-panel{ padding:44px 24px 60px; }
+  }
+
+  /* ===== TOUR DETAIL PAGE ===== */
+  .tour-back{
+    display:inline-block;
+    font-size:12.5px; color:var(--ink-faint);
+    margin-bottom:26px;
+    cursor:pointer; background:none; border:none; font-family:'Vazirmatn','Inter',sans-serif;
+  }
+  .tour-back:hover{ color:var(--ink); }
+
+  .tour-hero{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:56px;
+    align-items:start;
+  }
+  .tour-gallery{ position:relative; }
+  .tour-gallery .frame{ aspect-ratio:4/3; }
+  .frame-photo{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    display:none;
+  }
+  .tour-gallery .g-arrow{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:34px; height:34px; border-radius:50%;
+    background:#fff; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:15px; color:var(--ink);
+    transition:background .2s ease;
+  }
+  .tour-gallery .g-arrow:hover{ background:var(--paper); }
+  .tour-gallery .g-prev{ left:14px; }
+  .tour-gallery .g-next{ right:14px; }
+  .tour-gallery .g-count{
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    font-size:11px; letter-spacing:0.05em; color:#fff;
+    background:rgba(10,10,10,0.55); padding:4px 12px;
+  }
+
+  .tour-info{ direction:rtl; }
+  .tour-info .tags{ margin-bottom:14px; }
+  .tour-info h1{ font-size:clamp(26px,3.4vw,36px); margin-bottom:14px; }
+  .tour-info .en-sub{ font-size:12px; letter-spacing:0.05em; color:var(--ink-faint); text-transform:uppercase; margin-bottom:20px; }
+  .tour-info p{ font-size:15.5px; line-height:2.05; color:var(--ink-soft); }
+
+  .tour-booking{
+    margin-top:44px;
+    padding:26px 0;
+    border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);
+    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+    direction:rtl;
+  }
+  .tour-price .amount{ font-family:'Fraunces', serif; font-size:23px; }
+  .tour-price .per{ font-size:12.5px; color:var(--ink-faint); margin-top:2px; }
+  .tour-booking-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+  .btn-fa.btn-ghost{ border-color:var(--line); color:var(--ink-soft); }
+  .btn-fa.btn-ghost:hover{ background:var(--paper); color:var(--ink); }
+
+  .tour-included{ margin-top:24px; direction:rtl; }
+  .tour-included summary{
+    display:flex; justify-content:space-between; align-items:center;
+    cursor:pointer; font-size:13.5px; color:var(--ink-soft);
+    list-style:none; padding:16px 0; border-bottom:1px solid var(--line-soft);
+  }
+  .tour-included summary::-webkit-details-marker{ display:none; }
+  .tour-included .s-icon::before{ content:'+'; font-size:16px; }
+  .tour-included[open] .s-icon::before{ content:'−'; }
+  .tour-included .included-list{ padding:18px 0 6px; font-size:14.5px; line-height:2.15; color:var(--ink-soft); }
+
+  .reviews-overview{
+    display:grid; grid-template-columns:200px 1fr; gap:48px;
+    padding:8px 0 40px;
+    direction:rtl;
+  }
+  .reviews-score{ text-align:center; }
+  .reviews-score .score-num{ font-family:'Fraunces', serif; font-size:50px; }
+  .reviews-score .stars{ font-size:16px; letter-spacing:3px; color:var(--ink); margin-top:8px; }
+  .reviews-score .score-count{ font-size:12.5px; color:var(--ink-faint); margin-top:8px; }
+  .review-categories{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:24px;
+    align-content:center; border-inline-start:1px solid var(--line-soft); padding-inline-start:32px;
+  }
+  .review-cat{ text-align:center; }
+  .review-cat .rc-label{ font-size:12px; color:var(--ink-faint); margin-bottom:8px; }
+  .review-cat .rc-score{ font-family:'Fraunces', serif; font-size:19px; }
+
+  .review-cards{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--line-soft); border:1px solid var(--line-soft);
+    direction:rtl;
+  }
+  .review-card{ background:#fff; padding:26px 24px; }
+  .review-card .rc-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .review-card .rc-name{ font-size:13.5px; }
+  .review-card .rc-stars{ font-size:12px; letter-spacing:1px; }
+  .review-card .rc-text{ font-size:14px; line-height:1.95; color:var(--ink-soft); }
+  .review-card .rc-date{ font-size:11.5px; color:var(--ink-faint); margin-top:14px; }
+
+  .review-form{ direction:rtl; }
+  .rf-stars{ display:flex; gap:6px; font-size:22px; margin-bottom:18px; cursor:pointer; width:fit-content; }
+  .rf-star{ color:var(--line); transition:color .15s ease; }
+  .rf-star.active{ color:var(--ink); }
+  .review-form textarea{
+    width:100%; border:1px solid var(--line); background:none;
+    padding:16px; font-family:'Vazirmatn','Inter',sans-serif; font-size:14.5px;
+    resize:vertical; min-height:110px;
+  }
+  .review-form textarea:focus{ outline:none; border-color:var(--ink); }
+  .rf-actions{ margin-top:16px; display:flex; align-items:center; gap:16px; }
+  .rf-note{ font-size:12.5px; color:var(--ink-faint); }
+
+  @media (max-width:860px){
+    .tour-hero{ grid-template-columns:1fr; }
+    .reviews-overview{ grid-template-columns:1fr; }
+    .review-categories{ grid-template-columns:repeat(2,1fr); border-inline-start:none; padding-inline-start:0; }
+    .review-cards{ grid-template-columns:1fr; }
+  }
+
+  /* ===== ACCOUNT PAGE ===== */
+  .acct-grid{
+    display:grid; grid-template-columns:280px 1fr; gap:56px;
+  }
+  .acct-info{ border:1px solid var(--line-soft); padding:26px 22px; height:fit-content; }
+  .acct-row{ padding:12px 0; border-bottom:1px solid var(--line-soft); }
+  .acct-row:last-of-type{ border-bottom:none; }
+  .acct-label{ font-size:12px; color:var(--ink-faint); margin-bottom:4px; }
+  .acct-value{ font-size:14.5px; }
+  .acct-subhead{ font-family:'Fraunces', serif; font-size:19px; margin-bottom:20px; }
+  .acct-bookings .tour-ticket{ width:100%; max-width:420px; }
+  .acct-empty{ font-size:14px; color:var(--ink-faint); }
+
+  @media (max-width:860px){
+    .acct-grid{ grid-template-columns:1fr; gap:32px; }
+  }
+
+  /* ===== BOOKING FLOW ===== */
+  .booking-context{ font-family:'Fraunces', serif; font-size:19px; margin-bottom:36px; text-align:right; }
+  .booking-step{ display:none; }
+  .booking-step.active{ display:block; animation:fadein .4s ease; }
+
+  .booking-dates{ display:flex; flex-direction:column; gap:12px; margin:20px 0 28px; }
+  .booking-date{
+    display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--line); background:none; padding:16px 18px; width:100%;
+    cursor:pointer; text-align:right; font-family:'Vazirmatn','Inter',sans-serif;
+    transition:border-color .2s ease, background .2s ease;
+  }
+  .booking-date:hover{ border-color:var(--ink); }
+  .booking-date.selected{ border-color:var(--ink); background:var(--paper); }
+  .booking-date:disabled{ opacity:0.4; cursor:not-allowed; }
+  .bd-date{ font-family:'Fraunces', serif; font-size:16px; }
+  .bd-status{ font-size:12px; color:var(--ink-faint); }
+
+  .booking-counter{
+    display:flex; align-items:center; gap:22px;
+    border:1px solid var(--line); width:fit-content;
+    padding:10px 22px; margin:16px 0;
+  }
+  .booking-counter button{
+    width:28px; height:28px; border:1px solid var(--line); background:none;
+    cursor:pointer; font-size:16px; color:var(--ink);
+  }
+  .booking-counter button:hover{ border-color:var(--ink); }
+  #guestCount{ font-family:'Fraunces', serif; font-size:18px; min-width:20px; text-align:center; }
+
+  .booking-summary{ border:1px solid var(--line-soft); padding:20px; }
+  .bs-row{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line-soft); font-size:14.5px; color:var(--ink-soft); }
+  .bs-row:last-child{ border-bottom:none; }
+  .bs-total{ font-family:'Fraunces', serif; font-size:17px; color:var(--ink); }
+
+  /* ===== HOSTS (organizers) ===== */
+  .host-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:28px; }
+
+  .host-card{ display:block; width:100%; text-align:right; background:none; border:none; padding:0; cursor:pointer; font:inherit; color:inherit; text-decoration:none; }
+  .host-card .host-avatar{ margin-bottom:14px; }
+  .host-card .hc-name{ font-family:'Fraunces', serif; font-size:16px; margin-bottom:5px; }
+  .host-card .hc-meta{ font-size:13px; color:var(--ink-faint); }
+  .host-card:hover .hc-name{ text-decoration:underline; text-underline-offset:4px; }
+
+  /* Square photo well: same film-frame language as the tour gallery, so a
+     host with no photo yet still reads as a deliberate placeholder. */
+  .host-avatar{
+    position:relative; aspect-ratio:1/1; background:var(--frame); overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .host-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .host-avatar .ha-initial{ font-family:'Fraunces', serif; font-size:34px; color:#f5f5f0; opacity:0.75; }
+
+  .host-verified{
+    display:inline-flex; align-items:center; gap:5px; font-size:12px;
+    color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:3px 10px;
+  }
+  .host-verified::before{ content:'✓'; font-size:11px; }
+
+  .host-head{ display:grid; grid-template-columns:200px 1fr; gap:36px; align-items:start; }
+  .host-head .host-avatar{ width:200px; }
+  .host-head h1{ font-family:'Fraunces', serif; font-size:30px; line-height:1.35; margin-bottom:10px; }
+  .host-title-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .host-expertise{ font-size:14px; color:var(--ink-faint); margin-bottom:18px; }
+  .host-bio{ font-size:15px; line-height:2.05; color:var(--ink-soft); white-space:pre-wrap; margin-bottom:20px; }
+  .host-links a{ font-size:13.5px; color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:2px; }
+  .host-links a:hover{ color:var(--ink); border-color:var(--ink); }
+
+  .empty-note{ font-size:14px; color:var(--ink-faint); padding:22px 0; }
+
+  /* ===== BECOME A HOST ===== */
+  .apply-form{ max-width:560px; }
+  .apply-field{ margin-bottom:22px; }
+  .apply-field label{ display:block; font-size:13px; color:var(--ink-soft); margin-bottom:8px; }
+  .apply-field input, .apply-field textarea{
+    width:100%; padding:12px 14px; border:1px solid var(--line); background:var(--bg);
+    font-family:inherit; font-size:14.5px; color:var(--ink); border-radius:0;
+  }
+  .apply-field input:focus, .apply-field textarea:focus{ outline:none; border-color:var(--ink); }
+  .apply-field textarea{ min-height:140px; resize:vertical; line-height:1.9; }
+  .apply-hint{ font-size:12.5px; color:var(--ink-faint); margin-top:7px; line-height:1.8; }
+  .apply-error{ font-size:12.5px; color:#a3352b; margin-top:7px; }
+  .apply-note{ font-size:14px; margin-top:16px; line-height:1.9; }
+
+  /* Kind chooser: two equal cards, because neither a person nor a place is
+     the "normal" case that the other is a variation of. */
+  .kind-choice{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:30px; }
+  .kind-opt{
+    text-align:right; padding:18px 18px 20px; border:1px solid var(--line); background:var(--bg);
+    cursor:pointer; font:inherit; color:inherit;
+  }
+  .kind-opt:hover{ border-color:var(--ink-faint); }
+  .kind-opt.active{ border-color:var(--ink); }
+  .kind-opt b{ display:block; font-family:'Fraunces', serif; font-size:16px; margin-bottom:7px; font-weight:400; }
+  .kind-opt span{ font-size:12.5px; color:var(--ink-faint); line-height:1.8; }
+  .apply-readonly{
+    width:100%; padding:12px 14px; border:1px solid var(--line-soft); background:var(--paper);
+    font-family:inherit; font-size:14.5px; color:var(--ink-soft);
+  }
+  .apply-gate{ max-width:560px; }
+  .apply-gate-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:26px; }
+
+  /* ===== PLACE PROFILE ===== */
+  .place-facts{ display:flex; flex-wrap:wrap; gap:8px 10px; margin-bottom:18px; }
+  .place-fact{
+    font-size:12.5px; color:var(--ink-soft); border:1px solid var(--line);
+    border-radius:999px; padding:4px 12px;
+  }
+  .amenity-list{ display:flex; flex-wrap:wrap; gap:8px 10px; }
+  .amenity-list li{
+    list-style:none; font-size:13px; color:var(--ink-soft);
+    border:1px solid var(--line); padding:6px 13px;
+  }
+  .place-gallery{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:18px; }
+  .place-shot figure{ margin:0; }
+  .place-shot .frame{ aspect-ratio:4/3; background:var(--frame); overflow:hidden; }
+  .place-shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .place-shot figcaption{ font-size:12.5px; color:var(--ink-faint); margin-top:8px; line-height:1.8; }
+  .place-map{ border:1px solid var(--line); background:var(--paper); }
+  .place-map iframe{ display:block; width:100%; height:340px; border:0; }
+  .place-map-note{ font-size:12.5px; color:var(--ink-faint); line-height:1.9; margin-top:10px; }
+
+  /* ===== ACCOUNT ===== */
+  .acct-section{ margin-top:52px; }
+  .acct-subhead{ font-family:'Fraunces', serif; font-size:18px; margin-bottom:6px; }
+  .acct-subnote{ font-size:12.5px; color:var(--ink-faint); line-height:1.9; margin-bottom:20px; }
+  .acct-edit-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .acct-edit-row .apply-field{ flex:1 1 180px; margin-bottom:0; }
+  .acct-list{ display:grid; gap:14px; }
+  .acct-item{ border:1px solid var(--line); padding:16px 18px; }
+  .acct-item-top{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  .acct-item-name{ font-family:'Fraunces', serif; font-size:15.5px; }
+  .acct-item-meta{ font-size:12.5px; color:var(--ink-faint); line-height:1.9; }
+  .acct-item a{ color:var(--ink-soft); }
+  .acct-pill{
+    font-size:11.5px; color:var(--ink-soft); border:1px solid var(--line);
+    border-radius:999px; padding:3px 10px; white-space:nowrap;
+  }
+  .acct-pill.warn{ color:#a3352b; border-color:#e3c9c6; }
+  .apply-note.ok{ color:var(--ink); }
+  .apply-note.bad{ color:#a3352b; }
+  /* Honeypot: off-screen rather than display:none, since some bots skip
+     hidden inputs. Never focusable or announced to a screen reader. */
+  .hp-field{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+
+  @media (max-width:720px){
+    .host-head{ grid-template-columns:1fr; gap:22px; }
+    .host-head .host-avatar{ width:150px; }
+    .host-head h1{ font-size:24px; }
+    .host-grid{ grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:20px; }
+    .kind-choice{ grid-template-columns:1fr; }
+    .place-gallery{ grid-template-columns:1fr; }
+    .place-map iframe{ height:260px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <div class="nav-left">
+      <div class="logo" onclick="goTo('home')" role="button" tabindex="0">chaacme</div>
+      <nav class="links" id="navLinks">
+        <button data-page="contact">تماس با ما</button>
+        <button data-page="about">درباره ما</button>
+        <button data-page="experiences">تجربه‌ها</button>
+        <button data-page="home" class="active">رویدادها</button>
+      </nav>
+    </div>
+    <div class="nav-right">
+      <button class="nav-auth" id="navAuthBtn" onclick="goTo('login')">ثبت‌نام / ورود</button>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HOME ============ -->
+<main>
+<section class="page active" id="page-home">
+<div class="hero">
+    <video class="hero-media" autoplay muted loop playsinline>
+      <source src="/media/hero.mp4" type="video/mp4">
+    </video>
+    <div class="hero-scrim"></div>
+
+    <div class="upcoming-panel">
+      <div class="up-head">
+        <div class="up-title" lang="fa">رویدادهای پیش رو</div>
+        <button class="up-all" onclick="goTo('experiences')">دیدن همه</button>
+      </div>
+      <div class="tour-strip" id="upcomingTourStrip"></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="intro-block">
+        <p lang="fa">چکمه یک مجموعه تجربه‌محور است که سفر، طبیعت، فرهنگ، موسیقی، غذا، حرکت و ارتباط انسانی را در قالب تجربه‌هایی متفاوت و طراحی‌شده کنار هم قرار می‌دهد.</p>
+        <p lang="fa">ما برای افراد، گروه‌ها، برندها، شرکت‌ها و سازمان‌ها، تجربه‌هایی خلق می‌کنیم که فراتر از یک رویداد یا سفر معمولی هستند.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">What We Create</div>
+        <h2 lang="fa">ما چی خلق می‌کنیم؟</h2>
+      </div>
+      <div class="cat-list">
+        <div class="cat-row">
+          <div class="cat-name">RETREATS</div>
+          <div class="cat-desc" lang="fa">تجربه‌های چندروزه با محوریت حرکت، سلامتی، خلاقیت، طبیعت و ارتباط با بدن.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">LIVE EXPERIENCES</div>
+          <div class="cat-desc" lang="fa">رویدادهای محدود با ترکیب موسیقی، غذا، فضا و ارتباط با یکدیگر.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">CULTURAL EXPERIENCES</div>
+          <div class="cat-desc" lang="fa">تجربه‌هایی برای کشف فرهنگ، تاریخ، هنر، غذا و سبک زندگی.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">BRAND EXPERIENCES</div>
+          <div class="cat-desc" lang="fa">طراحی تجربه اختصاصی برای برندها و کمپین‌های آن‌ها.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">CORPORATE EXPERIENCES</div>
+          <div class="cat-desc" lang="fa">Retreat، Team Experience، Incentive Travel و برنامه‌های اختصاصی سازمانی.</div>
+        </div>
+      </div>
+      <div class="cta-line">
+        <button class="btn" onclick="goTo('experiences')">View Experiences</button>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ EXPERIENCES ============ -->
+<section class="page" id="page-experiences">
+  <section style="padding-top:170px;">
+    <div class="wrap">
+      <div class="exp-search">
+        <input type="text" placeholder="جستجو سفر" />
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.2" y2="16.2"></line></svg>
+      </div>
+      <div class="exp-filters">
+        <button class="exp-filter">فعالیت</button>
+        <button class="exp-filter">موقعیت</button>
+      </div>
+
+      <div class="exp-grid" id="expGrid"></div>
+
+      <div class="cta-line" style="margin-top:56px;">
+        <a href="/become-host" class="btn-fa btn-ghost" lang="fa" style="text-decoration:none; display:inline-block;">برگزارکننده شوید</a>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ ABOUT / PARTNERSHIP ============ -->
+<section class="page" id="page-about">
+  <section style="padding-top:170px;">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Chaacme × Audiences</div>
+        <h2>Turn your world into an experience</h2>
+      </div>
+
+      <div class="x-block" style="border-top:none;">
+        <div class="x-head">
+          <h3>Chaacme × Brands</h3>
+          <div class="x-fa" lang="fa">چکمه برای برندها تجربه‌هایی طراحی می‌کند که در آن برند تنها یک اسپانسر نیست؛ بخشی از خود تجربه است.</div>
+        </div>
+        <div class="tag-grid">
+          <div class="tag-pill">Brand Activation</div>
+          <div class="tag-pill">Product Integration</div>
+          <div class="tag-pill">Branded Experiences</div>
+          <div class="tag-pill">Launch Events</div>
+          <div class="tag-pill">VIP Experiences</div>
+          <div class="tag-pill">Content &amp; Storytelling</div>
+          <div class="tag-pill">Community Events</div>
+          <div class="tag-pill">Co-branded Experiences</div>
+        </div>
+      </div>
+
+      <div class="x-block">
+        <div class="x-head">
+          <h3>Chaacme × Corporates</h3>
+          <div class="x-fa" lang="fa">تجربه‌هایی برای فاصله گرفتن از فضای روزمره، ایجاد ارتباط و ساختن خاطره مشترک.</div>
+        </div>
+        <div class="tag-grid">
+          <div class="tag-pill">Corporate Retreat</div>
+          <div class="tag-pill">Team Experience</div>
+          <div class="tag-pill">Incentive Travel</div>
+          <div class="tag-pill">Employee Experience</div>
+          <div class="tag-pill">Private Events</div>
+          <div class="tag-pill">Leadership &amp; Connection Programs</div>
+        </div>
+      </div>
+
+      <div class="x-block">
+        <div class="x-head">
+          <h3>Chaacme × Embassies</h3>
+          <div class="x-fa" lang="fa">تجربه‌هایی برای معرفی فرهنگ، هنر، طبیعت و زندگی معاصر ایران از زاویه‌ای انسانی و متفاوت.</div>
+        </div>
+        <div class="tag-grid">
+          <div class="tag-pill">Cultural Journeys</div>
+          <div class="tag-pill">Art &amp; Craft Experiences</div>
+          <div class="tag-pill">Culinary Experiences</div>
+          <div class="tag-pill">Heritage &amp; Nature Trips</div>
+          <div class="tag-pill">Cultural Exchange</div>
+          <div class="tag-pill">Private Guest Experiences</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Partnership</div>
+        <h2>Ways we work together</h2>
+      </div>
+      <div class="p-grid">
+        <div class="p-cell">
+          <div class="eyebrow">Sponsorship</div>
+          <p lang="fa">حمایت مالی یا محصولی از تجربه</p>
+        </div>
+        <div class="p-cell">
+          <div class="eyebrow">Brand Partnership</div>
+          <p lang="fa">خلق تجربه مشترک</p>
+        </div>
+        <div class="p-cell">
+          <div class="eyebrow">Co-production</div>
+          <p lang="fa">تولید مشترک رویداد</p>
+        </div>
+        <div class="p-cell">
+          <div class="eyebrow">Custom Experience</div>
+          <p lang="fa">طراحی یک تجربه اختصاصی بر اساس نیاز شما</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Why Chaacme</div>
+        <h2>What makes it Chaacme</h2>
+      </div>
+      <div class="why-grid">
+        <div class="why-cell">
+          <div class="why-name">Curated</div>
+          <p lang="fa">هر جزئیات با هدف انتخاب می‌شود.</p>
+        </div>
+        <div class="why-cell">
+          <div class="why-name">Human</div>
+          <p lang="fa">تمرکز بر ارتباط واقعی آدم‌ها.</p>
+        </div>
+        <div class="why-cell">
+          <div class="why-name">Local</div>
+          <p lang="fa">مقصد و فرهنگ محلی بخشی از تجربه است.</p>
+        </div>
+        <div class="why-cell">
+          <div class="why-name">Creative</div>
+          <p lang="fa">ترکیب سفر با موسیقی، هنر، غذا و حرکت.</p>
+        </div>
+        <div class="why-cell">
+          <div class="why-name">Flexible</div>
+          <p lang="fa">قابل طراحی برای هر برند، سازمان و گروه.</p>
+        </div>
+        <div class="why-cell">
+          <div class="why-name">Experience First</div>
+          <p lang="fa">هدف، ساختن چیزی است که به خاطر بماند.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section class="page" id="page-contact">
+  <div class="closing wrap">
+    <div class="eyebrow">Let's talk</div>
+    <h2>Let's create something<br>worth remembering.</h2>
+    <div class="cw">CHAACME</div>
+    <div class="ctag">Experience Design &amp; Curated Journeys</div>
+    <div class="lines">
+      <div>Travel differently.</div>
+      <div>Experience deeply.</div>
+      <div>Remember always.</div>
+    </div>
+    <div class="contact-links">
+      <a href="https://instagram.com/chaacme" target="_blank" rel="noopener">Instagram — @chaacme</a>
+      <a href="mailto:hello@chaacme.com">For Collaborations &amp; Partnerships</a>
+    </div>
+    <div class="contact-note">Replace the email above with the studio's real contact address.</div>
+  </div>
+</section>
+
+<!-- ============ TOUR DETAIL (template) ============ -->
+<section class="page" id="page-tour">
+  <section style="padding-top:170px;">
+    <div class="wrap">
+      <button class="tour-back" onclick="goTo('experiences')">‹ بازگشت به تجربه‌ها</button>
+      <div class="tour-hero">
+        <div class="tour-gallery">
+          <div class="frame">
+            <img class="frame-photo" id="tourFramePhoto" alt="">
+            <div class="corner tl"></div><div class="corner br"></div>
+            <div class="frame-label" id="tourFrameLabel">Photo — Desert Camp, Arrival</div>
+          </div>
+          <button class="g-arrow g-prev" onclick="tourGallery(-1)" aria-label="تصویر قبلی">‹</button>
+          <button class="g-arrow g-next" onclick="tourGallery(1)" aria-label="تصویر بعدی">›</button>
+          <div class="g-count" id="tourCount">۱ / ۵</div>
+        </div>
+        <div class="tour-info">
+          <div class="tags" id="tourTags">کویر · طبیعت · اخترنجوم</div>
+          <h1 lang="fa" id="tourTitle">سفر در کویر و دل تاریخ اشکانیان</h1>
+          <div class="en-sub" id="tourEnSub">Desert &amp; Parthian History — One Night</div>
+          <p lang="fa" id="tourDescription">یک شب در کویر با اقامت بوتیک، موسیقی زنده، غذای طراحی‌شده، رصد آسمان و تجربه بارش شهابی. گروهی محدود، همراه با راهنمایی مسلط به نجوم و تاریخ منطقه.</p>
+        </div>
+      </div>
+
+      <div class="tour-booking">
+        <div class="tour-price">
+          <div class="amount" id="tourPrice">۲۳٬۰۰۰٬۰۰۰ تومان</div>
+          <div class="per">برای هر نفر</div>
+        </div>
+        <div class="tour-booking-actions">
+          <button class="btn-fa" onclick="goTo('booking')">تاریخ و پرداخت</button>
+          <button class="btn-fa btn-ghost" onclick="goTo('experiences')">دانلود خلاصه تور</button>
+        </div>
+      </div>
+
+      <details class="tour-included">
+        <summary><span>این تور شامل چه مواردی است؟</span><span class="s-icon"></span></summary>
+        <div class="included-list" lang="fa" id="tourIncluded">اقامت یک‌شبه بوتیک · وعده‌های غذایی طراحی‌شده · تجهیزات رصد آسمان · موسیقی زنده · حمل‌ونقل رفت‌وبرگشت از تهران · راهنمای تور</div>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Highlights</div>
+        <h2 lang="fa">نکات برجسته این سفر</h2>
+      </div>
+      <div class="cat-list" id="tourHighlights">
+        <div class="cat-row">
+          <div class="cat-name">اقامت بوتیک</div>
+          <div class="cat-desc" lang="fa">اقامتگاهی طراحی‌شده در دل کویر، با چشم‌اندازی مستقیم به آسمان شب.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">رصد آسمان</div>
+          <div class="cat-desc" lang="fa">تلسکوپ حرفه‌ای و راهنمای نجوم، برای رصد ستاره‌ها و بارش شهابی.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">موسیقی زنده</div>
+          <div class="cat-desc" lang="fa">اجرای زنده در فضای باز کویر، همراه با آتش و سکوت شب.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">سفره محلی</div>
+          <div class="cat-desc" lang="fa">غذایی طراحی‌شده با محصولات و طعم‌های بومی منطقه.</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-name">گروه محدود</div>
+          <div class="cat-desc" lang="fa">حداکثر ۱۲ نفر، برای تجربه‌ای نزدیک‌تر و شخصی‌تر.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:0;">
+        <div class="eyebrow">Itinerary</div>
+        <h2 lang="fa">برنامه سفر</h2>
+      </div>
+
+      <div id="tourItinerary">
+      <div class="case">
+        <div class="frame-col">
+          <div class="frame"><div class="corner tl"></div><div class="corner br"></div><div class="frame-index">۱</div><div class="frame-label">Photo — Arrival</div></div>
+        </div>
+        <div>
+          <div class="tags">بعدازظهر</div>
+          <h3 lang="fa">رسیدن و استقرار</h3>
+          <p class="case-fa" lang="fa">رسیدن به کمپ، استقرار در اقامتگاه و زمان آزاد برای پیاده‌روی در کویر پیش از غروب.</p>
+        </div>
+      </div>
+
+      <div class="case">
+        <div class="frame-col">
+          <div class="frame"><div class="corner tl"></div><div class="corner br"></div><div class="frame-index">۲</div><div class="frame-label">Photo — Stargazing</div></div>
+        </div>
+        <div>
+          <div class="tags">غروب تا نیمه‌شب</div>
+          <h3 lang="fa">شام، موسیقی و رصد آسمان</h3>
+          <p class="case-fa" lang="fa">شام دورهمی، اجرای موسیقی زنده کنار آتش و رصد آسمان همراه با راهنمای نجوم.</p>
+        </div>
+      </div>
+
+      <div class="case">
+        <div class="frame-col">
+          <div class="frame"><div class="corner tl"></div><div class="corner br"></div><div class="frame-index">۳</div><div class="frame-label">Photo — Departure</div></div>
+        </div>
+        <div>
+          <div class="tags">صبح</div>
+          <h3 lang="fa">صبحانه و بازگشت</h3>
+          <p class="case-fa" lang="fa">صبحانه در کویر و حرکت به سمت تهران، رسیدن پیش از ظهر.</p>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Where the tour happens and who runs it are two different claims, so
+       they are two blocks. Each one is hidden when it is empty: an empty
+       heading would imply we are withholding something. -->
+  <section id="tourVenueSection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Venue</div>
+        <h2 lang="fa">محل برگزاری</h2>
+      </div>
+      <div class="host-grid" id="tourVenueGrid"></div>
+    </div>
+  </section>
+
+  <section id="tourHostsSection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Hosts</div>
+        <h2 lang="fa">برگزارکنندگان</h2>
+      </div>
+      <div class="host-grid" id="tourHostsGrid"></div>
+    </div>
+  </section>
+
+  <!-- Shown whenever either block above is, so a tour never presents its
+       partners without saying what chaacme's own part in it was. -->
+  <section id="tourCuratorLine" style="display:none;">
+    <div class="wrap">
+      <p lang="fa" style="font-size:13.5px; color:var(--ink-faint); line-height:2;">طراحی و هماهنگی: چکمه</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:0;">
+        <div class="eyebrow">Reviews &amp; Ratings</div>
+        <h2 lang="fa">نظرات و امتیازات</h2>
+      </div>
+
+      <div class="reviews-overview">
+        <div class="reviews-score">
+          <div class="score-num" id="reviewScore">۴.۳</div>
+          <div class="stars" id="reviewStars">★★★★☆</div>
+          <div class="score-count" id="reviewCount">از ۱۲ نظر</div>
+        </div>
+        <div class="review-categories" id="reviewCategories">
+          <div class="review-cat"><div class="rc-label">غذا</div><div class="rc-score">۴.۶</div></div>
+          <div class="review-cat"><div class="rc-label">راهنما و گروه</div><div class="rc-score">۴.۵</div></div>
+          <div class="review-cat"><div class="rc-label">اقامتگاه</div><div class="rc-score">۴.۰</div></div>
+          <div class="review-cat"><div class="rc-label">برنامه سفر</div><div class="rc-score">۴.۲</div></div>
+        </div>
+      </div>
+
+      <div class="section-head" style="margin-bottom:20px; text-align:right;">
+        <h3 lang="fa" style="font-family:'Fraunces',serif; font-size:19px;">نظرات اخیر</h3>
+      </div>
+      <div class="review-cards" id="reviewCards">
+        <div class="review-card">
+          <div class="rc-top"><div class="rc-name">مریم .ک</div><div class="rc-stars">★★★★★</div></div>
+          <p class="rc-text" lang="fa">شب فراموش‌نشدنی‌ای بود؛ رصد آسمان و موسیقی زنده کنار آتش عالی بود.</p>
+          <div class="rc-date">شهریور ۱۴۰۵</div>
+        </div>
+        <div class="review-card">
+          <div class="rc-top"><div class="rc-name">امیر .ر</div><div class="rc-stars">★★★★☆</div></div>
+          <p class="rc-text" lang="fa">اقامتگاه ساده ولی دنج بود، غذا خیلی خوب بود. راهنمای تور هم عالی توضیح می‌داد.</p>
+          <div class="rc-date">مرداد ۱۴۰۵</div>
+        </div>
+        <div class="review-card">
+          <div class="rc-top"><div class="rc-name">سارا .ن</div><div class="rc-stars">★★★★★</div></div>
+          <p class="rc-text" lang="fa">گروه محدود بود و همین باعث شد تجربه خیلی شخصی‌تر و آرام‌تر باشه.</p>
+          <div class="rc-date">مرداد ۱۴۰۵</div>
+        </div>
+      </div>
+      <div class="cta-line" style="margin-top:32px;">
+        <button class="btn-fa btn-ghost">دیدن تمامی نظرات</button>
+      </div>
+
+      <div class="section-head" style="margin:64px 0 20px; text-align:right;">
+        <h3 lang="fa" style="font-family:'Fraunces',serif; font-size:19px;">نظر خود را بنویسید</h3>
+      </div>
+      <div class="review-form">
+        <div class="rf-stars" id="rfStars">
+          <span class="rf-star" data-v="1">★</span>
+          <span class="rf-star" data-v="2">★</span>
+          <span class="rf-star" data-v="3">★</span>
+          <span class="rf-star" data-v="4">★</span>
+          <span class="rf-star" data-v="5">★</span>
+        </div>
+        <textarea placeholder="تجربه‌تون از این سفر رو بنویسید..."></textarea>
+        <div class="rf-actions">
+          <button class="btn-fa" onclick="submitReview()">ارسال نظر</button>
+          <div class="rf-note" id="rfNote"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ LOGIN / SIGNUP ============ -->
+<section class="page" id="page-login">
+  <div class="auth-shell">
+    <div class="auth-visual">
+      <div class="frame">
+        <img class="frame-photo" style="display:block" src="/images/login-cover.png" alt="">
+      </div>
+    </div>
+
+    <div class="auth-panel">
+
+      <div id="authError" style="display:none; color:#c0392b; font-size:13px; margin-bottom:12px;" lang="fa"></div>
+
+      <!-- Step 1: phone number (shared by both auth modes) -->
+      <div class="auth-step active" data-step="phone">
+        <h2 lang="fa">به چکمه خوش آمدید</h2>
+        <div class="auth-sub" lang="fa">برای ورود یا ثبت‌نام، یکی از روش‌های زیر را انتخاب کنید.</div>
+
+        <div style="display:flex; gap:8px; margin:14px 0;">
+          <button type="button" id="authTabOtp" class="btn-fa" style="flex:1;" onclick="authSetMode('otp')">کد تایید پیامکی</button>
+          <button type="button" id="authTabPassword" class="btn-fa btn-ghost" style="flex:1;" onclick="authSetMode('password')">رمز عبور</button>
+        </div>
+
+        <div class="auth-note">
+          <div class="note-icon">i</div>
+          <div lang="fa">تایید هویت شما از این طریق انجام می‌شود. لطفاً شماره موبایلی که به نام خودتان ثبت شده را وارد کنید.</div>
+        </div>
+        <label class="auth-label" for="authPhone">شماره موبایل</label>
+        <input class="auth-input" id="authPhone" type="tel" inputmode="numeric" placeholder="مثلاً ۰۹۱۲۳۴۵۶۷۸۹" oninput="authValidatePhone()">
+
+        <div id="authPasswordFields" style="display:none;">
+          <input class="auth-input" id="authPasswordInput" type="password" placeholder="رمز عبور" oninput="authValidatePhone()">
+          <div id="authSignupFields" style="display:none;">
+            <div class="auth-row">
+              <input class="auth-input" id="authPwLastName" placeholder="نام خانوادگی" oninput="authValidatePhone()">
+              <input class="auth-input" id="authPwFirstName" placeholder="نام" oninput="authValidatePhone()">
+            </div>
+            <input class="auth-input" id="authPwUsername" placeholder="نام کاربری" oninput="authValidatePhone()">
+          </div>
+          <!-- Signup now lives on its own screen (#page-signup) so its OTP tab can be
+               hidden independently of this login screen's OTP tab — see OTP_SIGNUP_DISABLED.
+               authToggleSignup()/authSignupFields below are left in place, untouched and
+               unused, in case this in-place toggle needs to come back. -->
+          <div class="auth-sub" lang="fa" style="margin-top:8px;">
+            <button class="auth-link" type="button" onclick="goTo('signup')"><span id="authToggleSignupText">حساب ندارید؟ ثبت‌نام کنید</span></button>
+          </div>
+        </div>
+
+        <button class="btn-fa auth-submit" id="authPhoneBtn" disabled onclick="authPhoneSubmit()">ادامه</button>
+        <div class="auth-terms" lang="fa">ورود شما به معنای پذیرش شرایط استفاده از چکمه است.</div>
+      </div>
+
+      <!-- Step 2: OTP code -->
+      <div class="auth-step" data-step="code">
+        <h2 lang="fa">کد تایید را وارد کنید</h2>
+        <div class="auth-sub" lang="fa">کد تایید برای شماره <span id="authPhoneDisplay"></span> ارسال شد. <button class="auth-link" onclick="authGoStep('phone')">شماره شما نیست؟</button></div>
+        <label class="auth-label">کد تایید</label>
+        <div class="otp-boxes" id="otpBoxes">
+          <input maxlength="1" inputmode="numeric" autocomplete="one-time-code">
+          <input maxlength="1" inputmode="numeric">
+          <input maxlength="1" inputmode="numeric">
+          <input maxlength="1" inputmode="numeric">
+          <input maxlength="1" inputmode="numeric">
+        </div>
+        <div class="auth-resend" lang="fa">دریافت مجدد کد تایید در <span id="otpTimer">۱:۲۳</span> ثانیه</div>
+        <button class="btn-fa btn-ghost auth-submit" id="authResendBtn" disabled onclick="authResendCode()">دریافت مجدد</button>
+      </div>
+
+      <!-- Step 3: profile info -->
+      <div class="auth-step" data-step="profile">
+        <h2 lang="fa">اطلاعات خود را وارد کنید</h2>
+        <div class="auth-row">
+          <input class="auth-input" id="authLastName" placeholder="نام خانوادگی" oninput="authValidateProfile()">
+          <input class="auth-input" id="authFirstName" placeholder="نام" oninput="authValidateProfile()">
+        </div>
+        <input class="auth-input" id="authUsername" placeholder="نام کاربری" oninput="authValidateProfile()">
+        <button class="btn-fa auth-submit" id="authProfileBtn" disabled onclick="authComplete()">ورود / ثبت‌نام</button>
+      </div>
+
+      <!-- Step 4: done -->
+      <div class="auth-step auth-success" data-step="done">
+        <h2 lang="fa">خوش اومدی!</h2>
+        <div class="auth-sub" lang="fa"><span id="authDoneName"></span> جان، ثبت‌نامت با موفقیت انجام شد.</div>
+        <button class="btn-fa auth-submit" onclick="goTo('account')">رفتن به حساب کاربری</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ SIGNUP (password-only) ============
+     OTP is intentionally not offered here — governed by the same OTP_SIGNUP_DISABLED
+     flag used on the login screen's OTP-verify branch (see near `let authMode` below).
+     Re-enabling OTP for signup means: flip OTP_SIGNUP_DISABLED to false AND build a
+     phone→code→profile flow on this screen (not built yet, since it's unused while
+     the flag is on). Login's own OTP tab/flow above is untouched by this section. -->
+<section class="page" id="page-signup">
+  <div class="auth-shell">
+    <div class="auth-visual">
+      <div class="frame">
+        <img class="frame-photo" style="display:block" src="/images/login-cover.png" alt="">
+      </div>
+    </div>
+
+    <div class="auth-panel">
+
+      <div id="authSuError" style="display:none; color:#c0392b; font-size:13px; margin-bottom:12px;" lang="fa"></div>
+
+      <div class="auth-step su-step active" data-sustep="form">
+        <h2 lang="fa">ثبت‌نام در چکمه</h2>
+        <div class="auth-sub" lang="fa">برای ثبت‌نام، اطلاعات زیر را وارد کنید.</div>
+
+        <label class="auth-label" for="authSuPhone">شماره موبایل</label>
+        <input class="auth-input" id="authSuPhone" type="tel" inputmode="numeric" placeholder="مثلاً ۰۹۱۲۳۴۵۶۷۸۹" oninput="authSuValidate()">
+        <input class="auth-input" id="authSuPasswordInput" type="password" placeholder="رمز عبور" oninput="authSuValidate()">
+        <div class="auth-row">
+          <input class="auth-input" id="authSuLastName" placeholder="نام خانوادگی" oninput="authSuValidate()">
+          <input class="auth-input" id="authSuFirstName" placeholder="نام" oninput="authSuValidate()">
+        </div>
+        <input class="auth-input" id="authSuUsername" placeholder="نام کاربری" oninput="authSuValidate()">
+
+        <div class="auth-sub" lang="fa" style="margin-top:8px;">
+          <button class="auth-link" type="button" onclick="goTo('login')">قبلاً ثبت‌نام کرده‌اید؟ وارد شوید</button>
+        </div>
+
+        <button class="btn-fa auth-submit" id="authSuBtn" disabled onclick="authSuSubmit()">ثبت‌نام</button>
+        <div class="auth-terms" lang="fa">ثبت‌نام شما به معنای پذیرش شرایط استفاده از چکمه است.</div>
+      </div>
+
+      <div class="auth-step su-step auth-success" data-sustep="done">
+        <h2 lang="fa">خوش اومدی!</h2>
+        <div class="auth-sub" lang="fa"><span id="authSuDoneName"></span> جان، ثبت‌نامت با موفقیت انجام شد.</div>
+        <button class="btn-fa auth-submit" onclick="goTo('account')">رفتن به حساب کاربری</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ ACCOUNT ============ -->
+<section class="page" id="page-account">
+  <section style="padding-top:170px;">
+    <div class="wrap" dir="rtl">
+      <div class="section-head" style="text-align:right; margin-bottom:48px;">
+        <div class="eyebrow">My Account</div>
+        <h2 id="acctGreeting" lang="fa">سلام!</h2>
+      </div>
+
+      <!-- This page is private: nothing on it is published anywhere. The
+           partner profiles listed at the bottom are the only public thing an
+           account can own, and they are linked, not shown. -->
+      <div class="acct-grid">
+        <div class="acct-info">
+          <div class="acct-subhead" lang="fa">اطلاعات من</div>
+          <div class="acct-subnote" lang="fa">این صفحه خصوصی است و برای کسی نمایش داده نمی‌شود.</div>
+          <div class="acct-edit-row">
+            <div class="apply-field">
+              <label for="acctFirstNameInput" lang="fa">نام</label>
+              <input type="text" id="acctFirstNameInput" maxlength="60" lang="fa">
+            </div>
+            <div class="apply-field">
+              <label for="acctLastNameInput" lang="fa">نام خانوادگی</label>
+              <input type="text" id="acctLastNameInput" maxlength="60" lang="fa">
+            </div>
+          </div>
+          <div class="apply-error" id="acctNameErr"></div>
+          <button class="btn-fa" style="margin-top:16px; width:100%;" id="acctSaveBtn">ذخیره‌ی نام</button>
+          <div class="apply-note" id="acctNameNote"></div>
+
+          <div class="acct-row" style="margin-top:22px;"><div class="acct-label">نام کاربری</div><div class="acct-value" id="acctUsername">—</div></div>
+          <div class="acct-row"><div class="acct-label">شماره موبایل</div><div class="acct-value" id="acctPhone">—</div></div>
+          <div class="acct-subnote" lang="fa" style="margin-top:10px;">شماره‌ی موبایل و نام کاربری از اینجا قابل تغییر نیستند.</div>
+          <button class="btn-fa btn-ghost" style="margin-top:16px; width:100%;" onclick="authLogout()">خروج از حساب</button>
+        </div>
+
+        <div class="acct-bookings">
+          <div class="acct-subhead" lang="fa">سفرهای من</div>
+          <div class="acct-subnote" lang="fa" id="acctUpcomingHead">تجربه‌های پیشِ رو</div>
+        </div>
+      </div>
+
+      <div class="acct-section">
+        <div class="acct-subhead" lang="fa">نظرهای من</div>
+        <div class="acct-subnote" lang="fa">نظرهایی که ثبت کرده‌اید و وضعیت انتشارشان.</div>
+        <div class="acct-list" id="acctReviews"></div>
+      </div>
+
+      <div class="acct-section">
+        <div class="acct-subhead" lang="fa">همکاری با چکمه</div>
+        <div class="acct-subnote" lang="fa">درخواست‌های همکاری و پروفایل‌هایی که به حساب شما تعلق دارند.</div>
+        <div class="acct-list" id="acctPartner"></div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ BOOKING ============ -->
+<section class="page" id="page-booking">
+  <section style="padding-top:170px;">
+    <div class="wrap" style="max-width:640px;" dir="rtl">
+      <button class="tour-back" onclick="goTo('tour')">‹ بازگشت به صفحه تور</button>
+      <div class="section-head" style="text-align:right; margin-bottom:8px;">
+        <div class="eyebrow">Booking</div>
+        <h2 lang="fa">رزرو تور</h2>
+      </div>
+      <div class="booking-context" lang="fa">سفر در کویر و دل تاریخ اشکانیان</div>
+
+      <!-- Step: date -->
+      <div class="booking-step active" data-bstep="date">
+        <div class="auth-sub" lang="fa">یکی از تاریخ‌های اجرا را انتخاب کنید.</div>
+        <div class="booking-dates" id="bookingDates"></div>
+        <button class="btn-fa auth-submit" id="bookingDateBtn" disabled onclick="bookingGoStep('guests')">ادامه</button>
+      </div>
+
+      <!-- Step: guests -->
+      <div class="booking-step" data-bstep="guests">
+        <div class="auth-sub" lang="fa">تعداد نفرات را مشخص کنید.</div>
+        <div class="booking-counter">
+          <button onclick="changeGuests(-1)" aria-label="کم کردن">−</button>
+          <div id="guestCount">۱</div>
+          <button onclick="changeGuests(1)" aria-label="زیاد کردن">+</button>
+        </div>
+        <label class="auth-label" style="margin-top:20px;">اطلاعات تماس</label>
+        <div id="bookingContactLoggedOut" class="auth-note">
+          <div class="note-icon">i</div>
+          <div lang="fa">برای تکمیل رزرو باید وارد حساب کاربری بشید.
+            <div style="margin-top:10px;"><button class="btn-fa" onclick="goTo('login')">ورود / ثبت‌نام</button></div>
+          </div>
+        </div>
+        <div id="bookingContactLoggedIn" style="display:none; border:1px solid var(--line-soft);">
+          <div class="acct-row"><div class="acct-label">نام</div><div class="acct-value" id="bookingUserName">—</div></div>
+          <div class="acct-row"><div class="acct-label">شماره موبایل</div><div class="acct-value" id="bookingUserPhone">—</div></div>
+        </div>
+        <button class="btn-fa auth-submit" id="bookingGuestsBtn" style="margin-top:20px;" onclick="bookingGoStep('pay')">ادامه</button>
+      </div>
+
+      <!-- Step: payment -->
+      <div class="booking-step" data-bstep="pay">
+        <div class="booking-summary">
+          <div class="bs-row"><div>تاریخ</div><div id="summaryDate">—</div></div>
+          <div class="bs-row"><div>تعداد نفرات</div><div id="summaryGuests">—</div></div>
+          <div class="bs-row"><div>قیمت هر نفر</div><div>۲۳٬۰۰۰٬۰۰۰ تومان</div></div>
+          <div class="bs-row bs-total"><div>مبلغ قابل پرداخت</div><div id="summaryTotal">—</div></div>
+        </div>
+        <div class="auth-note" style="margin-top:22px;">
+          <div class="note-icon">i</div>
+          <div lang="fa">پس از ثبت رزرو به درگاه پرداخت زرین‌پال منتقل می‌شوید.</div>
+        </div>
+        <div id="bookingError" style="display:none; color:#c0392b; font-size:13px; margin-top:10px;" lang="fa"></div>
+        <button class="btn-fa auth-submit" id="bookingPayBtn" style="margin-top:20px;" onclick="bookingComplete()">پرداخت و نهایی‌کردن رزرو</button>
+      </div>
+
+      <!-- Step: done (also the landing state for a return from the ZarinPal callback, see handlePaymentResultRedirect) -->
+      <div class="booking-step auth-success" data-bstep="done">
+        <h2 lang="fa" id="bookingDoneTitle">رزرو شما ثبت شد 🎉</h2>
+        <div class="auth-sub" lang="fa"><span id="bookingDoneLabel">کد رزرو:</span> <span id="bookingRef"></span></div>
+        <button class="btn-fa auth-submit" onclick="goTo('account')">مشاهده در حساب کاربری</button>
+      </div>
+
+    </div>
+  </section>
+</section>
+
+<!-- ============ HOST PROFILE (/host/<slug>) ============ -->
+<section class="page" id="page-host">
+  <section style="padding-top:170px;">
+    <div class="wrap">
+      <button class="tour-back" onclick="goTo('experiences')">‹ بازگشت به تجربه‌ها</button>
+
+      <div class="host-head" style="margin-top:34px;">
+        <div class="host-avatar" id="hostAvatar"></div>
+        <div>
+          <div class="host-title-row">
+            <h1 lang="fa" id="hostName"></h1>
+            <span class="host-verified" id="hostVerified" style="display:none;">تأییدشده توسط چکمه</span>
+          </div>
+          <!-- A person's expertise and a place's type/region occupy the same
+               slot: one line of "what this is", filled by kind. -->
+          <div class="host-expertise" lang="fa" id="hostExpertise"></div>
+          <div class="place-facts" id="hostPlaceFacts" style="display:none;"></div>
+          <p class="host-bio" lang="fa" id="hostBio"></p>
+          <div class="host-links" id="hostLinks"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="hostGallerySection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Gallery</div>
+        <h2 lang="fa">تصویرها</h2>
+      </div>
+      <div class="place-gallery" id="hostGallery"></div>
+    </div>
+  </section>
+
+  <section id="hostAmenitiesSection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Amenities</div>
+        <h2 lang="fa">امکانات</h2>
+      </div>
+      <ul class="amenity-list" id="hostAmenities"></ul>
+    </div>
+  </section>
+
+  <!-- Deliberately an area, not a pin: the API only ever returns coordinates
+       rounded to ~1 km, and the embed is built around that rounded point. -->
+  <section id="hostMapSection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Location</div>
+        <h2 lang="fa">موقعیت تقریبی</h2>
+      </div>
+      <div class="place-map" id="hostMap"></div>
+      <p class="place-map-note" lang="fa" id="hostMapNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Upcoming</div>
+        <h2 lang="fa">تجربه‌های پیشِ رو</h2>
+      </div>
+      <div class="exp-grid" id="hostUpcoming"></div>
+      <div class="empty-note" lang="fa" id="hostUpcomingEmpty" style="display:none;">در حال حاضر تجربه‌ی فعالی ندارد.</div>
+    </div>
+  </section>
+
+  <section id="hostPastSection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Past</div>
+        <h2 lang="fa">تجربه‌های گذشته</h2>
+      </div>
+      <div class="exp-grid" id="hostPast"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head" style="margin-bottom:28px;">
+        <div class="eyebrow">Reviews</div>
+        <h2 lang="fa">نظرات</h2>
+      </div>
+      <div class="review-cards" id="hostReviewCards"></div>
+      <div class="empty-note" lang="fa" id="hostReviewsEmpty" style="display:none;">هنوز نظری ثبت نشده</div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ BECOME A HOST (/become-host) ============ -->
+<section class="page" id="page-become-host">
+  <section style="padding-top:170px;">
+    <div class="wrap">
+      <div class="section-head" style="text-align:right; margin-bottom:28px;">
+        <div class="eyebrow">Become a Host</div>
+        <h2 lang="fa">برگزارکننده شوید</h2>
+      </div>
+      <p lang="fa" style="font-size:15px; line-height:2.05; color:var(--ink-soft); max-width:560px; margin-bottom:38px;">
+        چکمه تجربه‌ها را با آدم‌ها و مکان‌ها می‌سازد: مربیان و راهنمایانی که برنامه را اجرا می‌کنند، و اقامتگاه‌ها و
+        فضاهایی که میزبان آن هستند. اگر یکی از این دو هستید، درخواست همکاری بفرستید.
+      </p>
+
+      <!-- Logged out: nothing to fill in yet. A partner profile belongs to an
+           account, so the account comes first. -->
+      <div class="apply-gate" id="applyGate" style="display:none;">
+        <div class="auth-note" lang="fa">برای درخواست همکاری ابتدا وارد شوید یا ثبت‌نام کنید.</div>
+        <div class="apply-gate-actions">
+          <button type="button" class="btn-fa" id="applyGateLogin">ورود به حساب</button>
+          <button type="button" class="btn-fa btn-ghost" id="applyGateSignup">ساخت حساب</button>
+        </div>
+      </div>
+
+      <form class="apply-form" id="applyForm" autocomplete="off" style="display:none;">
+        <div class="apply-field">
+          <label lang="fa">چه چیزی را معرفی می‌کنید؟</label>
+          <div class="kind-choice">
+            <button type="button" class="kind-opt active" data-kind="person" id="applyKindPerson">
+              <b lang="fa">شخص</b><span lang="fa">مربی، راهنما، برگزارکننده</span>
+            </button>
+            <button type="button" class="kind-opt" data-kind="place" id="applyKindPlace">
+              <b lang="fa">مکان</b><span lang="fa">اقامتگاه، باغ، فضای برگزاری</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="apply-field">
+          <label for="applyName" lang="fa" id="applyNameLabel">نام نمایشی</label>
+          <input type="text" id="applyName" maxlength="80" lang="fa">
+          <div class="apply-hint" lang="fa" id="applyNameHint">نامی که روی صفحه‌ی عمومی نمایش داده می‌شود.</div>
+          <div class="apply-error" id="applyNameErr"></div>
+        </div>
+
+        <!-- Identity comes from the account, not from this form: a submission
+             can never claim to be someone else's name or phone number. -->
+        <div class="apply-field">
+          <label lang="fa">حساب شما</label>
+          <div class="apply-readonly" id="applyAccountName" lang="fa">—</div>
+        </div>
+
+        <div class="apply-field">
+          <label lang="fa">شماره تماس</label>
+          <div class="apply-readonly" id="applyAccountPhone" dir="ltr" style="text-align:left;">—</div>
+          <div class="apply-hint" lang="fa">شماره‌ی شما فقط برای تماس تیم چکمه درباره‌ی این درخواست استفاده می‌شود و نمایش داده نمی‌شود.</div>
+        </div>
+
+        <div class="apply-field" id="applyExpertiseField">
+          <label for="applyExpertise" lang="fa">زمینه‌ی تخصص (اختیاری)</label>
+          <input type="text" id="applyExpertise" maxlength="120" lang="fa" placeholder="مثلاً کوهنوردی، عکاسی، آشپزی">
+          <div class="apply-error" id="applyExpertiseErr"></div>
+        </div>
+
+        <div class="apply-field" id="applyLodgingField" style="display:none;">
+          <label for="applyLodging" lang="fa">نوع مکان (اختیاری)</label>
+          <input type="text" id="applyLodging" maxlength="60" lang="fa" placeholder="مثلاً اقامتگاه بوم‌گردی">
+          <div class="apply-error" id="applyLodgingErr"></div>
+        </div>
+
+        <div class="apply-field" id="applyRegionField" style="display:none;">
+          <label for="applyRegion" lang="fa">منطقه</label>
+          <input type="text" id="applyRegion" maxlength="120" lang="fa" placeholder="مثلاً سه‌هزار، تنکابن، مازندران">
+          <div class="apply-hint" lang="fa">فقط منطقه — نشانی دقیق روی سایت منتشر نمی‌شود.</div>
+          <div class="apply-error" id="applyRegionErr"></div>
+        </div>
+
+        <div class="apply-field">
+          <label for="applyInstagram" lang="fa">اینستاگرام (اختیاری)</label>
+          <input type="text" id="applyInstagram" maxlength="30" placeholder="username" dir="ltr" style="text-align:left;">
+          <div class="apply-hint" lang="fa">فقط نام کاربری، بدون @ و بدون لینک.</div>
+          <div class="apply-error" id="applyInstagramErr"></div>
+        </div>
+
+        <div class="apply-field">
+          <label for="applyDescription" lang="fa" id="applyDescriptionLabel">چه تجربه‌ای می‌خواهید برگزار کنید؟</label>
+          <textarea id="applyDescription" maxlength="2000" lang="fa"></textarea>
+          <div class="apply-error" id="applyDescriptionErr"></div>
+        </div>
+
+        <!-- Honeypot: a real person never sees or fills this. -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="applyWebsite">Website</label>
+          <input type="text" id="applyWebsite" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <button type="submit" class="btn-fa" id="applySubmit">ارسال درخواست</button>
+        <div class="apply-note" lang="fa" id="applyNote"></div>
+      </form>
+    </div>
+  </section>
+</section>
+
+<!-- ============ NOT FOUND ============ -->
+<section class="page" id="page-not-found">
+  <section style="padding-top:170px;">
+    <div class="wrap" style="text-align:center; padding-bottom:120px;">
+      <div class="eyebrow">Not Found</div>
+      <h2 lang="fa" style="margin:14px 0 18px;">این صفحه پیدا نشد</h2>
+      <p lang="fa" style="font-size:14.5px; color:var(--ink-faint); margin-bottom:30px;">ممکن است آدرس اشتباه باشد یا این صفحه دیگر در دسترس نباشد.</p>
+      <button class="btn-fa btn-ghost" onclick="goHome()">بازگشت به صفحه‌ی اصلی</button>
+    </div>
+  </section>
+</section>
+</main>
+
+<footer>
+  <p>CHAACME — Experience Design &amp; Curated Journeys</p>
+  <p style="margin-top:10px;"><a href="/become-host" lang="fa" style="color:inherit;">برگزارکننده شوید</a></p>
+</footer>
+
+<script>
+  const buttons = document.querySelectorAll('nav.links button');
+  const pages = document.querySelectorAll('.page');
+  const navLinks = document.getElementById('navLinks');
+  const navToggle = document.getElementById('navToggle');
+
+  // The only pages with a URL of their own. Everything else is reached
+  // through goTo() with no address-bar change, so the path must fall back to
+  // "/" — otherwise a visit to /become-host or /host/<slug> would keep that
+  // path for the rest of the session and every reload would land back on it
+  // instead of the events page. 'not-found' is included because it is only
+  // ever reached from one of those URLs, which should stay put so a refresh
+  // reproduces it.
+  const ROUTED_PAGES = ['become-host', 'host', 'not-found'];
+
+  function goTo(name){
+    const target = document.getElementById('page-' + name);
+    if(!target) return; // page not built yet
+    if(ROUTED_PAGES.indexOf(name) === -1 && window.location.pathname !== '/'){
+      history.replaceState(null, '', '/');
+    }
+    pages.forEach(p => p.classList.remove('active'));
+    target.classList.add('active');
+    buttons.forEach(b => b.classList.toggle('active', b.dataset.page === name));
+    window.scrollTo({top:0, behavior:'instant'});
+    navLinks.classList.remove('open');
+    if(name === 'login' && typeof authGoStep === 'function'){
+      document.getElementById('authPhone').value = '';
+      document.getElementById('authPhoneBtn').disabled = true;
+      authSetMode(typeof OTP_LOGIN_DISABLED !== 'undefined' && OTP_LOGIN_DISABLED ? 'password' : 'otp');
+      hideAuthError();
+      authGoStep('phone');
+    }
+    if(name === 'signup' && typeof authSuReset === 'function'){
+      authSuReset();
+    }
+    if(name === 'booking' && typeof bookingReset === 'function'){
+      bookingReset();
+    }
+    if(name === 'account' && typeof updateAccountPage === 'function'){
+      updateAccountPage();
+    }
+  }
+
+  buttons.forEach(b => b.addEventListener('click', () => goTo(b.dataset.page)));
+  navToggle.addEventListener('click', () => navLinks.classList.toggle('open'));
+
+  // --- Catalog: fetched from the backend API (GET /api/tours, GET
+  // /api/tours/:id) — never hardcoded, so admin edits show up here. ---
+  function apiGet(path){
+    return fetch('/api' + path, { credentials: 'same-origin' }).then(function(res){
+      if(!res.ok) throw new Error('http_' + res.status);
+      return res.json();
+    });
+  }
+
+  function apiPost(path, body){
+    return apiSend('POST', path, body);
+  }
+
+  function apiSend(method, path, body){
+    return fetch('/api' + path, {
+      method: method,
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(async function(res){
+      let data = null;
+      try { data = await res.json(); } catch(e){ /* no body */ }
+      if(!res.ok){
+        const err = new Error((data && data.error) || 'http_' + res.status);
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    });
+  }
+
+  let tourIndex = 0;
+  let tourImages = [];
+  let tourPhotos = null;
+  const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  function toFaNum(n){ return String(n).split('').map(d => faDigits[+d] ?? d).join(''); }
+
+  // Tour content is admin-authored, but reviews come from end users and go
+  // straight into these pages once approved — every dynamic string below
+  // must be escaped before it lands in innerHTML.
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function updateGalleryFrame(){
+    const label = document.getElementById('tourFrameLabel');
+    const img = document.getElementById('tourFramePhoto');
+    const corners = document.querySelectorAll('.tour-gallery .frame .corner');
+    if(!tourImages.length){
+      img.style.display = 'none';
+      label.style.display = '';
+      label.textContent = '';
+      document.getElementById('tourCount').textContent = '';
+      return;
+    }
+    if(tourPhotos && tourPhotos[tourIndex]){
+      img.src = tourPhotos[tourIndex];
+      img.alt = tourImages[tourIndex] || '';
+      img.style.display = 'block';
+      label.style.display = 'none';
+      corners.forEach(c => c.style.display = 'none');
+    } else {
+      img.style.display = 'none';
+      label.style.display = '';
+      label.textContent = 'Photo — ' + (tourImages[tourIndex] || '');
+      corners.forEach(c => c.style.display = '');
+    }
+    document.getElementById('tourCount').textContent = toFaNum(tourIndex + 1) + ' / ' + toFaNum(tourImages.length);
+  }
+
+  function tourGallery(dir){
+    if(!tourImages.length) return;
+    tourIndex = (tourIndex + dir + tourImages.length) % tourImages.length;
+    updateGalleryFrame();
+  }
+
+  function renderTourDetail(t){
+    document.getElementById('tourTags').textContent = t.tags || '';
+    document.getElementById('tourTitle').textContent = t.name;
+    document.getElementById('tourEnSub').textContent = t.subtitleEn || '';
+    document.getElementById('tourDescription').textContent = t.description || '';
+    document.getElementById('tourPrice').textContent = t.priceLine || '';
+
+    // galleryMedia pairs each label with its photo (or null) at the same
+    // index — unlike gallery/galleryPhotos, which drop unset photos and can
+    // shift out of alignment with their labels.
+    const media = t.galleryMedia || [];
+    tourImages = media.map(m => m.label || '');
+    tourPhotos = media.map(m => m.photoPath || null);
+    tourIndex = 0;
+    updateGalleryFrame();
+
+    const includedEl = document.getElementById('tourIncluded');
+    if(includedEl) includedEl.textContent = t.included || '';
+
+    const highlightsEl = document.getElementById('tourHighlights');
+    if(highlightsEl){
+      highlightsEl.innerHTML = (t.highlights || []).map(h =>
+        '<div class="cat-row"><div class="cat-name">' + esc(h.name) + '</div><div class="cat-desc" lang="fa">' + esc(h.description) + '</div></div>'
+      ).join('');
+    }
+
+    const itineraryEl = document.getElementById('tourItinerary');
+    if(itineraryEl){
+      itineraryEl.innerHTML = (t.itinerary || []).map((step, i) => {
+        // photos[0] is the current per-stage upload path (multiple photos per
+        // stage, added after photoPath); photoPath is kept as a fallback for
+        // any stage saved before that — both land in the same frame-photo slot.
+        const stepPhoto = (step.photos && step.photos[0]) || step.photoPath;
+        return (
+        '<div class="case">' +
+          '<div class="frame-col"><div class="frame">' +
+            (stepPhoto
+              ? '<img class="frame-photo" style="display:block" src="' + esc(stepPhoto) + '" alt="' + esc(step.photoLabel) + '"><div class="frame-index">' + toFaNum(i + 1) + '</div>'
+              : '<div class="corner tl"></div><div class="corner br"></div><div class="frame-index">' + toFaNum(i + 1) + '</div><div class="frame-label">Photo — ' + esc(step.photoLabel) + '</div>') +
+          '</div></div>' +
+          '<div><div class="tags">' + esc(step.time) + '</div><h3 lang="fa">' + esc(step.title) + '</h3><p class="case-fa" lang="fa">' + esc(step.description) + '</p></div>' +
+        '</div>'
+        );
+      }).join('');
+    }
+
+    renderTourHosts(t);
+
+    const summary = t.reviewSummary || { count: 0, average: null };
+    document.getElementById('reviewScore').textContent = summary.average != null ? toFaNum(summary.average) : '—';
+    const rounded = summary.average != null ? Math.round(summary.average) : 0;
+    document.getElementById('reviewStars').textContent = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+    document.getElementById('reviewCount').textContent = 'از ' + toFaNum(summary.count) + ' نظر';
+    document.getElementById('reviewCategories').innerHTML = (t.reviewCategories || []).map(c =>
+      '<div class="review-cat"><div class="rc-label">' + esc(c.label) + '</div><div class="rc-score">' + toFaNum(c.score) + '</div></div>'
+    ).join('');
+    document.getElementById('reviewCards').innerHTML = (t.reviews || []).map(r => {
+      const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const date = toFaNum(String(r.createdAt || '').slice(0, 10));
+      return '<div class="review-card"><div class="rc-top"><div class="rc-name">' + esc(r.displayName) + '</div><div class="rc-stars">' + stars + '</div></div><p class="rc-text" lang="fa">' + esc(r.body) + '</p><div class="rc-date">' + date + '</div></div>';
+    }).join('');
+  }
+
+  let currentTour = null;
+
+  async function openTour(id){
+    goTo('tour');
+    try {
+      const data = await apiGet('/tours/' + encodeURIComponent(id));
+      currentTour = data.tour;
+      renderTourDetail(data.tour);
+    } catch(e){
+      currentTour = null;
+      document.getElementById('tourTitle').textContent = 'این تجربه در دسترس نیست';
+      document.getElementById('tourDescription').textContent = '';
+      renderTourHosts(null); // otherwise the previous tour's organizers stay on screen
+    }
+  }
+
+  function expCardHtml(t){
+    const soon = t.comingSoon;
+    const photo = t.photoPath
+      ? '<img class="frame-photo" style="display:block" src="' + esc(t.photoPath) + '" alt="">'
+      : '<div class="corner tl"></div><div class="corner br"></div><div class="frame-label">Photo — ' + esc(t.name) + '</div>';
+    const meta = soon ? 'به‌زودی' : esc([t.duration, t.priceLine].filter(Boolean).join(' · '));
+    return '<div class="exp-card' + (soon ? ' exp-soon' : '') + '"' + (soon ? '' : ' onclick="openTour(\'' + t.id + '\')"') + '>' +
+      '<div class="frame">' + photo + '</div>' +
+      '<div class="tags">' + esc(t.tags) + '</div>' +
+      '<h3 lang="fa">' + esc(t.name) + '</h3>' +
+      '<div class="exp-meta">' + meta + '</div>' +
+    '</div>';
+  }
+
+  function renderExperiencesGrid(list){
+    const grid = document.getElementById('expGrid');
+    if(!grid) return;
+    grid.innerHTML = list.map(expCardHtml).join('');
+  }
+
+  function renderUpcomingTickets(list){
+    const strip = document.getElementById('upcomingTourStrip');
+    if(!strip) return;
+    strip.innerHTML = list.filter(t => t.featured && t.date).map(t =>
+      '<div class="tour-ticket">' +
+        '<div class="tt-main">' +
+          '<div class="tt-date"><div class="tt-day">' + esc(t.date.day) + '</div><div class="tt-month">' + esc(t.date.month) + '</div></div>' +
+          '<div class="tt-body"><div class="tt-tag">' + esc(t.tags) + '</div><div class="tt-name">' + esc(t.name) + '</div><div class="tt-seats">' + esc(t.availability) + '</div></div>' +
+        '</div>' +
+        '<button class="tt-cta" onclick="openTour(\'' + t.id + '\')">جزئیات و رزرو</button>' +
+      '</div>'
+    ).join('');
+  }
+
+  async function loadCatalog(){
+    let list = [];
+    try {
+      const data = await apiGet('/tours');
+      list = data.tours;
+    } catch(e){ /* leave both sections empty on failure */ }
+    renderExperiencesGrid(list);
+    renderUpcomingTickets(list);
+  }
+
+
+  // --- Tour detail page: star-rating input ---
+  document.querySelectorAll('.rf-star').forEach(star => {
+    star.addEventListener('click', () => {
+      const v = +star.dataset.v;
+      document.querySelectorAll('.rf-star').forEach(s => s.classList.toggle('active', +s.dataset.v <= v));
+    });
+  });
+
+  function submitReview(){
+    const note = document.getElementById('rfNote');
+    if(note) note.textContent = 'ممنون از نظرتون — بعد از بررسی نمایش داده می‌شود.';
+  }
+
+  // --- Auth flow: phone → code → profile → done (OTP), or phone+password → done (password) ---
+  // OTP signup disabled temporarily — 2026-09-22 — Kavenegar SMS template still pending,
+  // OTP delivery isn't reliable enough to onboard new accounts on yet. Re-enable by
+  // flipping this back to false. Does NOT affect OTP login: existing users still branch
+  // through the `status === 'existing'` case in verifyOtpCode() below untouched; this only
+  // blocks the profile-completion step that follows OTP verify for a brand-new phone number.
+  const OTP_SIGNUP_DISABLED = true;
+  // OTP removed from login too — 2026-09-23, explicit product decision (accepts that
+  // any existing password-less/OTP-only account can no longer sign in). Matching
+  // backend flag: OTP_AUTH_DISABLED in server/api.js (otp/request, otp/verify, and
+  // profile-ticket routes now return 410). Re-enable by flipping this AND that flag
+  // back to false and redeploying both. Hides the login screen's OTP tab and makes
+  // Password the default mode; the OTP code/profile auth-steps stay in the DOM,
+  // untouched, just unreachable while this is true.
+  const OTP_LOGIN_DISABLED = true;
+  const otpTabEl = document.getElementById('authTabOtp');
+  if(OTP_LOGIN_DISABLED && otpTabEl) otpTabEl.style.display = 'none';
+  let authMode = 'otp';       // 'otp' | 'password'
+  let authIsSignup = false;   // password mode only: login vs signup fields
+  let authPendingTicket = null; // OTP mode only: bridges verify → profile
+
+  function showAuthError(msg){
+    const el = document.getElementById('authError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideAuthError(){
+    document.getElementById('authError').style.display = 'none';
+  }
+
+  function authSetMode(mode){
+    authMode = mode;
+    document.getElementById('authTabOtp').className = 'btn-fa' + (mode === 'otp' ? '' : ' btn-ghost');
+    document.getElementById('authTabPassword').className = 'btn-fa' + (mode === 'password' ? '' : ' btn-ghost');
+    document.getElementById('authPasswordFields').style.display = mode === 'password' ? 'block' : 'none';
+    hideAuthError();
+    authValidatePhone();
+  }
+
+  function authToggleSignup(){
+    authIsSignup = !authIsSignup;
+    document.getElementById('authSignupFields').style.display = authIsSignup ? 'block' : 'none';
+    document.getElementById('authToggleSignupText').textContent = authIsSignup
+      ? 'قبلاً ثبت‌نام کرده‌اید؟ وارد شوید'
+      : 'حساب ندارید؟ ثبت‌نام کنید';
+    authValidatePhone();
+  }
+
+  function authGoStep(step){
+    document.querySelectorAll('.auth-step').forEach(s => s.classList.toggle('active', s.dataset.step === step));
+    if(step === 'code'){
+      const phone = document.getElementById('authPhone').value.trim();
+      document.getElementById('authPhoneDisplay').textContent = toFaNum(phone);
+      document.querySelectorAll('#otpBoxes input').forEach(inp => inp.value = '');
+      const first = document.querySelector('#otpBoxes input');
+      if(first) first.focus();
+      authStartTimer();
+    }
+  }
+
+  function authValidatePhone(){
+    const val = document.getElementById('authPhone').value.replace(/\D/g, '');
+    const phoneOk = val.length >= 10;
+    if(authMode === 'otp'){
+      document.getElementById('authPhoneBtn').disabled = !phoneOk;
+      return;
+    }
+    const pw = document.getElementById('authPasswordInput').value;
+    let ok = phoneOk && pw.length >= 8;
+    if(authIsSignup){
+      const first = document.getElementById('authPwFirstName').value.trim();
+      const last = document.getElementById('authPwLastName').value.trim();
+      const uname = document.getElementById('authPwUsername').value.trim();
+      ok = ok && !!first && !!last && !!uname;
+    }
+    document.getElementById('authPhoneBtn').disabled = !ok;
+  }
+
+  let authTimerInterval = null;
+  function authStartTimer(){
+    clearInterval(authTimerInterval);
+    let seconds = 83; // 1:23
+    const timerEl = document.getElementById('otpTimer');
+    const resendBtn = document.getElementById('authResendBtn');
+    resendBtn.disabled = true;
+    const render = () => {
+      const m = Math.floor(seconds / 60), s = seconds % 60;
+      timerEl.textContent = toFaNum(m) + ':' + toFaNum(String(s).padStart(2, '0'));
+    };
+    render();
+    authTimerInterval = setInterval(() => {
+      seconds--;
+      if(seconds <= 0){
+        clearInterval(authTimerInterval);
+        resendBtn.disabled = false;
+        timerEl.textContent = '۰:۰۰';
+        return;
+      }
+      render();
+    }, 1000);
+  }
+
+  function authResendCode(){
+    const phone = document.getElementById('authPhone').value.trim();
+    apiPost('/auth/otp/request', { phone }).then(function(){
+      authStartTimer();
+    }).catch(function(){
+      showAuthError('ارسال مجدد کد ممکن نشد. کمی بعد دوباره تلاش کنید.');
+    });
+  }
+
+  document.querySelectorAll('#otpBoxes input').forEach((input, idx, all) => {
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '').slice(0, 1);
+      if(input.value && idx < all.length - 1){
+        all[idx + 1].focus();
+      }
+      if(all.every(i => i.value)){
+        setTimeout(verifyOtpCode, 150);
+      }
+    });
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Backspace' && !input.value && idx > 0){
+        all[idx - 1].focus();
+      }
+    });
+  });
+
+  function otpCodeValue(){
+    return Array.from(document.querySelectorAll('#otpBoxes input')).map(i => i.value).join('');
+  }
+
+  function verifyOtpCode(){
+    const phone = document.getElementById('authPhone').value.trim();
+    const code = otpCodeValue();
+    if(code.length !== 5) return;
+    hideAuthError();
+    apiPost('/auth/otp/verify', { phone, code }).then(function(data){
+      if(data.status === 'existing'){
+        setCurrentUser(data.user);
+        document.getElementById('authDoneName').textContent = currentUser.firstName;
+        authGoStep('done');
+      } else if(OTP_SIGNUP_DISABLED){
+        showAuthError('ثبت‌نام با کد تایید موقتاً غیرفعال است. لطفاً از طریق رمز عبور ثبت‌نام کنید.');
+        document.querySelectorAll('#otpBoxes input').forEach(inp => inp.value = '');
+        const first = document.querySelector('#otpBoxes input');
+        if(first) first.focus();
+      } else {
+        authPendingTicket = data.ticket;
+        authGoStep('profile');
+      }
+    }).catch(function(){
+      showAuthError('کد وارد شده صحیح نیست.');
+      document.querySelectorAll('#otpBoxes input').forEach(inp => inp.value = '');
+      const first = document.querySelector('#otpBoxes input');
+      if(first) first.focus();
+    });
+  }
+
+  function authValidateProfile(){
+    const first = document.getElementById('authFirstName').value.trim();
+    const last = document.getElementById('authLastName').value.trim();
+    const user = document.getElementById('authUsername').value.trim();
+    document.getElementById('authProfileBtn').disabled = !(first && last && user);
+  }
+
+  // --- Session state, backed by the real API (server/auth.js) ---
+  let currentUser = null;
+
+  // Where to send the visitor once they finish signing in. Set only by the
+  // two buttons on the /become-host gate and cleared the moment it is used,
+  // so an ordinary login from the nav is never redirected somewhere
+  // unexpected.
+  let pendingAfterAuth = null;
+
+  function setCurrentUser(user){
+    currentUser = user;
+    updateAccountPage();
+    updateNavAuth();
+    applyUpdateGate();
+    if(user && pendingAfterAuth){
+      const target = pendingAfterAuth;
+      pendingAfterAuth = null;
+      // Deliberately not navigate(): the login and signup screens never
+      // changed the address bar, so the path already IS /become-host and
+      // navigate() would short-circuit, leaving the auth page on screen.
+      if(window.location.pathname !== target) history.pushState(null, '', target);
+      applyRoute(target);
+    }
+  }
+
+  async function initSession(){
+    try {
+      const data = await apiGet('/auth/me');
+      setCurrentUser(data.user);
+    } catch(e){
+      currentUser = null;
+      updateNavAuth();
+    }
+  }
+
+  function authPhoneSubmit(){
+    hideAuthError();
+    const phone = document.getElementById('authPhone').value.trim();
+    const btn = document.getElementById('authPhoneBtn');
+    if(authMode === 'otp'){
+      btn.disabled = true;
+      apiPost('/auth/otp/request', { phone }).then(function(){
+        authGoStep('code');
+      }).catch(function(err){
+        showAuthError(err.data && err.data.error === 'rate_limited'
+          ? 'تعداد درخواست‌ها بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+          : 'شماره موبایل نامعتبر است.');
+      }).finally(function(){ btn.disabled = false; });
+      return;
+    }
+    const password = document.getElementById('authPasswordInput').value;
+    btn.disabled = true;
+    const req = authIsSignup
+      ? apiPost('/auth/signup', {
+          phone, password,
+          firstName: document.getElementById('authPwFirstName').value.trim(),
+          lastName: document.getElementById('authPwLastName').value.trim(),
+          username: document.getElementById('authPwUsername').value.trim()
+        })
+      : apiPost('/auth/login', { phone, password });
+    req.then(function(data){
+      setCurrentUser(data.user);
+      document.getElementById('authDoneName').textContent = currentUser.firstName;
+      authGoStep('done');
+    }).catch(function(err){
+      const msg = authIsSignup
+        ? (err.data && err.data.error === 'already_exists' ? 'این شماره یا نام کاربری قبلاً ثبت شده است.' : 'ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.')
+        : 'شماره موبایل یا رمز عبور اشتباه است.';
+      showAuthError(msg);
+    }).finally(function(){ authValidatePhone(); });
+  }
+
+  // OTP-path profile completion (redeems the ticket from verifyOtpCode above; untouched backend flow).
+  function authComplete(){
+    const btn = document.getElementById('authProfileBtn');
+    btn.disabled = true;
+    hideAuthError();
+    apiPost('/auth/profile', {
+      ticket: authPendingTicket,
+      firstName: document.getElementById('authFirstName').value.trim(),
+      lastName: document.getElementById('authLastName').value.trim(),
+      username: document.getElementById('authUsername').value.trim()
+    }).then(function(data){
+      setCurrentUser(data.user);
+      document.getElementById('authDoneName').textContent = currentUser.firstName;
+      authGoStep('done');
+    }).catch(function(err){
+      showAuthError(err.data && err.data.error === 'already_exists' ? 'این نام کاربری قبلاً استفاده شده است.' : 'ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.');
+    }).finally(function(){ btn.disabled = false; });
+  }
+
+  // --- Signup screen (#page-signup): password-only, separate from login above so its
+  // OTP tab can stay off (OTP_SIGNUP_DISABLED) without touching login's OTP tab/flow. ---
+  function showSuError(msg){
+    const el = document.getElementById('authSuError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideSuError(){
+    document.getElementById('authSuError').style.display = 'none';
+  }
+  function authSuGoStep(step){
+    document.querySelectorAll('#page-signup .su-step').forEach(s => s.classList.toggle('active', s.dataset.sustep === step));
+  }
+  function authSuValidate(){
+    const phone = document.getElementById('authSuPhone').value.replace(/\D/g, '');
+    const pw = document.getElementById('authSuPasswordInput').value;
+    const first = document.getElementById('authSuFirstName').value.trim();
+    const last = document.getElementById('authSuLastName').value.trim();
+    const uname = document.getElementById('authSuUsername').value.trim();
+    const ok = phone.length >= 10 && pw.length >= 8 && !!first && !!last && !!uname;
+    document.getElementById('authSuBtn').disabled = !ok;
+  }
+  function authSuSubmit(){
+    hideSuError();
+    const btn = document.getElementById('authSuBtn');
+    btn.disabled = true;
+    apiPost('/auth/signup', {
+      phone: document.getElementById('authSuPhone').value.trim(),
+      password: document.getElementById('authSuPasswordInput').value,
+      firstName: document.getElementById('authSuFirstName').value.trim(),
+      lastName: document.getElementById('authSuLastName').value.trim(),
+      username: document.getElementById('authSuUsername').value.trim()
+    }).then(function(data){
+      setCurrentUser(data.user);
+      document.getElementById('authSuDoneName').textContent = currentUser.firstName;
+      authSuGoStep('done');
+    }).catch(function(err){
+      showSuError(err.data && err.data.error === 'already_exists' ? 'این شماره یا نام کاربری قبلاً ثبت شده است.' : 'ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.');
+    }).finally(function(){ btn.disabled = false; authSuValidate(); });
+  }
+  function authSuReset(){
+    document.getElementById('authSuPhone').value = '';
+    document.getElementById('authSuPasswordInput').value = '';
+    document.getElementById('authSuFirstName').value = '';
+    document.getElementById('authSuLastName').value = '';
+    document.getElementById('authSuUsername').value = '';
+    document.getElementById('authSuBtn').disabled = true;
+    hideSuError();
+    authSuGoStep('form');
+  }
+
+  function updateNavAuth(){
+    const btn = document.getElementById('navAuthBtn');
+    if(currentUser){
+      btn.textContent = currentUser.firstName;
+      btn.onclick = () => goTo('account');
+    } else {
+      btn.textContent = 'ثبت‌نام / ورود';
+      btn.onclick = () => goTo('login');
+    }
+  }
+
+  function bookingRowHtml(b){
+    const parts = String(b.dateLabel || '').split(' ');
+    const day = parts[0] || '', month = parts.slice(1).join(' ') || '';
+    const statusFa = b.status === 'confirmed' ? 'تایید شده' : (b.status === 'cancelled' ? 'لغو شده' : 'در انتظار تایید نهایی');
+    return '<div class="tour-ticket" style="margin-top:16px;">' +
+        '<div class="tt-main">' +
+          '<div class="tt-date"><div class="tt-day">' + esc(day) + '</div><div class="tt-month">' + esc(month) + '</div></div>' +
+          '<div class="tt-body">' +
+            '<div class="tt-tag">' + esc(b.tags || '') + '</div>' +
+            '<div class="tt-name">' + esc(b.tourTitle) + '</div>' +
+            '<div class="tt-seats">' + toFaNum(b.guests) + ' نفر · کد رزرو ' + esc(b.ref) + '</div>' +
+            '<div class="tt-seats">وضعیت: ' + statusFa + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button class="tt-cta" onclick="openTour(\'' + b.tourId + '\')">مشاهده جزئیات</button>' +
+      '</div>';
+  }
+
+  function acctNote(container, text){
+    const note = el('div', 'auth-sub', text);
+    note.lang = 'fa';
+    note.style.marginBottom = '0';
+    container.appendChild(note);
+  }
+
+  async function loadAccountBookings(){
+    const list = document.querySelector('.acct-bookings');
+    if(!list) return;
+    list.querySelectorAll('.tour-ticket, .auth-sub, .acct-split').forEach(el => el.remove());
+    const head = document.getElementById('acctUpcomingHead');
+    if(head) head.style.display = 'none';
+    if(!currentUser) return;
+    try {
+      const data = await apiGet('/bookings/me');
+      const bookings = data.bookings || [];
+      if(!bookings.length){
+        acctNote(list, 'هنوز توری رزرو نکرده‌اید.');
+        return;
+      }
+      // "upcoming" is decided on the server from the tour's visibility and
+      // whether its date is still open — there is no real calendar date in
+      // the schema to sort by. See getUserBookings.
+      const upcoming = bookings.filter(b => b.upcoming);
+      const past = bookings.filter(b => !b.upcoming);
+      if(head && upcoming.length){ head.style.display = ''; }
+      if(upcoming.length) upcoming.forEach(b => list.insertAdjacentHTML('beforeend', bookingRowHtml(b)));
+      else acctNote(list, 'در حال حاضر سفر پیشِ رویی ندارید.');
+      if(past.length){
+        const split = el('div', 'acct-split acct-subnote', 'سفرهای گذشته');
+        split.lang = 'fa';
+        split.style.marginTop = '26px';
+        list.appendChild(split);
+        past.forEach(b => list.insertAdjacentHTML('beforeend', bookingRowHtml(b)));
+      }
+    } catch(e){ /* leave empty on failure */ }
+  }
+
+  const REVIEW_STATUS_FA = {
+    pending: 'در انتظار بررسی',
+    published: 'منتشر شده',
+    rejected: 'منتشر نشد'
+  };
+
+  function acctItem(name, pills, metaLines, link){
+    const item = el('div', 'acct-item');
+    const top = el('div', 'acct-item-top');
+    const title = el('div', 'acct-item-name', name);
+    title.lang = 'fa';
+    top.appendChild(title);
+    pills.filter(Boolean).forEach(p => {
+      const pill = el('span', 'acct-pill' + (p.warn ? ' warn' : ''), p.text);
+      pill.lang = 'fa';
+      top.appendChild(pill);
+    });
+    item.appendChild(top);
+    metaLines.filter(Boolean).forEach(line => {
+      const meta = el('div', 'acct-item-meta', line);
+      meta.lang = 'fa';
+      item.appendChild(meta);
+    });
+    if(link){
+      const wrap = el('div', 'acct-item-meta');
+      const a = document.createElement('a');
+      a.href = link;
+      a.textContent = link;
+      a.dir = 'ltr';
+      wrap.appendChild(a);
+      item.appendChild(wrap);
+    }
+    return item;
+  }
+
+  async function loadAccountReviews(){
+    const box = document.getElementById('acctReviews');
+    if(!box) return;
+    box.replaceChildren();
+    if(!currentUser) return;
+    try {
+      const reviews = (await apiGet('/me/reviews')).reviews || [];
+      if(!reviews.length){ acctNote(box, 'هنوز نظری ثبت نکرده‌اید.'); return; }
+      box.replaceChildren.apply(box, reviews.map(r => acctItem(
+        r.tourTitle || '',
+        [{ text: REVIEW_STATUS_FA[r.status] || r.status }],
+        ['★'.repeat(Math.max(0, Math.min(5, Number(r.rating) || 0))) + ' — ' + (r.body || '')]
+      )));
+    } catch(e){ /* leave empty on failure */ }
+  }
+
+  const APP_STATUS_FA = {
+    pending: 'در انتظار بررسی',
+    approved: 'پذیرفته شد',
+    rejected: 'رد شد'
+  };
+  const KIND_FA = { person: 'شخص', place: 'مکان' };
+
+  async function loadAccountPartner(){
+    const box = document.getElementById('acctPartner');
+    if(!box) return;
+    box.replaceChildren();
+    if(!currentUser) return;
+    let applications = [], profiles = [];
+    try {
+      const [a, p] = await Promise.all([apiGet('/me/applications'), apiGet('/me/profiles')]);
+      applications = a.applications || [];
+      profiles = p.profiles || [];
+    } catch(e){ return; }
+
+    if(!applications.length && !profiles.length){
+      const empty = el('div', 'auth-sub');
+      empty.lang = 'fa';
+      empty.style.marginBottom = '0';
+      empty.appendChild(document.createTextNode('هنوز درخواستی نفرستاده‌اید. '));
+      const a = document.createElement('a');
+      a.href = '/become-host';
+      a.textContent = 'برگزارکننده یا میزبان شوید';
+      empty.appendChild(a);
+      box.appendChild(empty);
+      return;
+    }
+
+    profiles.forEach(h => {
+      const active = h.status === 'active';
+      box.appendChild(acctItem(
+        h.displayName || '',
+        [
+          { text: KIND_FA[h.kind] || h.kind },
+          active ? { text: 'منتشر شده' } : { text: 'هنوز منتشر نشده', warn: true },
+          h.verified ? { text: 'تأییدشده' } : null
+        ],
+        [active ? null : 'این پروفایل تا زمانی که تیم چکمه آن را فعال کند روی سایت دیده نمی‌شود.'],
+        // Only an active profile has a working public address; linking a
+        // hidden one would hand the owner a URL that answers not-found.
+        active && HOST_SLUG_RE.test(String(h.slug || '')) ? '/host/' + h.slug : null
+      ));
+    });
+
+    applications.forEach(a => {
+      box.appendChild(acctItem(
+        a.name || '',
+        [{ text: KIND_FA[a.kind] || a.kind }, { text: APP_STATUS_FA[a.status] || a.status }],
+        ['ارسال‌شده در ' + toFaNum(String(a.createdAt || '').slice(0, 10))]
+      ));
+    });
+  }
+
+  async function saveAccountName(){
+    const btn = document.getElementById('acctSaveBtn');
+    const err = document.getElementById('acctNameErr');
+    const note = document.getElementById('acctNameNote');
+    err.textContent = '';
+    note.textContent = '';
+    note.className = 'apply-note';
+    btn.disabled = true;
+    try {
+      const data = await apiSend('PUT', '/auth/me', {
+        firstName: document.getElementById('acctFirstNameInput').value.trim(),
+        lastName: document.getElementById('acctLastNameInput').value.trim()
+      });
+      currentUser = data.user;
+      updateNavAuth();
+      document.getElementById('acctGreeting').textContent = 'سلام، ' + currentUser.firstName + '!';
+      note.className = 'apply-note ok';
+      note.textContent = 'نام شما ذخیره شد.';
+    } catch(e){
+      if(e.status === 422) err.textContent = 'نام و نام خانوادگی را وارد کنید (حداکثر ۶۰ نویسه).';
+      else if(e.status === 401){ currentUser = null; updateNavAuth(); goTo('login'); }
+      else err.textContent = 'ذخیره نشد. دوباره تلاش کنید.';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  const acctSaveBtn = document.getElementById('acctSaveBtn');
+  if(acctSaveBtn) acctSaveBtn.addEventListener('click', saveAccountName);
+
+  function updateAccountPage(){
+    if(!currentUser){
+      loadAccountBookings();
+      loadAccountReviews();
+      loadAccountPartner();
+      return;
+    }
+    document.getElementById('acctGreeting').textContent = 'سلام، ' + currentUser.firstName + '!';
+    document.getElementById('acctFirstNameInput').value = currentUser.firstName || '';
+    document.getElementById('acctLastNameInput').value = currentUser.lastName || '';
+    document.getElementById('acctUsername').textContent = currentUser.username;
+    document.getElementById('acctPhone').textContent = toFaNum(currentUser.phone);
+    loadAccountBookings();
+    loadAccountReviews();
+    loadAccountPartner();
+  }
+
+  function authLogout(){
+    apiPost('/auth/logout', {}).catch(function(){}).finally(function(){
+      currentUser = null;
+      updateNavAuth();
+      applyUpdateGate();
+      goTo('home');
+    });
+  }
+
+  // --- Booking flow: date → guests → payment → done ---
+  let bookingSelectedDateId = null;
+  let bookingSelectedDateLabel = null;
+  let bookingGuests = 1;
+
+  function showBookingError(msg){
+    const el = document.getElementById('bookingError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideBookingError(){
+    document.getElementById('bookingError').style.display = 'none';
+  }
+
+  function renderBookingDates(){
+    const container = document.getElementById('bookingDates');
+    const dates = (currentTour && currentTour.bookingDates) || [];
+    container.innerHTML = dates.map(d =>
+      d.disabled
+        ? '<button class="booking-date" disabled><div class="bd-date">' + esc(d.label) + '</div><div class="bd-status">' + esc(d.status) + '</div></button>'
+        : '<button class="booking-date" data-date-id="' + d.id + '" data-date-label="' + esc(d.label) + '" onclick="selectBookingDate(this)"><div class="bd-date">' + esc(d.label) + '</div><div class="bd-status">' + esc(d.status) + '</div></button>'
+    ).join('');
+  }
+
+  function bookingReset(){
+    bookingSelectedDateId = null;
+    bookingSelectedDateLabel = null;
+    bookingGuests = 1;
+    hideBookingError();
+    renderBookingDates();
+    document.getElementById('bookingDateBtn').disabled = true;
+    document.getElementById('guestCount').textContent = toFaNum(1);
+    bookingGoStep('date');
+  }
+
+  function selectBookingDate(btn){
+    document.querySelectorAll('.booking-date').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    bookingSelectedDateId = Number(btn.dataset.dateId);
+    bookingSelectedDateLabel = btn.dataset.dateLabel;
+    document.getElementById('bookingDateBtn').disabled = false;
+  }
+
+  function changeGuests(delta){
+    bookingGuests = Math.max(1, Math.min(8, bookingGuests + delta));
+    document.getElementById('guestCount').textContent = toFaNum(bookingGuests);
+  }
+
+  function bookingGoStep(step){
+    document.querySelectorAll('.booking-step').forEach(s => s.classList.toggle('active', s.dataset.bstep === step));
+    if(step === 'guests'){
+      const loggedOut = document.getElementById('bookingContactLoggedOut');
+      const loggedIn = document.getElementById('bookingContactLoggedIn');
+      const guestsBtn = document.getElementById('bookingGuestsBtn');
+      if(currentUser){
+        loggedOut.style.display = 'none';
+        loggedIn.style.display = 'block';
+        document.getElementById('bookingUserName').textContent = currentUser.firstName + ' ' + currentUser.lastName;
+        document.getElementById('bookingUserPhone').textContent = toFaNum(currentUser.phone);
+        guestsBtn.disabled = false;
+      } else {
+        loggedOut.style.display = 'flex';
+        loggedIn.style.display = 'none';
+        guestsBtn.disabled = true;
+      }
+    }
+    if(step === 'pay'){
+      hideBookingError();
+      document.getElementById('summaryDate').textContent = bookingSelectedDateLabel || '—';
+      document.getElementById('summaryGuests').textContent = toFaNum(bookingGuests) + ' نفر';
+      const price = (currentTour && currentTour.price) || 0;
+      const total = price * bookingGuests;
+      document.getElementById('summaryTotal').textContent = toFaNum(total.toLocaleString('en-US')) + ' تومان';
+    }
+  }
+
+  async function bookingComplete(){
+    if(!currentTour || bookingSelectedDateId == null) return;
+    const btn = document.getElementById('bookingPayBtn');
+    hideBookingError();
+    btn.disabled = true;
+    try {
+      const data = await apiPost('/bookings', {
+        tourId: currentTour.id, tourDateId: bookingSelectedDateId, guests: bookingGuests
+      });
+      const payment = await apiPost('/payments/zarinpal/request', { bookingId: data.booking.id });
+      window.location.href = payment.redirectUrl;
+    } catch(err) {
+      showBookingError(err.data && err.data.error === 'not_enough_seats'
+        ? 'ظرفیت این تاریخ تکمیل شده است. لطفاً تاریخ دیگری انتخاب کنید.'
+        : 'ثبت رزرو انجام نشد. لطفاً دوباره تلاش کنید.');
+      btn.disabled = false;
+    }
+  }
+
+  // --- Landing back from the ZarinPal callback (GET /api/payments/zarinpal/callback
+  // 302s the browser here with ?status=success|no_capacity|failed|error&ref=...,
+  // see server/api.js's bookingResultRedirect). Reuses the existing booking "done"
+  // step's markup for all four outcomes rather than building a separate page. ---
+  function showBookingDone(status, ref){
+    const title = document.getElementById('bookingDoneTitle');
+    const label = document.getElementById('bookingDoneLabel');
+    const refEl = document.getElementById('bookingRef');
+    if(status === 'no_capacity'){
+      title.textContent = 'پرداخت شما ثبت شد، اما ظرفیت این تاریخ تکمیل شده بود';
+      label.textContent = 'پرداخت شما دریافت شد ولی جای خالی برای این تاریخ باقی نمانده بود — تیم پشتیبانی پیگیری می‌کند. کد رزرو:';
+    } else if(status === 'failed' || status === 'error'){
+      title.textContent = 'پرداخت انجام نشد';
+      label.textContent = 'پرداخت شما تکمیل یا تایید نشد. می‌توانید از حساب کاربری دوباره تلاش کنید. کد رزرو:';
+    } else {
+      title.textContent = 'رزرو شما ثبت شد 🎉';
+      label.textContent = 'کد رزرو:';
+    }
+    refEl.textContent = ref ? toFaNum(ref) : '';
+  }
+
+  function handlePaymentResultRedirect(){
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    if(!status) return;
+    goTo('booking');
+    bookingGoStep('done');
+    showBookingDone(status, params.get('ref') || '');
+    // Drop ?status=/&ref= from the address bar so a page refresh doesn't replay it.
+    history.replaceState(null, '', '/');
+  }
+
+  // --- Hosts (organizers) -------------------------------------------------
+  // Everything below renders admin- or applicant-authored strings, so every
+  // value that came out of the database is written with textContent and the
+  // nodes are built with createElement. Nothing from the API is ever
+  // concatenated into innerHTML on these pages.
+
+  // Mirrors the server's slug and handle rules. The server is still the
+  // authority; this is here so a malformed value from an unexpected source
+  // can never be pasted into a URL we build.
+  const HOST_SLUG_RE = /^[a-z0-9-]{2,40}$/;
+  const INSTAGRAM_RE = /^[A-Za-z0-9._]{1,30}$/;
+
+  function el(tag, className, text){
+    const node = document.createElement(tag);
+    if(className) node.className = className;
+    if(text != null) node.textContent = text;
+    return node;
+  }
+
+  // A host may have no photo yet (the admin fills it in later), so fall back
+  // to the first letter of their name rather than a broken image.
+  // Mirrors the server's HOST_PHOTO_PATH_RE. A photo path is only ever one of
+  // our own uploads; anything else is dropped rather than turned into an
+  // off-site request from the visitor's browser.
+  const PHOTO_PATH_RE = /^\/images(?:\/(?!\.\.?(?:\/|$))[A-Za-z0-9._-]+)+$/;
+
+  function fillHostAvatar(node, host){
+    node.replaceChildren();
+    if(PHOTO_PATH_RE.test(String(host.photoPath || ''))){
+      const img = document.createElement('img');
+      img.src = host.photoPath;
+      img.alt = host.displayName || '';
+      node.appendChild(img);
+    } else {
+      node.appendChild(el('div', 'ha-initial', (host.displayName || '؟').trim().charAt(0)));
+    }
+  }
+
+  function hostCard(host){
+    // A real <a href>, not a button: a host profile has its own URL, so
+    // ctrl/cmd/shift-click, middle-click and "copy link address" must all
+    // behave like any other link. The delegated router handler below turns a
+    // plain left-click into an in-page navigation; everything else is left to
+    // the browser. A host whose slug fails the pattern gets a non-link card
+    // rather than a broken URL.
+    const linkable = HOST_SLUG_RE.test(String(host.slug || ''));
+    const card = el(linkable ? 'a' : 'div', 'host-card');
+    if(linkable) card.href = '/host/' + host.slug;
+    const avatar = el('div', 'host-avatar');
+    fillHostAvatar(avatar, host);
+    card.appendChild(avatar);
+
+    const name = el('div', 'hc-name', host.displayName || '');
+    name.lang = 'fa';
+    card.appendChild(name);
+
+    // A place is described by what it is and where; a person by their part
+    // in the tour and what they do. Same card, different second line.
+    const bits = [];
+    if(host.kind === 'place'){
+      if(host.lodgingType) bits.push(host.lodgingType);
+      if(host.region) bits.push(host.region);
+    } else {
+      if(host.role === 'lead') bits.push('برگزارکننده اصلی');
+      if(host.expertise) bits.push(host.expertise);
+    }
+    if(host.verified) bits.push('تأییدشده');
+    const meta = el('div', 'hc-meta', bits.join(' · '));
+    meta.lang = 'fa';
+    card.appendChild(meta);
+
+    return card;
+  }
+
+  function fillHostGrid(sectionId, gridId, hosts){
+    const section = document.getElementById(sectionId);
+    const grid = document.getElementById(gridId);
+    if(!section || !grid) return false;
+    if(!hosts.length){
+      section.style.display = 'none';
+      grid.replaceChildren();
+      return false;
+    }
+    grid.replaceChildren.apply(grid, hosts.map(hostCard));
+    section.style.display = '';
+    return true;
+  }
+
+  function renderTourHosts(t){
+    const hosts = (t && t.hosts) || [];
+    // Where it happens and who runs it are separate claims, so they render
+    // into separate blocks. Either one with nothing to show is hidden
+    // outright — an empty heading would imply we were hiding something.
+    const venue = fillHostGrid('tourVenueSection', 'tourVenueGrid', hosts.filter(h => h.role === 'venue'));
+    const people = fillHostGrid('tourHostsSection', 'tourHostsGrid', hosts.filter(h => h.role !== 'venue'));
+    // chaacme's own part is only worth stating next to the partners it
+    // connected; on a tour with no partners on record there is nothing to
+    // distinguish it from.
+    const line = document.getElementById('tourCuratorLine');
+    if(line) line.style.display = (venue || people) ? '' : 'none';
+  }
+
+  function hostTourCard(t){
+    const card = el('div', 'exp-card' + (t.comingSoon ? ' exp-soon' : ''));
+    const frame = el('div', 'frame');
+    if(PHOTO_PATH_RE.test(String(t.photoPath || ''))){
+      const img = document.createElement('img');
+      img.className = 'frame-photo';
+      img.style.display = 'block';
+      img.src = t.photoPath;
+      img.alt = '';
+      frame.appendChild(img);
+    } else {
+      frame.appendChild(el('div', 'corner tl'));
+      frame.appendChild(el('div', 'corner br'));
+      frame.appendChild(el('div', 'frame-label', 'Photo — ' + (t.name || '')));
+    }
+    card.appendChild(frame);
+    const tags = el('div', 'tags', t.tags || '');
+    tags.lang = 'fa';
+    card.appendChild(tags);
+    const h = el('h3', null, t.name || '');
+    h.lang = 'fa';
+    card.appendChild(h);
+    card.appendChild(el('div', 'exp-meta',
+      t.comingSoon ? 'به‌زودی' : [t.duration, t.priceLine].filter(Boolean).join(' · ')));
+
+    if(!t.comingSoon && t.id){
+      // Tour detail has no URL of its own yet (bookmarkable /tour/<id> is a
+      // follow-up). goTo('tour') drops the address bar back to "/", so it is
+      // never left pointing at a profile the visitor has navigated away from.
+      card.addEventListener('click', () => { openTour(t.id); });
+    }
+    return card;
+  }
+
+  function renderHostReviews(reviews){
+    const cards = document.getElementById('hostReviewCards');
+    const empty = document.getElementById('hostReviewsEmpty');
+    const list = reviews || [];
+    if(!list.length){
+      cards.replaceChildren();
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+    cards.replaceChildren.apply(cards, list.map(function(r){
+      const card = el('div', 'review-card');
+      const top = el('div', 'rc-top');
+      const name = el('div', 'rc-name', r.displayName || '');
+      name.lang = 'fa';
+      top.appendChild(name);
+      const rating = Math.max(0, Math.min(5, Number(r.rating) || 0));
+      top.appendChild(el('div', 'rc-stars', '★'.repeat(rating) + '☆'.repeat(5 - rating)));
+      card.appendChild(top);
+      const body = el('p', 'rc-text', r.body || '');
+      body.lang = 'fa';
+      card.appendChild(body);
+      card.appendChild(el('div', 'rc-date', toFaNum(String(r.createdAt || '').slice(0, 10))));
+      return card;
+    }));
+  }
+
+  // A place's rounded point, drawn as an area rather than a pin. The API
+  // never returns anything more precise than this, so there is nothing finer
+  // to leak here even by accident.
+  const MAP_PAD_LAT = 0.02;
+  const MAP_PAD_LNG = 0.025;
+
+  function renderPlaceMap(host){
+    const section = document.getElementById('hostMapSection');
+    const box = document.getElementById('hostMap');
+    const note = document.getElementById('hostMapNote');
+    if(!section || !box) return;
+    const loc = host.approximateLocation;
+    const lat = loc ? Number(loc.lat) : NaN;
+    const lng = loc ? Number(loc.lng) : NaN;
+    if(!isFinite(lat) || !isFinite(lng)){
+      section.style.display = 'none';
+      box.replaceChildren();
+      return;
+    }
+
+    // The fallback text is in the box first and the iframe goes over it, so
+    // a blocked or failed embed leaves something readable rather than a
+    // blank rectangle. onload is the only signal an iframe reliably gives.
+    box.replaceChildren();
+    const bbox = [lng - MAP_PAD_LNG, lat - MAP_PAD_LAT, lng + MAP_PAD_LNG, lat + MAP_PAD_LAT].join(',');
+    const frame = document.createElement('iframe');
+    frame.loading = 'lazy';
+    frame.referrerPolicy = 'no-referrer';
+    frame.title = 'موقعیت تقریبی ' + (host.displayName || '');
+    frame.src = 'https://www.openstreetmap.org/export/embed.html?bbox='
+      + encodeURIComponent(bbox) + '&layer=mapnik';
+    box.appendChild(frame);
+
+    // Always rendered, never conditional on the embed: an iframe fires `load`
+    // for its own error page too, so "hide this when the map works" would
+    // hide it precisely when the map does not. The line below is what a
+    // reader is left with if the embed is blocked, slow or gone.
+    note.textContent = 'موقعیت تقریبی: '
+      + (host.region ? host.region + ' — ' : '')
+      + toFaNum(lat.toFixed(2)) + '، ' + toFaNum(lng.toFixed(2))
+      + ' · این نقشه فقط محدوده‌ی تقریبی را نشان می‌دهد؛ نشانی دقیق منتشر نمی‌شود.';
+    section.style.display = '';
+  }
+
+  function renderPlaceExtras(host){
+    const facts = document.getElementById('hostPlaceFacts');
+    const bits = [];
+    if(host.kind === 'place'){
+      if(host.lodgingType) bits.push(host.lodgingType);
+      if(host.region) bits.push(host.region);
+    }
+    facts.replaceChildren.apply(facts, bits.map(b => {
+      const node = el('span', 'place-fact', b);
+      node.lang = 'fa';
+      return node;
+    }));
+    facts.style.display = bits.length ? '' : 'none';
+
+    const amenities = (host.kind === 'place' && Array.isArray(host.amenities)) ? host.amenities : [];
+    const list = document.getElementById('hostAmenities');
+    list.replaceChildren.apply(list, amenities.map(a => {
+      const li = el('li', null, a);
+      li.lang = 'fa';
+      return li;
+    }));
+    document.getElementById('hostAmenitiesSection').style.display = amenities.length ? '' : 'none';
+
+    const shots = (Array.isArray(host.gallery) ? host.gallery : [])
+      .filter(g => PHOTO_PATH_RE.test(String(g && g.photoPath || '')));
+    const grid = document.getElementById('hostGallery');
+    grid.replaceChildren.apply(grid, shots.map(g => {
+      const wrap = el('div', 'place-shot');
+      const fig = document.createElement('figure');
+      const frame = el('div', 'frame');
+      const img = document.createElement('img');
+      img.src = g.photoPath;
+      img.alt = g.caption || '';
+      img.loading = 'lazy';
+      frame.appendChild(img);
+      fig.appendChild(frame);
+      if(g.caption){
+        const cap = document.createElement('figcaption');
+        cap.lang = 'fa';
+        cap.textContent = g.caption;
+        fig.appendChild(cap);
+      }
+      wrap.appendChild(fig);
+      return wrap;
+    }));
+    document.getElementById('hostGallerySection').style.display = shots.length ? '' : 'none';
+
+    if(host.kind === 'place') renderPlaceMap(host);
+    else document.getElementById('hostMapSection').style.display = 'none';
+  }
+
+  function renderHostProfile(host){
+    fillHostAvatar(document.getElementById('hostAvatar'), host);
+    document.getElementById('hostName').textContent = host.displayName || '';
+    // The badge is a claim about a real verification step, so it appears only
+    // when the server says so — never as a default decoration.
+    document.getElementById('hostVerified').style.display = host.verified ? '' : 'none';
+    // A place has no "expertise"; its type and region take that slot, as
+    // pills, so the two kinds don't have to pretend to the same shape.
+    document.getElementById('hostExpertise').textContent =
+      host.kind === 'place' ? '' : (host.expertise || '');
+    renderPlaceExtras(host);
+
+    const bio = document.getElementById('hostBio');
+    bio.textContent = host.bio || '';
+    bio.style.display = host.bio ? '' : 'none';
+
+    // Built from a bare handle we validate ourselves — the API never stores
+    // or returns a full URL, so a host can never point this at another site.
+    const links = document.getElementById('hostLinks');
+    links.replaceChildren();
+    const handle = String(host.instagramHandle || '');
+    if(INSTAGRAM_RE.test(handle)){
+      const a = document.createElement('a');
+      a.href = 'https://instagram.com/' + handle;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.dir = 'ltr';
+      a.textContent = '@' + handle;
+      links.appendChild(a);
+    }
+
+    const tours = host.tours || { upcoming: [], past: [] };
+    const upcoming = tours.upcoming || [];
+    const past = tours.past || [];
+
+    document.querySelector('#page-host #hostUpcoming').closest('section').querySelector('h2').textContent =
+      host.kind === 'place' ? 'تجربه‌های پیشِ رو در این مکان' : 'تجربه‌های پیشِ رو';
+
+    const upGrid = document.getElementById('hostUpcoming');
+    upGrid.replaceChildren.apply(upGrid, upcoming.map(hostTourCard));
+    document.getElementById('hostUpcomingEmpty').style.display = upcoming.length ? 'none' : '';
+
+    const pastGrid = document.getElementById('hostPast');
+    pastGrid.replaceChildren.apply(pastGrid, past.map(hostTourCard));
+    document.getElementById('hostPastSection').style.display = past.length ? '' : 'none';
+
+    renderHostReviews(host.reviews);
+  }
+
+  async function openHost(slug){
+    if(!HOST_SLUG_RE.test(String(slug || ''))){ goTo('not-found'); return; }
+    try {
+      const data = await apiGet('/hosts/' + encodeURIComponent(slug));
+      renderHostProfile(data.host);
+      goTo('host');
+    } catch(e){
+      // A hidden host is a 404 from the API too, so an unknown slug and a
+      // withdrawn profile look identical from out here — as intended.
+      goTo('not-found');
+    }
+  }
+
+  // --- Become a partner: application form ---------------------------------
+  // Two kinds share one form. Only the fields that mean something for the
+  // chosen kind are shown, and only those are sent — the server drops the
+  // rest anyway, so showing them would just invite people to fill in
+  // something that is never stored.
+  const APPLY_FIELDS = ['Name', 'Instagram', 'Expertise', 'Description', 'Region', 'Lodging'];
+  let applyKind = 'person';
+
+  function applyClearErrors(){
+    APPLY_FIELDS.forEach(f => {
+      const node = document.getElementById('apply' + f + 'Err');
+      if(node) node.textContent = '';
+    });
+    document.getElementById('applyNote').textContent = '';
+    document.getElementById('applyNote').className = 'apply-note';
+  }
+
+  function applySetKind(kind){
+    applyKind = kind === 'place' ? 'place' : 'person';
+    const isPlace = applyKind === 'place';
+    document.querySelectorAll('#applyForm .kind-opt').forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.kind === applyKind);
+      btn.setAttribute('aria-pressed', btn.dataset.kind === applyKind ? 'true' : 'false');
+    });
+    document.getElementById('applyNameLabel').textContent = isPlace ? 'نام مکان' : 'نام نمایشی';
+    document.getElementById('applyNameHint').textContent = isPlace
+      ? 'نامی که مکان با آن روی سایت معرفی می‌شود.'
+      : 'نامی که روی صفحه‌ی عمومی نمایش داده می‌شود.';
+    document.getElementById('applyDescriptionLabel').textContent = isPlace
+      ? 'مکان را توصیف کنید'
+      : 'چه تجربه‌ای می‌خواهید برگزار کنید؟';
+    document.getElementById('applyExpertiseField').style.display = isPlace ? 'none' : '';
+    document.getElementById('applyLodgingField').style.display = isPlace ? '' : 'none';
+    document.getElementById('applyRegionField').style.display = isPlace ? '' : 'none';
+    applyClearErrors();
+  }
+
+  // A partner profile belongs to an account, so an anonymous visitor sees the
+  // reason and the two ways out of it — not a form that will 401.
+  function applyUpdateGate(){
+    const gate = document.getElementById('applyGate');
+    const form = document.getElementById('applyForm');
+    if(!gate || !form) return;
+    const signedIn = !!currentUser;
+    gate.style.display = signedIn ? 'none' : '';
+    form.style.display = signedIn ? '' : 'none';
+    if(signedIn){
+      document.getElementById('applyAccountName').textContent =
+        (currentUser.firstName || '') + ' ' + (currentUser.lastName || '');
+      document.getElementById('applyAccountPhone').textContent = toFaNum(currentUser.phone || '');
+    }
+  }
+
+  function applyReset(){
+    const form = document.getElementById('applyForm');
+    if(form) form.reset();
+    applySetKind('person');
+    applyClearErrors();
+    applyUpdateGate();
+  }
+
+  // Server-side field names -> the Persian message shown under that input.
+  const APPLY_FIELD_LABELS = {
+    fullName: { id: 'applyNameErr', msg: 'نام را کامل وارد کنید.' },
+    instagramHandle: { id: 'applyInstagramErr', msg: 'نام کاربری اینستاگرام معتبر نیست — فقط حروف، عدد، نقطه و زیرخط.' },
+    expertise: { id: 'applyExpertiseErr', msg: 'زمینه‌ی تخصص طولانی‌تر از حد مجاز است.' },
+    lodgingType: { id: 'applyLodgingErr', msg: 'نوع مکان طولانی‌تر از حد مجاز است.' },
+    region: { id: 'applyRegionErr', msg: 'منطقه را وارد کنید (حداکثر ۱۲۰ نویسه).' },
+    description: { id: 'applyDescriptionErr', msg: 'توضیحات را کامل‌تر بنویسید (حداقل ۱۰ و حداکثر ۲۰۰۰ نویسه).' }
+  };
+
+  function applyPayload(){
+    const isPlace = applyKind === 'place';
+    const base = {
+      kind: applyKind,
+      fullName: document.getElementById('applyName').value.trim(),
+      instagramHandle: document.getElementById('applyInstagram').value.trim(),
+      description: document.getElementById('applyDescription').value.trim(),
+      website: document.getElementById('applyWebsite').value
+    };
+    if(isPlace){
+      base.region = document.getElementById('applyRegion').value.trim();
+      base.lodgingType = document.getElementById('applyLodging').value.trim();
+    } else {
+      base.expertise = document.getElementById('applyExpertise').value.trim();
+    }
+    return base;
+  }
+
+  async function submitApplication(ev){
+    if(ev) ev.preventDefault();
+    applyClearErrors();
+    const btn = document.getElementById('applySubmit');
+    const note = document.getElementById('applyNote');
+    btn.disabled = true;
+    try {
+      await apiPost('/host-applications', applyPayload());
+      // The API answers the same way for a genuine submission, a duplicate and
+      // a honeypot hit, so this message is all we can honestly say.
+      document.getElementById('applyForm').reset();
+      // Clears the field errors too, so the note below must come after it.
+      applySetKind(applyKind);
+      note.className = 'apply-note ok';
+      note.textContent = 'درخواست شما ثبت شد. تیم چکمه بررسی می‌کند و در صورت نیاز تماس می‌گیرد.';
+    } catch(e){
+      if(e.status === 401){
+        // The session expired between loading the page and submitting it.
+        currentUser = null;
+        updateNavAuth();
+        applyUpdateGate();
+        note.className = 'apply-note bad';
+        note.textContent = 'برای ارسال درخواست ابتدا وارد شوید.';
+      } else if(e.status === 422 && e.data && e.data.fields){
+        Object.keys(e.data.fields).forEach(function(f){
+          const target = APPLY_FIELD_LABELS[f];
+          if(target) document.getElementById(target.id).textContent = target.msg;
+        });
+        note.className = 'apply-note bad';
+        note.textContent = 'لطفاً موارد مشخص‌شده را اصلاح کنید.';
+      } else if(e.status === 429){
+        note.className = 'apply-note bad';
+        note.textContent = 'تعداد درخواست‌های شما زیاد بوده است. لطفاً فردا دوباره تلاش کنید.';
+      } else {
+        note.className = 'apply-note bad';
+        note.textContent = 'ارسال درخواست ممکن نشد. لطفاً دوباره تلاش کنید.';
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.querySelectorAll('#applyForm .kind-opt').forEach(function(btn){
+    btn.addEventListener('click', function(){ applySetKind(btn.dataset.kind); });
+  });
+
+  function applyGateGo(page){
+    pendingAfterAuth = '/become-host';
+    goTo(page);
+  }
+  const gateLogin = document.getElementById('applyGateLogin');
+  if(gateLogin) gateLogin.addEventListener('click', function(){ applyGateGo('login'); });
+  const gateSignup = document.getElementById('applyGateSignup');
+  if(gateSignup) gateSignup.addEventListener('click', function(){ applyGateGo('signup'); });
+
+  const applyFormEl = document.getElementById('applyForm');
+  if(applyFormEl) applyFormEl.addEventListener('submit', submitApplication);
+
+  // --- Path router ---------------------------------------------------------
+  // Only the two new pages have real URLs; every existing page still switches
+  // through goTo() with no address-bar change, exactly as before. nginx serves
+  // index.html for any unmatched path (try_files ... /index.html), so a direct
+  // load of /host/<slug> arrives here with the path intact.
+
+  const HOST_PATH_RE = /^\/host\/([^/]+)\/?$/;
+
+  function goHome(){
+    history.replaceState(null, '', '/');
+    goTo('home');
+  }
+
+  function applyRoute(path){
+    // The ZarinPal callback lands on /booking/result?status=&ref=, which
+    // handlePaymentResultRedirect() owns end to end — including clearing the
+    // query string. The router must never touch that path or it would race
+    // the handler and drop the payment result.
+    if(path === '/booking/result') return;
+
+    const hostMatch = HOST_PATH_RE.exec(path);
+    if(hostMatch){ openHost(decodeURIComponent(hostMatch[1])); return; }
+    if(path === '/become-host' || path === '/become-host/'){ applyReset(); goTo('become-host'); return; }
+    if(path === '/' || path === '') return; // home is already the active page on load
+
+    // Any other unknown path is not a missing host — it is a bad URL, so send
+    // it home rather than showing a not-found page for, say, a stale link.
+    goHome();
+  }
+
+  function navigate(path){
+    if(window.location.pathname === path) return;
+    history.pushState(null, '', path);
+    applyRoute(path);
+  }
+
+  // Same-origin links to routed paths stay in the SPA; everything else
+  // (mailto:, external hosts, new-tab modifier clicks) behaves normally.
+  document.addEventListener('click', function(ev){
+    if(ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+    const a = ev.target.closest && ev.target.closest('a[href]');
+    // Any target (not just _blank) and any download link belongs to the
+    // browser, not the router — hijacking those would silently break them.
+    if(!a || a.target || a.hasAttribute('download')) return;
+    const href = a.getAttribute('href');
+    if(!href || !href.startsWith('/')) return;
+    if(!HOST_PATH_RE.test(href) && href !== '/become-host') return;
+    ev.preventDefault();
+    navigate(href);
+  });
+
+  window.addEventListener('popstate', function(){
+    const path = window.location.pathname;
+    // Back out of /host/<slug> or /become-host and we are on "/" again, which
+    // applyRoute() deliberately ignores — so handle home explicitly here.
+    if(path === '/' || path === ''){ goTo('home'); return; }
+    applyRoute(path);
+  });
+
+  loadCatalog();
+  initSession();
+  handlePaymentResultRedirect();
+  // Runs last so the ZarinPal handler has already consumed ?status= and reset
+  // the path to "/" before the router looks at window.location.
+  applyRoute(window.location.pathname);
+</script>
+
+</body>
+</html>

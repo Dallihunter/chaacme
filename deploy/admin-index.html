@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAACME — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --paper:#fafaf9; --ink:#0a0a0a; --ink-soft:#4a4a4a; --ink-faint:#8a8a86;
+    --line:#dcdcd8; --line-soft:#ececea; --danger:#a83232; --danger-bg:#fbeceb; --ok:#2f7a4f; --maxw:1040px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; font-weight:400;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  h1,h2,h3{ font-family:'Fraunces',serif; font-weight:500; letter-spacing:-0.01em; line-height:1.15; }
+  a{ color:inherit; }
+  input,select,textarea,button{ font-family:inherit; font-size:inherit; color:inherit; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 28px; }
+  [hidden]{ display:none !important; }
+
+  /* ---- shell ---- */
+  header.topbar{
+    border-bottom:1px solid var(--line-soft); position:sticky; top:0; background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(8px); z-index:10;
+  }
+  .topbar-inner{ max-width:var(--maxw); margin:0 auto; padding:18px 28px; display:flex; align-items:center; justify-content:space-between; }
+  .logo{ font-family:'Fraunces',serif; font-size:18px; letter-spacing:0.01em; }
+  .logo b{ font-weight:600; }
+  .logo span{ color:var(--ink-faint); font-weight:400; font-size:14px; margin-left:8px; }
+  .topbar nav{ display:flex; align-items:center; gap:18px; font-size:13px; }
+  .topbar nav a{ color:var(--ink-soft); text-decoration:none; cursor:pointer; }
+  .topbar nav a:hover{ color:var(--ink); }
+  .who{ color:var(--ink-faint); }
+  main{ padding:44px 0 80px; }
+
+  /* ---- buttons / inputs ---- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:1px solid var(--ink); background:var(--bg); color:var(--ink); cursor:pointer;
+    padding:12px 22px; font-size:11.5px; letter-spacing:0.12em; text-transform:uppercase;
+    transition:background .2s ease, color .2s ease;
+  }
+  .btn:hover{ background:var(--ink); color:#fff; }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .btn.primary{ background:var(--ink); color:#fff; }
+  .btn.primary:hover{ opacity:0.85; background:var(--ink); }
+  .btn.danger{ border-color:var(--danger); color:var(--danger); }
+  .btn.danger:hover{ background:var(--danger); color:#fff; }
+  .btn.small{ padding:7px 14px; font-size:10.5px; }
+  .btn.ghost{ border-color:var(--line); color:var(--ink-soft); }
+  .btn.ghost:hover{ background:var(--paper); color:var(--ink); }
+
+  label{ display:block; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; }
+  input[type=text], input[type=number], input[type=password], input[type=username], textarea, select{
+    width:100%; background:var(--paper); border:1px solid var(--line); padding:11px 13px; font-size:14px; color:var(--ink);
+  }
+  input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--ink); }
+  textarea{ resize:vertical; min-height:70px; font-family:inherit; }
+  .field{ margin-bottom:18px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
+  .checkline{ display:flex; align-items:center; gap:8px; }
+  .checkline label{ margin:0; text-transform:none; letter-spacing:0; font-size:13.5px; color:var(--ink); }
+  .checkline input{ width:auto; }
+
+  /* ---- login ---- */
+  .login-wrap{ max-width:340px; margin:16vh auto 0; padding:0 20px; }
+  .login-wrap h1{ font-size:24px; margin-bottom:6px; }
+  .login-wrap p.sub{ color:var(--ink-faint); font-size:13.5px; margin-bottom:28px; }
+  .error{ background:var(--danger-bg); color:var(--danger); font-size:13px; padding:10px 12px; margin-bottom:16px; border:1px solid #f0d3d1; }
+
+  /* ---- tour list ---- */
+  .list-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:26px; }
+  table.tours{ width:100%; border-collapse:collapse; }
+  table.tours th{ text-align:left; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); padding:0 12px 10px; border-bottom:1px solid var(--line); }
+  table.tours td{ padding:14px 12px; border-bottom:1px solid var(--line-soft); font-size:14px; vertical-align:middle; }
+  table.tours tr:hover td{ background:var(--paper); }
+  .badge{ display:inline-block; font-size:10px; letter-spacing:0.05em; text-transform:uppercase; padding:3px 9px; border-radius:20px; border:1px solid var(--line); color:var(--ink-soft); }
+  .badge.published{ border-color:#bfe0c9; background:#f1faf4; color:var(--ok); }
+  .badge.draft{ border-color:var(--line); color:var(--ink-faint); }
+  .badge.archived{ border-color:var(--line); color:var(--ink-faint); background:var(--paper); }
+  .badge.coming_soon{ border-color:#e0d6b8; background:#fbf7ea; color:#8a6d1f; }
+  .row-actions{ display:flex; gap:8px; justify-content:flex-end; }
+  .empty{ color:var(--ink-faint); padding:40px 0; text-align:center; }
+
+  /* ---- bookings list ---- */
+  .badge.paid{ border-color:#bfe0c9; background:#f1faf4; color:var(--ok); }
+  .badge.pending{ border-color:var(--line); color:var(--ink-faint); }
+  .badge.failed{ border-color:#f0d3d1; background:var(--danger-bg); color:var(--danger); }
+  .badge.canceled{ border-color:var(--line); color:var(--ink-faint); background:var(--paper); }
+  .badge.paid_no_capacity{ border-color:var(--danger); background:var(--danger); color:#fff; font-weight:600; }
+  tr.needs-attention td{ background:var(--danger-bg); }
+  tr.needs-attention:hover td{ background:#f6dedc; }
+  .filter-row{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .filter-row label{ margin:0; }
+  .filter-row select{ width:auto; min-width:200px; }
+
+  /* ---- editor ---- */
+  .editor-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:20px; }
+  .editor-head h1{ font-size:24px; }
+  section.panel{ border:1px solid var(--line-soft); padding:26px; margin-bottom:22px; }
+  section.panel h2{ font-size:15px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--line-soft); }
+  .repeat-row{ display:grid; gap:10px; border:1px solid var(--line-soft); padding:14px; margin-bottom:10px; position:relative; background:var(--paper); }
+  .repeat-row .rm{ position:absolute; top:10px; right:10px; }
+  .save-bar{ position:sticky; bottom:0; background:rgba(255,255,255,0.94); backdrop-filter:blur(6px); border-top:1px solid var(--line); padding:16px 0; display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:10px; }
+  .save-bar .msg{ margin-right:auto; font-size:13px; color:var(--ink-faint); }
+
+  /* ---- gallery ---- */
+  .gallery-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; margin-bottom:18px; }
+  .gphoto{ border:1px solid var(--line-soft); position:relative; }
+  .gphoto img{ width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--paper); }
+  .gphoto .gcap{ font-size:11px; padding:7px 8px; color:var(--ink-soft); border-top:1px solid var(--line-soft); }
+  .gphoto .gctrl{ position:absolute; top:6px; right:6px; display:flex; gap:4px; }
+  .gphoto .gctrl button{ width:24px; height:24px; border:none; background:rgba(10,10,10,0.72); color:#fff; cursor:pointer; font-size:11px; line-height:1; }
+  .gphoto .gctrl button:hover{ background:#000; }
+  .upload-row{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .upload-row .field{ flex:1; min-width:160px; margin-bottom:0; }
+
+  /* ---- itinerary stage photos ---- */
+  .iphoto-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:8px; margin:4px 0 10px; grid-column:1/-1; }
+  .iphoto{ border:1px solid var(--line-soft); position:relative; }
+  .iphoto img{ width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--paper); }
+  .iphoto button{ position:absolute; top:3px; right:3px; width:20px; height:20px; border:none; background:rgba(10,10,10,0.72); color:#fff; cursor:pointer; font-size:10px; line-height:1; }
+  .iphoto button:hover{ background:#000; }
+  .istage-photos{ grid-column:1/-1; border-top:1px dashed var(--line-soft); padding-top:12px; margin-top:2px; }
+  .istage-photos > label{ margin-bottom:8px; }
+
+  /* ---- hosts (organizers) ---- */
+  .host-photo-box{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+  .host-photo{ width:120px; height:120px; border:1px solid var(--line-soft); background:var(--paper); display:flex; align-items:center; justify-content:center; flex:none; }
+  .host-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .host-photo .ph{ font-size:11px; color:var(--ink-faint); text-align:center; padding:6px; }
+  .host-photo-ctrl{ flex:1; min-width:200px; }
+
+  /* Assigned organizers inside the tour editor. */
+  .th-row{ display:flex; align-items:center; gap:10px; border:1px solid var(--line-soft); padding:10px 12px; margin-bottom:8px; background:var(--paper); }
+  .th-row .th-name{ flex:1; font-size:13.5px; }
+  .th-row .th-name small{ display:block; color:var(--ink-faint); font-size:11.5px; }
+  .th-row select{ width:auto; min-width:120px; }
+  .th-row .th-ord{ display:flex; gap:4px; }
+  .th-row .th-ord button{ width:26px; height:26px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:12px; line-height:1; }
+  .th-row .th-ord button:disabled{ opacity:.35; cursor:default; }
+  .th-add{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-top:12px; }
+  .th-add select{ min-width:220px; width:auto; }
+
+  .app-card{ border:1px solid var(--line-soft); padding:16px 18px; margin-bottom:12px; background:var(--paper); }
+  .app-card .app-top{ display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
+  .app-card .app-top b{ font-size:14.5px; }
+  .app-card .app-meta{ color:var(--ink-faint); font-size:12px; }
+  .app-card .app-desc{ font-size:13px; line-height:1.85; color:var(--ink-soft); white-space:pre-wrap; margin:10px 0 12px; }
+  .app-actions{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+  .app-actions .field{ margin-bottom:0; }
+  .app-actions input{ width:220px; }
+
+  .badge.active{ background:#e7f2e9; color:#1e6b33; }
+  .badge.hidden{ background:#eee; color:#666; }
+  .badge.pending{ background:#fdf3e0; color:#8a5a12; }
+  .badge.approved{ background:#e7f2e9; color:#1e6b33; }
+  .badge.rejected{ background:#fbe9e7; color:#8d2b20; }
+  .badge.lead{ background:#ecebff; color:#3b348c; }
+  .badge.co_host{ background:#eee; color:#555; }
+  .badge.venue{ background:#e6f1f6; color:#1f5771; }
+  /* The two partner kinds, told apart at a glance in every list. */
+  .badge.person{ background:#f1eee8; color:#6b5a3e; }
+  .badge.place{ background:#e6f1f6; color:#1f5771; }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; font-size:13px;
+    border:1px solid var(--line); background:var(--paper); padding:5px 6px 5px 11px;
+  }
+  .chip-x{
+    border:none; background:none; cursor:pointer; font-size:15px; line-height:1;
+    color:var(--ink-faint); padding:0 2px;
+  }
+  .chip-x:hover{ color:var(--danger); }
+
+  .media-row .gm-thumb{ width:64px; height:48px; background:var(--paper); border:1px solid var(--line-soft); overflow:hidden; flex:none; }
+  .media-row .gm-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .media-row .gm-caption{ flex:1; padding:8px 10px; border:1px solid var(--line); font:inherit; font-size:13px; }
+
+  #toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 20px; font-size:13.5px; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  #toast.show{ opacity:1; }
+  #toast.err{ background:var(--danger); }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------------------------------------------------------------
+  // API client
+  // ---------------------------------------------------------------------
+  async function api(path, opts){
+    opts = opts || {};
+    const headers = Object.assign({}, opts.headers || {});
+    let body = opts.body;
+    if (body !== undefined && !(body instanceof FormData)){
+      headers['content-type'] = 'application/json';
+      body = JSON.stringify(body);
+    }
+    const res = await fetch('/api' + path, {
+      method: opts.method || 'GET',
+      headers,
+      body,
+      credentials: 'same-origin'
+    });
+    let data = null;
+    try { data = await res.json(); } catch(e){ /* no body */ }
+    if (!res.ok){
+      const err = new Error((data && data.error) || ('http_' + res.status));
+      err.status = res.status; err.body = data;
+      throw err;
+    }
+    return data;
+  }
+
+  function toast(msg, isErr){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = isErr ? 'show err' : 'show';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.className = ''; }, 3200);
+  }
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  const STATUSES = ['draft', 'published', 'coming_soon', 'archived'];
+  // Mirrors isValidHostSlug() on the server. The slug is the public URL of a
+  // profile (/host/<slug>) and is immutable once created, so it is validated
+  // here before the request rather than after a 422.
+  const HOST_SLUG_RE = /^[a-z0-9-]{2,40}$/;
+  const HOST_STATUSES = ['hidden', 'active'];
+  // 'venue' is a place's only role and the only role a place may have; the
+  // two people roles are the only ones a person may have. The server
+  // enforces this too — these lists just stop the UI offering a 422.
+  const HOST_PERSON_ROLES = ['lead', 'co_host'];
+  const HOST_KINDS = ['person', 'place'];
+  const KIND_LABEL = { person: 'Person', place: 'Place' };
+  const TOUR_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'canceled', 'paid_no_capacity'];
+
+  // ---------------------------------------------------------------------
+  // App state + tiny hash router
+  // ---------------------------------------------------------------------
+  const state = { admin: null, tours: [], bookings: [], bookingsFilter: '', busy: false,
+                  hosts: [], applications: [], applicationsFilter: '', hostsFilter: '' };
+  const app = document.getElementById('app');
+
+  function route(){
+    const hash = location.hash.replace(/^#\/?/, '');
+    if (!state.admin){ renderLogin(); return; }
+    if (hash === '' || hash === 'tours') { renderList(); return; }
+    if (hash === 'tours/new') { renderEditor(null); return; }
+    if (hash === 'bookings') { renderBookings(); return; }
+    if (hash === 'hosts') { renderHosts(); return; }
+    if (hash === 'hosts/new') { renderHostEditor(null, 'person'); return; }
+    if (hash === 'hosts/new?kind=place') { renderHostEditor(null, 'place'); return; }
+    if (hash === 'applications') { renderApplications(); return; }
+    const mh = /^hosts\/(\d+)\/edit$/.exec(hash);
+    if (mh) { renderHostEditor(Number(mh[1])); return; }
+    const m = /^tours\/([^/]+)\/edit$/.exec(hash);
+    if (m) { renderEditor(m[1]); return; }
+    renderList();
+  }
+  window.addEventListener('hashchange', route);
+
+  async function boot(){
+    try {
+      const me = await api('/admin/me');
+      state.admin = me.admin;
+    } catch(e){ state.admin = null; }
+    route();
+  }
+
+  // ---------------------------------------------------------------------
+  // Shell (topbar) — wraps every authenticated view
+  // ---------------------------------------------------------------------
+  function shell(contentHtml){
+    return (
+      '<header class="topbar"><div class="topbar-inner">' +
+        '<div class="logo"><b>CHAACME</b><span>admin</span></div>' +
+        '<nav>' +
+          '<a href="#/tours">Tours</a>' +
+          '<a href="#/hosts">Organizers</a>' +
+          '<a href="#/applications">Applications</a>' +
+          '<a href="#/bookings">رزروها و پرداخت‌ها</a>' +
+          '<span class="who">' + esc(state.admin ? state.admin.username : '') + '</span>' +
+          '<a id="logoutLink">Log out</a>' +
+        '</nav>' +
+      '</div></header>' +
+      '<main><div class="wrap">' + contentHtml + '</div></main>'
+    );
+  }
+
+  function bindLogout(){
+    const el = document.getElementById('logoutLink');
+    if (el) el.addEventListener('click', async function(){
+      try { await api('/admin/logout', { method:'POST' }); } catch(e){}
+      state.admin = null;
+      location.hash = '';
+      route();
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Login
+  // ---------------------------------------------------------------------
+  function renderLogin(){
+    app.innerHTML =
+      '<div class="login-wrap">' +
+        '<h1>Admin sign in</h1>' +
+        '<p class="sub">CHAACME tour management</p>' +
+        '<div id="loginError" class="error" hidden></div>' +
+        '<form id="loginForm">' +
+          '<div class="field"><label>Username</label><input type="text" id="loginUsername" autocomplete="username" required></div>' +
+          '<div class="field"><label>Password</label><input type="password" id="loginPassword" autocomplete="current-password" required></div>' +
+          '<button class="btn primary" type="submit" style="width:100%" id="loginSubmit">Sign in</button>' +
+        '</form>' +
+      '</div>';
+
+    document.getElementById('loginForm').addEventListener('submit', async function(e){
+      e.preventDefault();
+      const errEl = document.getElementById('loginError');
+      errEl.hidden = true;
+      const btn = document.getElementById('loginSubmit');
+      btn.disabled = true;
+      try {
+        await api('/admin/login', {
+          method: 'POST',
+          body: {
+            username: document.getElementById('loginUsername').value.trim(),
+            password: document.getElementById('loginPassword').value
+          }
+        });
+        const me = await api('/admin/me');
+        state.admin = me.admin;
+        location.hash = '#/tours';
+        route();
+      } catch(err){
+        errEl.textContent = err.status === 429
+          ? 'Too many attempts. Wait a few minutes and try again.'
+          : 'Incorrect username or password.';
+        errEl.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Tour list
+  // ---------------------------------------------------------------------
+  async function renderList(){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+    try {
+      const data = await api('/admin/tours');
+      state.tours = data.tours;
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('Could not load tours', true);
+      state.tours = [];
+    }
+
+    const rows = state.tours.map(function(t){
+      const status = t.status || 'draft';
+      return (
+        '<tr>' +
+          '<td>' + esc(t.name) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(t.id) + '</div></td>' +
+          '<td><span class="badge ' + esc(status) + '">' + esc(status.replace('_',' ')) + '</span></td>' +
+          '<td>' + (t.featured ? '★' : '') + '</td>' +
+          '<td>' + (t.price != null ? Number(t.price).toLocaleString('en-US') : '—') + '</td>' +
+          '<td><div class="row-actions">' +
+            '<a class="btn small ghost" href="#/tours/' + encodeURIComponent(t.id) + '/edit">Edit</a>' +
+          '</div></td>' +
+        '</tr>'
+      );
+    }).join('');
+
+    app.innerHTML = shell(
+      '<div class="list-head"><h1>Tours</h1><a class="btn primary" href="#/tours/new">+ New tour</a></div>' +
+      (state.tours.length
+        ? '<table class="tours"><thead><tr><th>Name</th><th>Status</th><th>Featured</th><th>Price</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="empty">No tours yet. Create the first one.</div>')
+    );
+    bindLogout();
+  }
+
+  // ---------------------------------------------------------------------
+  // Bookings + payments
+  // ---------------------------------------------------------------------
+  async function renderBookings(){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+    try {
+      const qs = state.bookingsFilter ? ('?payment_status=' + encodeURIComponent(state.bookingsFilter)) : '';
+      const data = await api('/admin/bookings' + qs);
+      state.bookings = data.bookings;
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('Could not load bookings', true);
+      state.bookings = [];
+    }
+    paintBookings();
+  }
+
+  function paintBookings(){
+    const filterOptions = ['<option value="">All payment statuses</option>'].concat(
+      PAYMENT_STATUSES.map(function(s){
+        return '<option value="' + esc(s) + '"' + (s === state.bookingsFilter ? ' selected' : '') + '>' + esc(s.replace(/_/g, ' ')) + '</option>';
+      })
+    ).join('');
+
+    const rows = state.bookings.map(function(b){
+      const status = b.paymentStatus || 'pending';
+      const flagged = status === 'paid_no_capacity';
+      const customer = [b.firstName, b.lastName].filter(Boolean).join(' ') || '—';
+      return (
+        '<tr' + (flagged ? ' class="needs-attention"' : '') + '>' +
+          '<td>' + esc(b.ref) + '</td>' +
+          '<td>' + esc(b.tourTitle) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.dateLabel) + '</div></td>' +
+          '<td>' + esc(b.guests) + '</td>' +
+          '<td>' + esc(customer) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.phone) + '</div></td>' +
+          '<td><span class="badge ' + esc(status) + '">' + (flagged ? '⚠ ' : '') + esc(status.replace(/_/g, ' ')) + '</span></td>' +
+          '<td>' + Number(b.total || 0).toLocaleString('en-US') + '</td>' +
+          '<td style="font-size:12px;color:var(--ink-faint);">' + esc(b.zarinpalRefId || '—') + '</td>' +
+          '<td style="font-size:12px;color:var(--ink-faint);">' + esc(b.createdAt) + '</td>' +
+        '</tr>'
+      );
+    }).join('');
+
+    app.innerHTML = shell(
+      '<div class="list-head"><h1>رزروها و پرداخت‌ها</h1></div>' +
+      '<div class="filter-row"><label>Payment status</label><select id="bookingsFilter">' + filterOptions + '</select></div>' +
+      (state.bookings.length
+        ? '<table class="tours"><thead><tr><th>Ref</th><th>Tour / Date</th><th>Guests</th><th>Customer</th><th>Payment</th><th>Amount (Toman)</th><th>ZarinPal ref</th><th>Created</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="empty">No bookings match this filter.</div>')
+    );
+    bindLogout();
+
+    document.getElementById('bookingsFilter').addEventListener('change', function(){
+      state.bookingsFilter = this.value;
+      renderBookings();
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Editor — shared for create + edit
+  // ---------------------------------------------------------------------
+  function emptyTour(){
+    return {
+      id: '', name: '', status: 'draft', featured: false, ordinal: 0,
+      subtitleEn: '', tags: '', duration: '', price: '', description: '', included: '',
+      photoPath: '', dayLabel: '', monthLabel: '',
+      highlights: [], itinerary: [], reviewCategories: [],
+      gallery: [], galleryPhotos: [], galleryMedia: []
+    };
+  }
+
+  async function renderEditor(id){
+    const isNew = !id;
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+
+    let tour;
+    if (isNew){
+      tour = emptyTour();
+    } else {
+      try {
+        const data = await api('/admin/tours/' + encodeURIComponent(id));
+        tour = data.tour;
+        if (!Array.isArray(tour.galleryMedia)) tour.galleryMedia = [];
+        (tour.itinerary || []).forEach(function(it){ if (!Array.isArray(it.photos)) it.photos = []; });
+      } catch(e){
+        if (e.status === 401){ state.admin = null; renderLogin(); return; }
+        toast('Could not load tour', true);
+        location.hash = '#/tours';
+        return;
+      }
+    }
+
+    const ed = { tour: tour, isNew: isNew };
+    paintEditor(ed);
+  }
+
+  function paintEditor(ed){
+    const t = ed.tour;
+    const idField = ed.isNew
+      ? '<div class="field"><label>Tour ID (permanent, url-safe: lowercase letters, digits, hyphens)</label>' +
+        '<input type="text" id="f_id" value="' + esc(t.id) + '" placeholder="e.g. desert-parthian"></div>'
+      : '<div class="field"><label>Tour ID</label><input type="text" value="' + esc(t.id) + '" disabled></div>';
+
+    app.innerHTML = shell(
+      '<div class="editor-head">' +
+        '<h1>' + (ed.isNew ? 'New tour' : esc(t.name || t.id)) + '</h1>' +
+        (ed.isNew ? '' : '<button class="btn danger small" id="deleteTourBtn">Delete tour</button>') +
+      '</div>' +
+
+      '<section class="panel"><h2>Basics</h2>' +
+        '<div class="grid2">' +
+          idField +
+          field('Name', 'f_name', t.name) +
+        '</div>' +
+        '<div class="grid3">' +
+          selectField('Status', 'f_status', STATUSES, t.status || 'draft') +
+          field('Duration', 'f_duration', t.duration, 'e.g. یک‌روزه') +
+          field('Price (Toman)', 'f_price', t.price, '', 'number') +
+        '</div>' +
+        '<div class="grid2">' +
+          field('Tags', 'f_tags', t.tags, 'comma or · separated, shown as-is') +
+          field('Subtitle (EN)', 'f_subtitleEn', t.subtitleEn) +
+        '</div>' +
+        '<div class="grid2">' +
+          field('Card day label', 'f_dayLabel', t.dayLabel, 'e.g. ۱ — required for Featured to show on homepage') +
+          field('Card month label', 'f_monthLabel', t.monthLabel, 'e.g. مهر') +
+        '</div>' +
+        '<div class="field"><label>Cover photo path</label>' +
+          uploadRow('cover', t.photoPath, t.id) +
+        '</div>' +
+        '<div class="field checkline"><input type="checkbox" id="f_featured"' + (t.featured ? ' checked' : '') + '>' +
+          '<label for="f_featured">Featured (shown on the homepage — also needs Card day/month label above, or it won’t appear there)</label></div>' +
+        '<div class="field"><label>Description</label><textarea id="f_description">' + esc(t.description) + '</textarea></div>' +
+        '<div class="field"><label>What\'s included</label><textarea id="f_included">' + esc(t.included) + '</textarea></div>' +
+      '</section>' +
+
+      '<section class="panel"><h2>Highlights</h2>' +
+        '<div id="highlightsList"></div>' +
+        '<button class="btn small ghost" id="addHighlight">+ Add highlight</button>' +
+      '</section>' +
+
+      '<section class="panel"><h2>Itinerary</h2>' +
+        '<div id="itineraryList"></div>' +
+        '<button class="btn small ghost" id="addStep">+ Add step</button>' +
+      '</section>' +
+
+      '<section class="panel"><h2>Review categories</h2>' +
+        '<div id="categoriesList"></div>' +
+        '<button class="btn small ghost" id="addCategory">+ Add category</button>' +
+      '</section>' +
+
+      '<section class="panel" id="galleryPanel"><h2>Gallery</h2>' +
+        (ed.isNew
+          ? '<p style="color:var(--ink-faint);font-size:13px;margin-bottom:14px;">Save the tour first, then manage its gallery here.</p>'
+          : renderGallerySection(t)) +
+      '</section>' +
+
+      // Saved through its own endpoint (PUT /admin/tours/:id/hosts), so it has
+      // its own save button rather than riding along with the tour fields.
+      '<section class="panel" id="tourHostsPanel"><h2>Partners</h2>' +
+        (ed.isNew
+          ? '<p style="color:var(--ink-faint);font-size:13px;">Save the tour first, then assign its organizers here.</p>'
+          : '<div class="empty">Loading…</div>') +
+      '</section>' +
+
+      '<div class="save-bar"><span class="msg" id="editorMsg"></span>' +
+        '<a class="btn ghost" href="#/tours">Cancel</a>' +
+        '<button class="btn primary" id="saveBtn">' + (ed.isNew ? 'Create tour' : 'Save changes') + '</button>' +
+      '</div>'
+    );
+    bindLogout();
+
+    if (!ed.isNew) initTourHosts(ed.tour.id);
+
+    renderRepeat('highlightsList', ed.tour.highlights, [
+      { key:'name', label:'Name' }, { key:'description', label:'Description', area:true }
+    ]);
+    renderItineraryList(ed);
+    renderRepeat('categoriesList', ed.tour.reviewCategories, [
+      { key:'label', label:'Label' }, { key:'score', label:'Score (0-5)', number:true }
+    ]);
+
+    document.getElementById('addHighlight').addEventListener('click', function(){
+      ed.tour.highlights.push({ name:'', description:'' });
+      renderRepeat('highlightsList', ed.tour.highlights, [
+        { key:'name', label:'Name' }, { key:'description', label:'Description', area:true }
+      ]);
+    });
+    document.getElementById('addStep').addEventListener('click', function(){
+      ed.tour.itinerary.push({ time:'', title:'', description:'', photoLabel:'', photoPath:'', photos:[] });
+      renderItineraryList(ed);
+    });
+    document.getElementById('addCategory').addEventListener('click', function(){
+      ed.tour.reviewCategories.push({ label:'', score:'' });
+      renderRepeat('categoriesList', ed.tour.reviewCategories, [
+        { key:'label', label:'Label' }, { key:'score', label:'Score (0-5)', number:true }
+      ]);
+    });
+
+    bindCoverUpload(ed);
+    if (!ed.isNew) bindGallery(ed);
+
+    var delBtn = document.getElementById('deleteTourBtn');
+    if (delBtn) delBtn.addEventListener('click', function(){ deleteTour(ed); });
+
+    document.getElementById('saveBtn').addEventListener('click', function(){ saveTour(ed); });
+  }
+
+  function field(label, id, value, placeholder, type){
+    return '<div class="field"><label>' + esc(label) + '</label>' +
+      '<input type="' + (type || 'text') + '" id="' + id + '" value="' + esc(value == null ? '' : value) + '"' +
+      (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '') + '></div>';
+  }
+  function selectField(label, id, options, current){
+    return '<div class="field"><label>' + esc(label) + '</label><select id="' + id + '">' +
+      options.map(function(o){
+        return '<option value="' + esc(o) + '"' + (o === current ? ' selected' : '') + '>' + esc(o.replace('_',' ')) + '</option>';
+      }).join('') + '</select></div>';
+  }
+
+  function uploadRow(prefix, currentPath, tourId){
+    return '<div class="upload-row">' +
+      '<div class="field"><input type="text" id="' + prefix + 'Path" value="' + esc(currentPath || '') + '" placeholder="/images/…"></div>' +
+      '<input type="file" id="' + prefix + 'File" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
+      '<button type="button" class="btn small ghost" id="' + prefix + 'Upload" data-tourid="' + esc(tourId || '') + '">Upload</button>' +
+    '</div>';
+  }
+
+  function bindCoverUpload(ed){
+    const btn = document.getElementById('coverUpload');
+    btn.addEventListener('click', async function(){
+      const fileInput = document.getElementById('coverFile');
+      if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+      btn.disabled = true;
+      try {
+        const path = await uploadFile(fileInput.files[0], document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id);
+        document.getElementById('coverPath').value = path;
+        toast('Cover photo uploaded');
+      } catch(e){
+        toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
+      } finally { btn.disabled = false; }
+    });
+  }
+
+  async function uploadFile(file, tourId){
+    const fd = new FormData();
+    fd.append('file', file);
+    if (tourId) fd.append('tourId', tourId);
+    const data = await api('/admin/upload', { method:'POST', body: fd });
+    return data.path;
+  }
+
+  // ---- generic repeatable list (highlights / itinerary / review categories) ----
+  function renderRepeat(containerId, items, fields){
+    const el = document.getElementById(containerId);
+    if (!items.length){
+      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">None yet.</p>';
+      return;
+    }
+    el.innerHTML = items.map(function(item, i){
+      const cols = fields.map(function(f){
+        const val = item[f.key] == null ? '' : item[f.key];
+        const inputHtml = f.area
+          ? '<textarea data-i="' + i + '" data-k="' + f.key + '" style="min-height:50px;">' + esc(val) + '</textarea>'
+          : '<input type="' + (f.number ? 'number' : 'text') + '" ' + (f.number ? 'step="0.1"' : '') +
+            ' data-i="' + i + '" data-k="' + f.key + '" value="' + esc(val) + '">';
+        return '<div class="field" style="margin-bottom:0;"><label>' + esc(f.label) + '</label>' + inputHtml + '</div>';
+      }).join('');
+      return '<div class="repeat-row" style="grid-template-columns:repeat(' + Math.min(fields.length,3) + ',1fr);">' +
+        cols + '<button type="button" class="btn small ghost rm" data-i="' + i + '">✕</button></div>';
+    }).join('');
+
+    el.querySelectorAll('input, textarea').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        const i = Number(inp.dataset.i), k = inp.dataset.k;
+        items[i][k] = inp.type === 'number' ? (inp.value === '' ? null : Number(inp.value)) : inp.value;
+      });
+    });
+    el.querySelectorAll('.rm').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        items.splice(Number(btn.dataset.i), 1);
+        renderRepeat(containerId, items, fields);
+      });
+    });
+  }
+
+  // ---- itinerary (own renderer, not the generic renderRepeat: each stage
+  // also carries a multi-photo array using the same /admin/upload endpoint
+  // and magic-byte/5MB validation as the gallery, just without gallery's
+  // per-photo stable ids — the whole itinerary array is bulk-replaced on
+  // Save, same as its other fields, so photo removal only needs to edit
+  // local state and let Save persist it. ----
+  const ITINERARY_FIELDS = [
+    { key:'time', label:'Time label' }, { key:'title', label:'Title' },
+    { key:'description', label:'Description', area:true },
+    { key:'photoLabel', label:'Photo label' }
+  ];
+
+  function renderItineraryList(ed){
+    const el = document.getElementById('itineraryList');
+    const items = ed.tour.itinerary;
+    if (!items.length){
+      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">None yet.</p>';
+      return;
+    }
+    el.innerHTML = items.map(function(item, i){
+      const cols = ITINERARY_FIELDS.map(function(f){
+        const val = item[f.key] == null ? '' : item[f.key];
+        const inputHtml = f.area
+          ? '<textarea data-i="' + i + '" data-k="' + f.key + '" style="min-height:50px;">' + esc(val) + '</textarea>'
+          : '<input type="text" data-i="' + i + '" data-k="' + f.key + '" value="' + esc(val) + '">';
+        return '<div class="field" style="margin-bottom:0;"><label>' + esc(f.label) + '</label>' + inputHtml + '</div>';
+      }).join('');
+      const photos = (item.photos || []).map(function(path, pi){
+        return '<div class="iphoto" data-si="' + i + '" data-pi="' + pi + '">' +
+          '<img src="' + esc(path) + '" onerror="this.style.opacity=0.15" alt="">' +
+          '<button type="button" class="iPhotoDel" title="Remove">✕</button>' +
+        '</div>';
+      }).join('');
+      const photoBlock = '<div class="istage-photos">' +
+        '<label>Photos</label>' +
+        '<div class="iphoto-grid">' + photos + '</div>' +
+        '<div class="upload-row">' +
+          '<input type="file" class="iPhotoFile" data-i="' + i + '" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
+          '<button type="button" class="btn small ghost iPhotoAdd" data-i="' + i + '">Add photo</button>' +
+        '</div>' +
+      '</div>';
+      return '<div class="repeat-row" style="grid-template-columns:repeat(' + Math.min(ITINERARY_FIELDS.length,3) + ',1fr);">' +
+        cols + photoBlock + '<button type="button" class="btn small ghost rm" data-i="' + i + '">✕</button></div>';
+    }).join('');
+
+    el.querySelectorAll('input[data-k], textarea[data-k]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        const i = Number(inp.dataset.i), k = inp.dataset.k;
+        items[i][k] = inp.value;
+      });
+    });
+    el.querySelectorAll('.rm').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        items.splice(Number(btn.dataset.i), 1);
+        renderItineraryList(ed);
+      });
+    });
+    el.querySelectorAll('.iPhotoDel').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const cell = btn.closest('.iphoto');
+        const si = Number(cell.dataset.si), pi = Number(cell.dataset.pi);
+        items[si].photos.splice(pi, 1);
+        renderItineraryList(ed);
+      });
+    });
+    el.querySelectorAll('.iPhotoAdd').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const i = Number(btn.dataset.i);
+        const fileInput = el.querySelector('.iPhotoFile[data-i="' + i + '"]');
+        if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+        btn.disabled = true;
+        try {
+          const tourId = document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id;
+          const path = await uploadFile(fileInput.files[0], tourId);
+          items[i].photos.push(path);
+          renderItineraryList(ed);
+          toast('Photo uploaded — click Save changes to attach it to this stage');
+        } catch(e){
+          toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
+        } finally { btn.disabled = false; }
+      });
+    });
+  }
+
+  // ---- gallery (edit mode only — needs real tour_media ids) ----
+  function renderGallerySection(t){
+    const photos = (t.galleryMedia || []).map(function(m, i){
+      return '<div class="gphoto" data-id="' + m.id + '">' +
+        '<img src="' + esc(m.photoPath || '') + '" onerror="this.style.opacity=0.15" alt="">' +
+        '<div class="gctrl">' +
+          (i > 0 ? '<button type="button" class="gUp" title="Move earlier">↑</button>' : '') +
+          (i < t.galleryMedia.length - 1 ? '<button type="button" class="gDown" title="Move later">↓</button>' : '') +
+          '<button type="button" class="gDel" title="Delete">✕</button>' +
+        '</div>' +
+        '<div class="gcap">' + esc(m.label || '(no label)') + '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-faint);font-size:13px;">No photos yet.</p>') + '</div>' +
+      '<div class="upload-row">' +
+        '<div class="field"><label>New photo label</label><input type="text" id="newPhotoLabel" placeholder="e.g. Sunrise departure"></div>' +
+        '<input type="file" id="newPhotoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
+        '<button type="button" class="btn small primary" id="addPhotoBtn">Add photo</button>' +
+      '</div>';
+  }
+
+  function bindGallery(ed){
+    const grid = document.getElementById('galleryGrid');
+    grid.querySelectorAll('.gDel').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const id = Number(btn.closest('.gphoto').dataset.id);
+        deleteGalleryPhoto(ed, id);
+      });
+    });
+    grid.querySelectorAll('.gUp').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const id = Number(btn.closest('.gphoto').dataset.id);
+        moveGalleryPhoto(ed, id, -1);
+      });
+    });
+    grid.querySelectorAll('.gDown').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const id = Number(btn.closest('.gphoto').dataset.id);
+        moveGalleryPhoto(ed, id, 1);
+      });
+    });
+    document.getElementById('addPhotoBtn').addEventListener('click', function(){ addGalleryPhoto(ed); });
+  }
+
+  async function deleteGalleryPhoto(ed, mediaId){
+    if (!confirm('Delete this photo? This cannot be undone.')) return;
+    try {
+      await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/' + mediaId, { method:'DELETE' });
+      toast('Photo deleted');
+      await refreshGalleryFull(ed);
+    } catch(e){ toast('Delete failed', true); }
+  }
+
+  async function moveGalleryPhoto(ed, mediaId, dir){
+    const ids = ed.tour.galleryMedia.map(function(m){ return m.id; });
+    const i = ids.indexOf(mediaId);
+    const j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+    try {
+      await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/reorder', { method:'PUT', body:{ order: ids } });
+      await refreshGalleryFull(ed);
+    } catch(e){ toast('Reorder failed', true); }
+  }
+
+  async function addGalleryPhoto(ed){
+    const fileInput = document.getElementById('newPhotoFile');
+    const label = document.getElementById('newPhotoLabel').value.trim();
+    if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+    const btn = document.getElementById('addPhotoBtn');
+    btn.disabled = true;
+    try {
+      const path = await uploadFile(fileInput.files[0], ed.tour.id);
+      const galleryImages = ed.tour.gallery.concat([label]);
+      const galleryPhotos = ed.tour.galleryPhotos.concat([path]);
+      await api('/admin/tours/' + encodeURIComponent(ed.tour.id), {
+        method:'PUT', body:{ galleryImages: galleryImages, galleryPhotos: galleryPhotos }
+      });
+      toast('Photo added');
+      await refreshGalleryFull(ed);
+    } catch(e){
+      toast('Upload/save failed', true);
+    } finally { btn.disabled = false; }
+  }
+
+  // Re-fetches the tour and repaints just the gallery <section> in place.
+  async function refreshGalleryFull(ed){
+    const data = await api('/admin/tours/' + encodeURIComponent(ed.tour.id));
+    ed.tour = Object.assign(ed.tour, data.tour);
+    document.getElementById('galleryPanel').innerHTML = '<h2>Gallery</h2>' + renderGallerySection(ed.tour);
+    bindGallery(ed);
+  }
+
+  // ---------------------------------------------------------------------
+  // Save / delete
+  // ---------------------------------------------------------------------
+  function readEditorFields(ed){
+    const t = ed.tour;
+    const patch = {
+      name: val('f_name'), status: val('f_status'), duration: val('f_duration'),
+      price: numOrNull('f_price'), tags: val('f_tags'), subtitleEn: val('f_subtitleEn'),
+      dayLabel: val('f_dayLabel'), monthLabel: val('f_monthLabel'),
+      photoPath: val('coverPath'), featured: document.getElementById('f_featured').checked,
+      description: val('f_description'), included: val('f_included'),
+      highlights: t.highlights.filter(function(h){ return h.name; }),
+      itinerary: t.itinerary.filter(function(s){ return s.title; }),
+      reviewCategories: t.reviewCategories.filter(function(c){ return c.label; })
+    };
+    if (ed.isNew){
+      patch.galleryImages = t.gallery || [];
+      patch.galleryPhotos = t.galleryPhotos || [];
+    }
+    return patch;
+  }
+  function val(id){ const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function numOrNull(id){ const v = val(id); return v === '' ? null : Number(v); }
+
+  async function saveTour(ed){
+    const msg = document.getElementById('editorMsg');
+    const btn = document.getElementById('saveBtn');
+    msg.textContent = '';
+
+    if (ed.isNew){
+      const id = val('f_id');
+      if (!TOUR_ID_RE.test(id)){
+        msg.textContent = 'Tour ID must be lowercase letters/digits/hyphens only (e.g. desert-parthian).';
+        return;
+      }
+      ed.tour.id = id;
+    }
+    const patch = readEditorFields(ed);
+    if (!patch.name){ msg.textContent = 'Name is required.'; return; }
+
+    const featuredWithoutDate = patch.featured && (!patch.dayLabel || !patch.monthLabel);
+    const savedMsg = featuredWithoutDate
+      ? 'Saved — but Featured tours need both Card day and month label to actually show on the homepage.'
+      : null;
+
+    btn.disabled = true;
+    try {
+      if (ed.isNew){
+        patch.id = ed.tour.id;
+        await api('/admin/tours', { method:'POST', body: patch });
+        toast(savedMsg || 'Tour created', featuredWithoutDate);
+        location.hash = '#/tours/' + encodeURIComponent(ed.tour.id) + '/edit';
+        route();
+      } else {
+        await api('/admin/tours/' + encodeURIComponent(ed.tour.id), { method:'PUT', body: patch });
+        toast(savedMsg || 'Saved', featuredWithoutDate);
+        renderEditor(ed.tour.id);
+      }
+    } catch(e){
+      if (e.status === 409) msg.textContent = 'That tour ID is already taken.';
+      else if (e.status === 422) msg.textContent = 'Please check the highlighted fields.';
+      else msg.textContent = 'Save failed. Try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteTour(ed){
+    if (!confirm('Delete "' + ed.tour.name + '"? This cannot be undone.')) return;
+    try {
+      await api('/admin/tours/' + encodeURIComponent(ed.tour.id), { method:'DELETE' });
+      toast('Tour deleted');
+      location.hash = '#/tours';
+      route();
+    } catch(e){
+      if (e.status === 409) toast('Cannot delete: this tour has real bookings. Archive it instead.', true);
+      else toast('Delete failed', true);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Organizers (hosts)
+  // ---------------------------------------------------------------------
+  // A host is never deleted — there is no DELETE endpoint on purpose, because
+  // a profile may already be linked from a tour page or an external link.
+  // "hidden" is the way to take one off the site.
+
+  async function loadHosts(){
+    const data = await api('/admin/hosts');
+    state.hosts = data.hosts;
+    return state.hosts;
+  }
+
+  async function renderHosts(){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+    try {
+      await loadHosts();
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('Could not load organizers', true);
+      state.hosts = [];
+    }
+
+    const shown = state.hostsFilter
+      ? state.hosts.filter(function(h){ return h.kind === state.hostsFilter; })
+      : state.hosts;
+
+    const rows = shown.map(function(h){
+      const status = h.status || 'hidden';
+      // A place is described by where it is, a person by what they do — the
+      // same column, filled by kind, rather than two mostly-empty ones.
+      const about = h.kind === 'place'
+        ? [h.lodgingType, h.region].filter(Boolean).join(' · ')
+        : (h.expertise || '');
+      return (
+        '<tr>' +
+          '<td>' + esc(h.displayName) +
+            '<div style="color:var(--ink-faint);font-size:12px;">/host/' + esc(h.slug) + '</div></td>' +
+          '<td><span class="badge ' + esc(h.kind) + '">' + esc(KIND_LABEL[h.kind] || h.kind) + '</span></td>' +
+          '<td><span class="badge ' + esc(status) + '">' + esc(status) + '</span></td>' +
+          '<td>' + (h.verified ? '✓' : '') + '</td>' +
+          '<td>' + esc(about || '—') + '</td>' +
+          '<td>' + (h.owner
+            ? esc(h.owner.firstName + ' ' + h.owner.lastName) + '<div style="color:var(--ink-faint);font-size:12px;" dir="ltr">' + esc(h.owner.phone) + '</div>'
+            : '<span style="color:var(--ink-faint);">بدون حساب</span>') + '</td>' +
+          '<td><div class="row-actions">' +
+            '<a class="btn small ghost" href="#/hosts/' + h.id + '/edit">Edit</a>' +
+          '</div></td>' +
+        '</tr>'
+      );
+    }).join('');
+
+    const filterOptions = ['', 'person', 'place'].map(function(v){
+      return '<option value="' + v + '"' + (state.hostsFilter === v ? ' selected' : '') + '>' + (v ? KIND_LABEL[v] : 'All kinds') + '</option>';
+    }).join('');
+
+    app.innerHTML = shell(
+      '<div class="list-head"><h1>Partner profiles</h1>' +
+        '<span><a class="btn ghost" href="#/hosts/new?kind=place">+ New place</a> ' +
+        '<a class="btn primary" href="#/hosts/new">+ New person</a></span></div>' +
+      '<p style="color:var(--ink-faint);font-size:13px;margin:-8px 0 18px;">' +
+        'A <b>person</b> runs a tour (lead or co-host); a <b>place</b> is where it is held (the venue). ' +
+        'A profile appears on the site only when its status is <b>active</b> and it is linked to a tour ' +
+        '(Tours → edit a tour → Partners). Profiles are never deleted — set them back to hidden instead.</p>' +
+      '<div class="filter-row"><label>Kind</label><select id="hostKindFilter">' + filterOptions + '</select></div>' +
+      (shown.length
+        ? '<table class="tours"><thead><tr><th>Name</th><th>Kind</th><th>Status</th><th>Verified</th><th>About</th><th>Owner account</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="empty">' + (state.hosts.length ? 'No profiles of this kind.' : 'No profiles yet. Create one, or approve an application.') + '</div>')
+    );
+    bindLogout();
+    document.getElementById('hostKindFilter').addEventListener('change', function(){
+      state.hostsFilter = this.value;
+      renderHosts();
+    });
+  }
+
+  function hostPhotoHtml(photoPath){
+    return photoPath
+      ? '<img src="' + esc(photoPath) + '" alt="">'
+      : '<div class="ph">No photo</div>';
+  }
+
+  async function renderHostEditor(id, newKind){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+
+    const isNew = id == null;
+    let host;
+    if (isNew){
+      host = { slug:'', kind: newKind === 'place' ? 'place' : 'person', displayName:'', bio:'',
+               expertise:'', instagramHandle:'', contactPhone:'', photoPath:'', region:'',
+               lodgingType:'', amenities:[], latitude:null, longitude:null, media:[],
+               owner:null, status:'hidden', verified:false };
+    } else {
+      try {
+        host = (await api('/admin/hosts/' + id)).host;
+      } catch(e){
+        if (e.status === 401){ state.admin = null; renderLogin(); return; }
+        toast('Profile not found', true);
+        location.hash = '#/hosts'; return;
+      }
+    }
+    const isPlace = host.kind === 'place';
+    const ed = {
+      host: host, isNew: isNew, isPlace: isPlace,
+      photoPath: host.photoPath || '',
+      amenities: (host.amenities || []).slice(),
+      media: (host.media || []).map(function(m){ return { photoPath: m.photoPath, caption: m.caption || '' }; })
+    };
+
+    const placeFields =
+      '<div class="field"><label>Lodging type</label>' +
+        '<input type="text" id="h_lodging" value="' + esc(host.lodgingType || '') + '" placeholder="اقامتگاه بوم‌گردی" maxlength="60"></div>' +
+      '<div class="field"><label>Region</label>' +
+        '<input type="text" id="h_region" value="' + esc(host.region || '') + '" placeholder="سه‌هزار، تنکابن، مازندران" maxlength="120">' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>';
+
+    const personFields =
+      '<div class="field"><label>Expertise</label>' +
+        '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>';
+
+    app.innerHTML = shell(
+      '<div class="editor-head"><h1>' + (isNew ? ('New ' + (isPlace ? 'place' : 'person')) : esc(host.displayName)) + '</h1>' +
+        '<a class="btn small ghost" href="#/hosts">← All profiles</a></div>' +
+
+      '<section class="panel"><h2>Profile</h2>' +
+        '<div class="field"><label>Kind</label>' +
+          (isNew
+            ? '<select id="h_kind">' + HOST_KINDS.map(function(k){
+                return '<option value="' + k + '"' + (host.kind === k ? ' selected' : '') + '>' + KIND_LABEL[k] + '</option>';
+              }).join('') + '</select>' +
+              '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+                'A <b>person</b> runs tours; a <b>place</b> hosts them. Like the slug, this <b>cannot be changed later</b> — ' +
+                'the two kinds do not use the same fields.</p>'
+            : '<input type="text" value="' + esc(KIND_LABEL[host.kind] || host.kind) + '" disabled>' +
+              '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Fixed once created.</p>') +
+        '</div>' +
+
+        (isNew
+          ? '<div class="field"><label>Public slug</label>' +
+            '<input type="text" id="h_slug" placeholder="' + (isPlace ? 'dood-lodge' : 'arash-niko') + '" autocomplete="off">' +
+            '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+              'Lowercase letters, digits and hyphens. This becomes the public address ' +
+              '<b>/host/&lt;slug&gt;</b> and <b>cannot be changed later</b>.</p></div>'
+          : '<div class="field"><label>Public address</label>' +
+            '<input type="text" value="/host/' + esc(host.slug) + '" disabled>' +
+            '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">The slug is fixed once created.</p></div>') +
+
+        '<div class="field"><label>' + (isPlace ? 'Place name' : 'Display name') + '</label>' +
+          '<input type="text" id="h_name" value="' + esc(host.displayName || '') + '"></div>' +
+        (isPlace ? placeFields : personFields) +
+        '<div class="field"><label>' + (isPlace ? 'Description' : 'Bio') + '</label><textarea id="h_bio" rows="6">' + esc(host.bio || '') + '</textarea>' +
+          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown on the public profile. Max 1500 characters.</p></div>' +
+        '<div class="field"><label>Instagram handle</label><input type="text" id="h_instagram" value="' + esc(host.instagramHandle || '') + '" placeholder="arash.niko" dir="ltr">' +
+          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Username only — no @, no link. Shown publicly.</p></div>' +
+        '<div class="field"><label>Contact phone</label><input type="text" id="h_phone" value="' + esc(host.contactPhone || '') + '" placeholder="09xxxxxxxxx" dir="ltr">' +
+          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;"><b>Internal only</b> — never shown on the site.</p></div>' +
+        '<div class="field"><label>Owner account</label>' +
+          '<input type="text" value="' + esc(host.owner ? (host.owner.firstName + ' ' + host.owner.lastName + ' — ' + host.owner.phone) : 'بدون حساب — admin-created') + '" disabled>' +
+          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+            'Set when an application is approved. The owner sees this profile on their account page.</p></div>' +
+      '</section>' +
+
+      (isPlace ? amenitiesPanelHtml() + locationPanelHtml(host) : '') +
+
+      '<section class="panel"><h2>' + (isPlace ? 'Cover photo' : 'Photo') + '</h2>' +
+        '<div class="host-photo-box">' +
+          '<div class="host-photo" id="h_photoBox">' + hostPhotoHtml(ed.photoPath) + '</div>' +
+          '<div class="host-photo-ctrl">' +
+            '<div class="upload-row">' +
+              '<input type="file" id="h_photoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
+              '<button type="button" class="btn small primary" id="h_photoBtn">Upload</button>' +
+              (ed.photoPath ? '<button type="button" class="btn small danger" id="h_photoClear">Remove</button>' : '') +
+            '</div>' +
+            '<p style="color:var(--ink-faint);font-size:12px;margin-top:10px;">' +
+              (isNew ? 'Save the profile first — the photo is stored under its slug.' : 'Square images work best. Uploaded to /images/host-' + esc(host.slug) + '/.') +
+            '</p>' +
+          '</div>' +
+        '</div>' +
+      '</section>' +
+
+      (isNew ? '' : '<section class="panel" id="hostMediaPanel"><h2>Gallery</h2><div class="empty">Loading…</div></section>') +
+
+      '<section class="panel"><h2>Visibility</h2>' +
+        '<div class="field"><label>Status</label><select id="h_status">' +
+          HOST_STATUSES.map(function(v){
+            return '<option value="' + v + '"' + ((host.status || 'hidden') === v ? ' selected' : '') + '>' + v + '</option>';
+          }).join('') +
+        '</select>' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+          '<b>hidden</b> keeps the profile off the site entirely (/host/&lt;slug&gt; returns not-found, and it vanishes from any tour it is on). ' +
+          '<b>active</b> publishes it.</p></div>' +
+        '<div class="field"><label><input type="checkbox" id="h_verified"' + (host.verified ? ' checked' : '') + '> Verified by chaacme</label>' +
+          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shows a “تأییدشده توسط چکمه” badge. This is a claim about a real check you have done — only tick it if you have.</p></div>' +
+      '</section>' +
+
+      '<div class="save-bar"><span class="msg" id="hostMsg"></span>' +
+        '<a class="btn ghost" href="#/hosts">Cancel</a>' +
+        '<button class="btn primary" id="hostSaveBtn">' + (isNew ? 'Create profile' : 'Save changes') + '</button>' +
+      '</div>'
+    );
+    bindLogout();
+
+    document.getElementById('hostSaveBtn').addEventListener('click', function(){ saveHost(ed); });
+
+    if (isNew){
+      // Kind decides which fields exist, so switching it re-renders the whole
+      // editor rather than hiding inputs that would still be submitted.
+      document.getElementById('h_kind').addEventListener('change', function(){
+        location.hash = this.value === 'place' ? '#/hosts/new?kind=place' : '#/hosts/new';
+      });
+    }
+    if (isPlace) bindAmenities(ed);
+    if (!isNew) drawHostMedia(ed);
+
+    const photoBtn = document.getElementById('h_photoBtn');
+    if (photoBtn) photoBtn.addEventListener('click', async function(){
+      const f = document.getElementById('h_photoFile');
+      if (!f.files || !f.files[0]) { toast('Choose an image first', true); return; }
+      if (ed.isNew) { toast('Save the profile first', true); return; }
+      photoBtn.disabled = true;
+      try {
+        const data = await uploadHostImage(ed, f.files[0]);
+        ed.photoPath = data.path;
+        document.getElementById('h_photoBox').innerHTML = hostPhotoHtml(ed.photoPath);
+        f.value = '';
+        toast('Photo uploaded — remember to save');
+      } catch(e){
+        toast(e.status === 422 ? 'That file was rejected (png/jpeg/webp only)' : 'Upload failed', true);
+      } finally { photoBtn.disabled = false; }
+    });
+
+    const clearBtn = document.getElementById('h_photoClear');
+    if (clearBtn) clearBtn.addEventListener('click', function(){
+      ed.photoPath = '';
+      document.getElementById('h_photoBox').innerHTML = hostPhotoHtml('');
+      clearBtn.remove();
+      toast('Photo cleared — remember to save');
+    });
+  }
+
+  async function uploadHostImage(ed, file){
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('hostSlug', ed.host.slug);
+    return api('/admin/upload', { method:'POST', body: fd });
+  }
+
+  // ---- amenities (places only) ----------------------------------------
+  // A flat list of short labels, edited as chips: the server stores at most
+  // 20 of them, each at most 40 characters.
+  function amenitiesPanelHtml(){
+    return '<section class="panel" id="amenitiesPanel"><h2>Amenities</h2>' +
+      '<div class="chips" id="h_amenityChips"></div>' +
+      '<div class="th-add" style="margin-top:12px;">' +
+        '<div class="field" style="margin-bottom:0;"><label>Add an amenity</label>' +
+          '<input type="text" id="h_amenityInput" maxlength="40" placeholder="وای‌فای"></div>' +
+        '<button type="button" class="btn small ghost" id="h_amenityAdd">+ Add</button>' +
+      '</div>' +
+      '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
+        'Up to 20, each up to 40 characters. Saved with the rest of the profile.</p>' +
+    '</section>';
+  }
+
+  function locationPanelHtml(host){
+    return '<section class="panel"><h2>Location</h2>' +
+      '<div class="field" style="display:inline-block;width:48%;margin-inline-end:2%;"><label>Latitude</label>' +
+        '<input type="text" id="h_lat" dir="ltr" value="' + esc(host.latitude == null ? '' : host.latitude) + '" placeholder="36.812"></div>' +
+      '<div class="field" style="display:inline-block;width:48%;"><label>Longitude</label>' +
+        '<input type="text" id="h_lng" dir="ltr" value="' + esc(host.longitude == null ? '' : host.longitude) + '" placeholder="50.898"></div>' +
+      '<p style="color:var(--ink-faint);font-size:12px;">' +
+        'Enter the real point — it is kept for you, not published. The public page only ever shows it ' +
+        '<b>rounded to 2 decimals (~1 km)</b> as a map area, never an exact pin or an address. ' +
+        'Both fields together or both empty; must be inside Iran.</p>' +
+    '</section>';
+  }
+
+  function drawAmenities(ed){
+    const box = document.getElementById('h_amenityChips');
+    if (!box) return;
+    box.innerHTML = ed.amenities.length
+      ? ed.amenities.map(function(a, i){
+          return '<span class="chip">' + esc(a) + '<button type="button" class="chip-x" data-i="' + i + '" title="Remove">×</button></span>';
+        }).join('')
+      : '<span style="color:var(--ink-faint);font-size:13px;">None yet.</span>';
+    box.querySelectorAll('.chip-x').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        ed.amenities.splice(Number(btn.dataset.i), 1);
+        drawAmenities(ed);
+      });
+    });
+  }
+
+  function bindAmenities(ed){
+    drawAmenities(ed);
+    const input = document.getElementById('h_amenityInput');
+    const addIt = function(){
+      const v = (input.value || '').trim();
+      if (!v) return;
+      if (ed.amenities.length >= 20){ toast('20 amenities is the limit', true); return; }
+      if (ed.amenities.indexOf(v) !== -1){ toast('Already listed', true); input.value = ''; return; }
+      ed.amenities.push(v);
+      input.value = '';
+      drawAmenities(ed);
+    };
+    document.getElementById('h_amenityAdd').addEventListener('click', addIt);
+    input.addEventListener('keydown', function(ev){
+      if (ev.key === 'Enter'){ ev.preventDefault(); addIt(); }
+    });
+  }
+
+  // ---- gallery (host_media) -------------------------------------------
+  // Saved on its own button, not with the profile: the endpoint replaces the
+  // whole list in one transaction, so a half-built gallery must never be sent.
+  function drawHostMedia(ed){
+    const panel = document.getElementById('hostMediaPanel');
+    if (!panel) return;
+    const rows = ed.media.map(function(m, i){
+      return '<div class="th-row media-row" data-i="' + i + '">' +
+        '<div class="th-ord">' +
+          '<button type="button" class="gm-up"' + (i === 0 ? ' disabled' : '') + ' title="Move up">↑</button>' +
+          '<button type="button" class="gm-down"' + (i === ed.media.length - 1 ? ' disabled' : '') + ' title="Move down">↓</button>' +
+        '</div>' +
+        '<div class="gm-thumb"><img src="' + esc(m.photoPath) + '" alt=""></div>' +
+        '<input type="text" class="gm-caption" maxlength="120" placeholder="Caption (optional)" value="' + esc(m.caption || '') + '">' +
+        '<button type="button" class="btn small danger gm-rm">Remove</button>' +
+      '</div>';
+    }).join('');
+
+    panel.innerHTML =
+      '<h2>Gallery</h2>' +
+      (ed.media.length ? rows : '<p style="color:var(--ink-faint);font-size:13px;">No images yet.</p>') +
+      '<div class="th-add">' +
+        '<input type="file" id="gmFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
+        '<button type="button" class="btn small ghost" id="gmAdd">+ Upload</button>' +
+        '<button type="button" class="btn small primary" id="gmSave">Save gallery</button>' +
+        '<span class="msg" id="gmMsg" style="font-size:13px;color:var(--ink-faint);"></span>' +
+      '</div>' +
+      '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
+        'Shown on the public profile in this order. Uploading adds an image immediately; ' +
+        '<b>Save gallery</b> is what stores the list, its order and its captions.</p>';
+
+    panel.querySelectorAll('.gm-rm').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        ed.media.splice(Number(btn.closest('.media-row').dataset.i), 1);
+        drawHostMedia(ed);
+      });
+    });
+    panel.querySelectorAll('.gm-up').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const i = Number(btn.closest('.media-row').dataset.i);
+        ed.media.splice(i - 1, 0, ed.media.splice(i, 1)[0]);
+        drawHostMedia(ed);
+      });
+    });
+    panel.querySelectorAll('.gm-down').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const i = Number(btn.closest('.media-row').dataset.i);
+        ed.media.splice(i + 1, 0, ed.media.splice(i, 1)[0]);
+        drawHostMedia(ed);
+      });
+    });
+    panel.querySelectorAll('.gm-caption').forEach(function(input){
+      input.addEventListener('input', function(){
+        ed.media[Number(input.closest('.media-row').dataset.i)].caption = input.value;
+      });
+    });
+
+    document.getElementById('gmAdd').addEventListener('click', async function(){
+      const f = document.getElementById('gmFile');
+      if (!f.files || !f.files[0]) { toast('Choose an image first', true); return; }
+      this.disabled = true;
+      try {
+        const data = await uploadHostImage(ed, f.files[0]);
+        ed.media.push({ photoPath: data.path, caption: '' });
+        drawHostMedia(ed);
+        toast('Uploaded — remember to save the gallery');
+      } catch(e){
+        toast(e.status === 422 ? 'That file was rejected (png/jpeg/webp only)' : 'Upload failed', true);
+        this.disabled = false;
+      }
+    });
+
+    document.getElementById('gmSave').addEventListener('click', async function(){
+      const msg = document.getElementById('gmMsg');
+      msg.textContent = '';
+      this.disabled = true;
+      try {
+        await api('/admin/hosts/' + ed.host.id + '/media', { method:'PUT', body: { media: ed.media } });
+        toast('Gallery saved');
+      } catch(e){
+        if (e.status === 401){ state.admin = null; renderLogin(); return; }
+        msg.textContent = e.status === 422 ? 'One of these images was rejected. Re-upload it.' : 'Could not save the gallery.';
+      } finally { this.disabled = false; }
+    });
+  }
+
+  function hostPatchFromForm(ed){
+    const patch = {
+      kind: ed.host.kind,
+      displayName: (document.getElementById('h_name').value || '').trim(),
+      bio: (document.getElementById('h_bio').value || '').trim(),
+      instagramHandle: (document.getElementById('h_instagram').value || '').trim(),
+      contactPhone: (document.getElementById('h_phone').value || '').trim(),
+      photoPath: ed.photoPath || '',
+      status: document.getElementById('h_status').value,
+      verified: document.getElementById('h_verified').checked
+    };
+    if (ed.isPlace){
+      patch.region = (document.getElementById('h_region').value || '').trim();
+      patch.lodgingType = (document.getElementById('h_lodging').value || '').trim();
+      patch.amenities = ed.amenities;
+      // Sent as-is (empty string included): the server treats "" as absent,
+      // and a half-filled pair is a 422 rather than a guess at the other half.
+      patch.latitude = (document.getElementById('h_lat').value || '').trim();
+      patch.longitude = (document.getElementById('h_lng').value || '').trim();
+    } else {
+      patch.expertise = (document.getElementById('h_expertise').value || '').trim();
+    }
+    return patch;
+  }
+
+  // Maps the server's per-field 422 codes onto the field they belong to, so a
+  // rejected save says which input is wrong instead of "check the fields".
+  const HOST_FIELD_MSG = {
+    displayName: 'Name is required (max 80 characters).',
+    bio: 'Bio/description is too long (max 1500 characters).',
+    expertise: 'Expertise is too long (max 120 characters).',
+    region: 'Region is too long (max 120 characters).',
+    lodgingType: 'Lodging type is too long (max 60 characters).',
+    amenities: 'Amenities must be at most 20 items of at most 40 characters each.',
+    latitude: 'Latitude must be a number inside Iran (roughly 24–40).',
+    longitude: 'Longitude must be a number inside Iran (roughly 43–64).',
+    coordinates: 'Give both latitude and longitude, or neither.',
+    instagramHandle: 'Instagram handle is not valid — username only, no @ or link.',
+    contactPhone: 'Contact phone is not a valid Iranian mobile number.',
+    photoPath: 'Photo path is not one of our uploads. Re-upload the image.',
+    status: 'Status must be hidden or active.',
+    slug: 'Slug must be 2–40 lowercase letters, digits or hyphens.'
+  };
+
+  function hostErrorText(e){
+    if (e.status === 409) return 'That slug is already taken.';
+    if (e.status === 422 && e.body && e.body.fields){
+      const msgs = Object.keys(e.body.fields).map(function(f){ return HOST_FIELD_MSG[f] || (f + ' is invalid.'); });
+      if (msgs.length) return msgs.join(' ');
+    }
+    return 'Save failed. Try again.';
+  }
+
+  async function saveHost(ed){
+    const msg = document.getElementById('hostMsg');
+    const btn = document.getElementById('hostSaveBtn');
+    msg.textContent = '';
+
+    const patch = hostPatchFromForm(ed);
+    if (!patch.displayName){ msg.textContent = 'Name is required.'; return; }
+    if (ed.isPlace && !patch.region){ msg.textContent = 'A place needs a region.'; return; }
+
+    let slug = ed.host.slug;
+    if (ed.isNew){
+      slug = (document.getElementById('h_slug').value || '').trim();
+      if (!HOST_SLUG_RE.test(slug)){
+        msg.textContent = 'Slug must be 2–40 lowercase letters, digits or hyphens (e.g. arash-niko).';
+        return;
+      }
+    }
+
+    btn.disabled = true;
+    try {
+      if (ed.isNew){
+        const created = await api('/admin/hosts', { method:'POST', body: Object.assign({ slug: slug }, patch) });
+        toast('Profile created');
+        location.hash = '#/hosts/' + created.host.id + '/edit';
+        route();
+      } else {
+        await api('/admin/hosts/' + ed.host.id, { method:'PUT', body: patch });
+        toast('Saved');
+        renderHostEditor(ed.host.id);
+      }
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      msg.textContent = hostErrorText(e);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Applications ("become an organizer" submissions)
+  // ---------------------------------------------------------------------
+  function slugSuggestion(fullName){
+    // Latin names give a usable slug; Persian ones do not, so leave it blank
+    // rather than emit an empty or mangled one the admin might not notice.
+    const s = String(fullName || '').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    return HOST_SLUG_RE.test(s) ? s : '';
+  }
+
+  async function renderApplications(){
+    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    bindLogout();
+    try {
+      const qs = state.applicationsFilter ? ('?status=' + encodeURIComponent(state.applicationsFilter)) : '';
+      const data = await api('/admin/host-applications' + qs);
+      state.applications = data.applications;
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('Could not load applications', true);
+      state.applications = [];
+    }
+
+    const filterOptions = ['', 'pending', 'approved', 'rejected'].map(function(v){
+      return '<option value="' + v + '"' + (state.applicationsFilter === v ? ' selected' : '') + '>' + (v || 'All') + '</option>';
+    }).join('');
+
+    const cards = state.applications.map(function(a){
+      const pending = a.status === 'pending';
+      return (
+        '<div class="app-card" data-id="' + a.id + '">' +
+          '<div class="app-top">' +
+            '<b>' + esc(a.fullName) + '</b>' +
+            '<span class="badge ' + esc(a.kind) + '">' + esc(KIND_LABEL[a.kind] || a.kind) + '</span>' +
+            '<span class="badge ' + esc(a.status) + '">' + esc(a.status) + '</span>' +
+            '<span class="app-meta">' + esc(String(a.createdAt || '').slice(0, 16).replace('T', ' ')) + '</span>' +
+          '</div>' +
+          // The applicant's identity comes from their account, not the form —
+          // admin-only, and never part of any public response.
+          '<div class="app-meta">' +
+            'Account: ' + (a.applicant
+              ? esc(a.applicant.firstName + ' ' + a.applicant.lastName) + ' · <span dir="ltr">' + esc(a.applicant.phone) + '</span>'
+              : '<i>no account (submitted before sign-in was required)</i>'
+                + (a.phone ? ' · <span dir="ltr">' + esc(a.phone) + '</span>' : '')) +
+          '</div>' +
+          '<div class="app-meta">' +
+            (a.instagramHandle ? 'Instagram: <span dir="ltr">@' + esc(a.instagramHandle) + '</span> · ' : '') +
+            (a.kind === 'place'
+              ? [a.lodgingType, a.region].filter(Boolean).map(esc).join(' · ')
+              : esc(a.expertise || '')) +
+          '</div>' +
+          '<div class="app-desc">' + esc(a.description) + '</div>' +
+          (a.adminNote ? '<div class="app-meta">Note: ' + esc(a.adminNote) + '</div>' : '') +
+          (a.hostId ? '<div class="app-meta">→ <a href="#/hosts/' + a.hostId + '/edit">open the organizer profile</a></div>' : '') +
+          (pending
+            ? '<div class="app-actions">' +
+                '<div class="field"><label>Slug for the new profile</label>' +
+                  '<input type="text" class="app-slug" value="' + esc(slugSuggestion(a.fullName)) + '" placeholder="arash-niko"></div>' +
+                '<button class="btn small primary app-approve">Approve</button>' +
+                '<button class="btn small danger app-reject">Reject</button>' +
+              '</div>' +
+              '<p style="color:var(--ink-faint);font-size:12px;margin-top:10px;">' +
+                'Approving creates a <b>hidden</b> ' + esc((KIND_LABEL[a.kind] || a.kind).toLowerCase()) +
+                ' profile, prefilled from this submission, owned by the applicant\'s account and carrying ' +
+                'their account phone as its internal contact. Nothing appears on the site until you complete ' +
+                'it and set it to active.</p>'
+            : '') +
+        '</div>'
+      );
+    }).join('');
+
+    app.innerHTML = shell(
+      '<div class="list-head"><h1>Applications</h1></div>' +
+      '<div class="filter-row"><label>Status</label><select id="appFilter">' + filterOptions + '</select></div>' +
+      (state.applications.length ? cards : '<div class="empty">No applications.</div>')
+    );
+    bindLogout();
+
+    document.getElementById('appFilter').addEventListener('change', function(){
+      state.applicationsFilter = this.value;
+      renderApplications();
+    });
+
+    app.querySelectorAll('.app-approve').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const card = btn.closest('.app-card');
+        approveApplication(Number(card.dataset.id), card.querySelector('.app-slug').value.trim(), btn);
+      });
+    });
+    app.querySelectorAll('.app-reject').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        rejectApplication(Number(btn.closest('.app-card').dataset.id), btn);
+      });
+    });
+  }
+
+  async function approveApplication(id, slug, btn){
+    if (!HOST_SLUG_RE.test(slug)){
+      toast('Slug must be 2–40 lowercase letters, digits or hyphens', true);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const data = await api('/admin/host-applications/' + id + '/approve', { method:'POST', body: { slug: slug } });
+      toast('Approved — complete the profile, then set it to active');
+      location.hash = '#/hosts/' + data.host.id + '/edit';
+      route();
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      if (e.status === 409) toast('That slug is already taken', true);
+      else if (e.status === 404) toast('This application is no longer pending', true);
+      else toast('Approve failed', true);
+      btn.disabled = false;
+    }
+  }
+
+  async function rejectApplication(id, btn){
+    const note = prompt('Reject this application?\n\nOptional internal note (not sent to the applicant):');
+    if (note === null) return;
+    btn.disabled = true;
+    try {
+      await api('/admin/host-applications/' + id + '/reject', { method:'POST', body: { adminNote: note } });
+      toast('Application rejected');
+      renderApplications();
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      if (e.status === 404) toast('This application is no longer pending', true);
+      else toast('Reject failed', true);
+      btn.disabled = false;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Tour ⇄ partners assignment (inside the tour editor)
+  // ---------------------------------------------------------------------
+  // A tour has one venue (a place) and any number of people (persons). Both
+  // live in the same tour_hosts list, so both are edited here and written by
+  // a single PUT: the endpoint replaces the whole list in one transaction,
+  // and a half-built list must never be sent.
+  const tourHosts = { tourId: null, venueId: null, people: [], loaded: false };
+
+  async function initTourHosts(tourId){
+    tourHosts.tourId = tourId;
+    tourHosts.venueId = null;
+    tourHosts.people = [];
+    tourHosts.loaded = false;
+    try {
+      const [assigned] = await Promise.all([
+        api('/admin/tours/' + encodeURIComponent(tourId) + '/hosts'),
+        state.hosts.length ? Promise.resolve(null) : loadHosts()
+      ]);
+      assigned.hosts.forEach(function(h){
+        if (h.role === 'venue') tourHosts.venueId = h.hostId;
+        else tourHosts.people.push({ hostId: h.hostId, slug: h.slug, displayName: h.displayName, status: h.status, role: h.role });
+      });
+      tourHosts.loaded = true;
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      const panel = document.getElementById('tourHostsPanel');
+      if (panel) panel.innerHTML = '<h2>Partners</h2><div class="empty">Could not load partner profiles.</div>';
+      return;
+    }
+    drawTourHosts();
+  }
+
+  function hostById(id){
+    return state.hosts.filter(function(h){ return h.id === id; })[0] || null;
+  }
+
+  // A linked profile that is hidden is silently absent from the public page,
+  // so say so here rather than let someone assign it and see nothing.
+  function hiddenWarning(status){
+    return status !== 'active' ? ' — <b>hidden</b>, will not show on the site' : '';
+  }
+
+  function venueSectionHtml(){
+    const places = state.hosts.filter(function(h){ return h.kind === 'place'; });
+    const current = tourHosts.venueId ? hostById(tourHosts.venueId) : null;
+    return '<h3 style="font-size:14px;margin:0 0 10px;">محل برگزاری — Venue</h3>' +
+      (current
+        ? '<div class="th-row">' +
+            '<div class="th-name">' + esc(current.displayName) +
+              '<small>/host/' + esc(current.slug) +
+                (current.region ? ' · ' + esc(current.region) : '') + hiddenWarning(current.status) + '</small></div>' +
+            '<button type="button" class="btn small danger" id="tvClear">Remove</button>' +
+          '</div>'
+        : '') +
+      '<div class="th-add">' +
+        '<div class="field" style="margin-bottom:0;"><label>' + (current ? 'Replace the venue' : 'Choose the venue') + '</label>' +
+          '<select id="tvPick">' +
+            (places.length
+              ? '<option value="">None</option>' + places.map(function(h){
+                  return '<option value="' + h.id + '"' + (h.id === tourHosts.venueId ? ' selected' : '') + '>' +
+                    esc(h.displayName) + ' (' + esc(h.status) + ')</option>';
+                }).join('')
+              : '<option value="">No places yet</option>') +
+          '</select></div>' +
+      '</div>' +
+      '<p style="color:var(--ink-faint);font-size:12px;margin:10px 0 24px;">' +
+        'A tour is held in one place. Only profiles of kind <b>place</b> appear here — ' +
+        '<a href="#/hosts/new?kind=place">create one</a> if the venue is missing.</p>';
+  }
+
+  function peopleSectionHtml(){
+    const assignedIds = tourHosts.people.map(function(a){ return a.hostId; });
+    const available = state.hosts.filter(function(h){
+      return h.kind === 'person' && assignedIds.indexOf(h.id) === -1;
+    });
+
+    const rows = tourHosts.people.map(function(a, i){
+      return '<div class="th-row" data-i="' + i + '">' +
+          '<div class="th-ord">' +
+            '<button type="button" class="th-up" ' + (i === 0 ? 'disabled' : '') + ' title="Move up">↑</button>' +
+            '<button type="button" class="th-down" ' + (i === tourHosts.people.length - 1 ? 'disabled' : '') + ' title="Move down">↓</button>' +
+          '</div>' +
+          '<div class="th-name">' + esc(a.displayName) +
+            '<small>/host/' + esc(a.slug) + hiddenWarning(a.status) + '</small></div>' +
+          '<select class="th-role">' +
+            HOST_PERSON_ROLES.map(function(r){
+              return '<option value="' + r + '"' + (a.role === r ? ' selected' : '') + '>' + (r === 'lead' ? 'Lead' : 'Co-host') + '</option>';
+            }).join('') +
+          '</select>' +
+          '<button type="button" class="btn small danger th-rm">Remove</button>' +
+        '</div>';
+    }).join('');
+
+    return '<h3 style="font-size:14px;margin:0 0 10px;">برگزارکنندگان — People</h3>' +
+      (tourHosts.people.length ? rows : '<p style="color:var(--ink-faint);font-size:13px;">No people assigned.</p>') +
+      '<div class="th-add">' +
+        '<div class="field" style="margin-bottom:0;"><label>Add a person</label>' +
+          '<select id="thPick">' +
+            (available.length
+              ? '<option value="">Choose…</option>' + available.map(function(h){
+                  return '<option value="' + h.id + '">' + esc(h.displayName) + ' (' + esc(h.status) + ')</option>';
+                }).join('')
+              : '<option value="">No other people available</option>') +
+          '</select></div>' +
+        '<button type="button" class="btn small ghost" id="thAdd"' + (available.length ? '' : ' disabled') + '>+ Add</button>' +
+      '</div>';
+  }
+
+  function drawTourHosts(){
+    const panel = document.getElementById('tourHostsPanel');
+    if (!panel) return;
+
+    panel.innerHTML =
+      '<h2>Partners</h2>' +
+      venueSectionHtml() +
+      peopleSectionHtml() +
+      '<div class="th-add" style="margin-top:18px;">' +
+        '<button type="button" class="btn small primary" id="thSave">Save partners</button>' +
+        '<span class="msg" id="thMsg" style="font-size:13px;color:var(--ink-faint);"></span>' +
+      '</div>' +
+      '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
+        'The venue and the people are saved together, in one step. Order here is the order on the tour page; ' +
+        'leads are always shown before co-hosts. Only <b>active</b> profiles appear publicly. ' +
+        '<a href="#/hosts">Manage profiles →</a></p>';
+
+    const pick = document.getElementById('tvPick');
+    if (pick) pick.addEventListener('change', function(){
+      tourHosts.venueId = Number(pick.value) || null;
+      drawTourHosts();
+    });
+    const clearVenue = document.getElementById('tvClear');
+    if (clearVenue) clearVenue.addEventListener('click', function(){
+      tourHosts.venueId = null;
+      drawTourHosts();
+    });
+
+    panel.querySelectorAll('.th-rm').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        tourHosts.people.splice(Number(btn.closest('.th-row').dataset.i), 1);
+        drawTourHosts();
+      });
+    });
+    panel.querySelectorAll('.th-up').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const i = Number(btn.closest('.th-row').dataset.i);
+        const a = tourHosts.people;
+        a.splice(i - 1, 0, a.splice(i, 1)[0]);
+        drawTourHosts();
+      });
+    });
+    panel.querySelectorAll('.th-down').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const i = Number(btn.closest('.th-row').dataset.i);
+        const a = tourHosts.people;
+        a.splice(i + 1, 0, a.splice(i, 1)[0]);
+        drawTourHosts();
+      });
+    });
+    panel.querySelectorAll('.th-role').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        tourHosts.people[Number(sel.closest('.th-row').dataset.i)].role = sel.value;
+      });
+    });
+
+    const addBtn = document.getElementById('thAdd');
+    if (addBtn) addBtn.addEventListener('click', function(){
+      const sel = document.getElementById('thPick');
+      const h = hostById(Number(sel.value));
+      if (!h) return;
+      tourHosts.people.push({
+        hostId: h.id, slug: h.slug, displayName: h.displayName, status: h.status,
+        // First one added is the lead; the rest default to co-host.
+        role: tourHosts.people.length === 0 ? 'lead' : 'co_host'
+      });
+      drawTourHosts();
+    });
+
+    document.getElementById('thSave').addEventListener('click', saveTourHosts);
+  }
+
+  async function saveTourHosts(){
+    const btn = document.getElementById('thSave');
+    const msg = document.getElementById('thMsg');
+    msg.textContent = '';
+    btn.disabled = true;
+    const payload = [];
+    // The venue goes first so it is also first in the stored sort order —
+    // the public tour page renders it above the people.
+    if (tourHosts.venueId) payload.push({ hostId: tourHosts.venueId, role: 'venue', sortOrder: 0 });
+    tourHosts.people.forEach(function(a, i){
+      payload.push({ hostId: a.hostId, role: a.role, sortOrder: payload.length + i });
+    });
+    try {
+      await api('/admin/tours/' + encodeURIComponent(tourHosts.tourId) + '/hosts', {
+        method: 'PUT', body: { hosts: payload }
+      });
+      toast('Partners saved');
+      await initTourHosts(tourHosts.tourId);
+    } catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      const field = e.body && e.body.fields ? (e.body.fields.role || e.body.fields.hostId) : null;
+      if (field === 'duplicate') msg.textContent = 'The same profile is listed twice.';
+      else if (field === 'place_must_be_venue') msg.textContent = 'A place can only be the venue, not a co-host.';
+      else if (field === 'person_cannot_be_venue') msg.textContent = 'A person cannot be the venue.';
+      else if (field === 'multiple_venues') msg.textContent = 'A tour can only have one venue.';
+      else if (e.status === 422) msg.textContent = 'One of these profiles no longer exists — reload the page.';
+      else msg.textContent = 'Could not save partners.';
+      btn.disabled = false;
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

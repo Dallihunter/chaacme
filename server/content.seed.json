@@ -1,0 +1,213 @@
+{
+  "_comment": "Ported from 'Chaacme design system refinement/helpers/chaacme-data.js' (the frontend's static mock). Capacities/seatsTaken here are illustrative placeholders for a first boot — replace via /api/admin/tours once real data exists. dayLabel/monthLabel are carried over verbatim from that mock's top-level day/month fields (card display copy, independent of the real bookable dates list below). photoPath/galleryPhotos are left unset — no real uploaded images exist yet for these tours; set them via POST /api/admin/upload + PUT /api/admin/tours/:id.",
+
+  "tours": [
+    {
+      "id": "desert-parthian",
+      "status": "published",
+      "featured": false,
+      "ordinal": 0,
+      "dayLabel": "۱۲",
+      "monthLabel": "مهر",
+      "name": "سفر در کویر و دل تاریخ اشکانیان",
+      "subtitleEn": "Desert & Parthian History — One Night",
+      "tags": "کویر · طبیعت · اخترنجوم",
+      "duration": "یک شب",
+      "price": 23000000,
+      "description": "یک شب در کویر با اقامت بوتیک، موسیقی زنده، غذای طراحی‌شده، رصد آسمان و تجربه بارش شهابی. گروهی محدود، همراه با راهنمایی مسلط به نجوم و تاریخ منطقه.",
+      "included": "اقامت یک‌شبه بوتیک · وعده‌های غذایی طراحی‌شده · تجهیزات رصد آسمان · موسیقی زنده · حمل‌ونقل رفت‌وبرگشت از تهران · راهنمای تور",
+      "gallery": ["Desert Camp, Arrival", "Boutique Tent Interior", "Live Music by the Fire", "Telescope & Night Sky", "Sunrise Departure"],
+      "highlights": [
+        { "name": "اقامت بوتیک", "description": "اقامتگاهی طراحی‌شده در دل کویر، با چشم‌اندازی مستقیم به آسمان شب." },
+        { "name": "رصد آسمان", "description": "تلسکوپ حرفه‌ای و راهنمای نجوم، برای رصد ستاره‌ها و بارش شهابی." },
+        { "name": "موسیقی زنده", "description": "اجرای زنده در فضای باز کویر، همراه با آتش و سکوت شب." },
+        { "name": "سفره محلی", "description": "غذایی طراحی‌شده با محصولات و طعم‌های بومی منطقه." },
+        { "name": "گروه محدود", "description": "حداکثر ۱۲ نفر، برای تجربه‌ای نزدیک‌تر و شخصی‌تر." }
+      ],
+      "itinerary": [
+        { "time": "بعدازظهر", "title": "رسیدن و استقرار", "description": "رسیدن به کمپ، استقرار در اقامتگاه و زمان آزاد برای پیاده‌روی در کویر پیش از غروب.", "photoLabel": "Arrival" },
+        { "time": "غروب تا نیمه‌شب", "title": "شام، موسیقی و رصد آسمان", "description": "شام دورهمی، اجرای موسیقی زنده کنار آتش و رصد آسمان همراه با راهنمای نجوم.", "photoLabel": "Stargazing" },
+        { "time": "صبح", "title": "صبحانه و بازگشت", "description": "صبحانه در کویر و حرکت به سمت تهران، رسیدن پیش از ظهر.", "photoLabel": "Departure" }
+      ],
+      "reviewCategories": [
+        { "label": "غذا", "score": 4.6 },
+        { "label": "راهنما و گروه", "score": 4.5 },
+        { "label": "اقامتگاه", "score": 4.0 },
+        { "label": "برنامه سفر", "score": 4.2 }
+      ],
+      "dates": [
+        { "label": "۱۲ مهر", "capacity": 12, "seatsTaken": 9, "closed": false },
+        { "label": "۲۶ مهر", "capacity": 16, "seatsTaken": 2, "closed": false },
+        { "label": "۱۰ آبان", "capacity": 12, "seatsTaken": 12, "closed": true }
+      ]
+    },
+    {
+      "id": "bazm-vol1",
+      "status": "published",
+      "featured": false,
+      "ordinal": 1,
+      "dayLabel": "۲۶",
+      "monthLabel": "مهر",
+      "name": "بزم پروژه — Vol.01",
+      "subtitleEn": "Bazm Project — Vol.01",
+      "tags": "موسیقی · طبیعت · غذا",
+      "duration": "رویداد محدود",
+      "price": 8500000,
+      "description": "یک رویداد محدود در فضای باز، با ترکیب موسیقی زنده، غذای طراحی‌شده و آدم‌هایی که دور هم جمع می‌شوند. یک شب برای شنیدن، چشیدن و بودن.",
+      "included": "ورودی رویداد · یک وعده غذای طراحی‌شده · نوشیدنی‌های همراه · اجرای موسیقی زنده · حمل‌ونقل رفت‌وبرگشت",
+      "gallery": ["Venue at Golden Hour", "Live Set", "Shared Table", "Crowd & Fire Pit", "Closing Set"],
+      "highlights": [
+        { "name": "موسیقی زنده", "description": "اجرای زنده در فضای باز، ساخته‌شده برای شنیدن دقیق‌تر." },
+        { "name": "سفره مشترک", "description": "غذایی طراحی‌شده برای خوردن دورهمی و به اشتراک گذاشتن." },
+        { "name": "فضای محدود", "description": "ظرفیت کوچک، برای حسی نزدیک‌تر به رویداد." },
+        { "name": "مکان منتخب", "description": "مکانی انتخاب‌شده برای هماهنگی با حس و ریتم شب." },
+        { "name": "آدم‌های جدید", "description": "فرصتی برای آشنایی با افرادی با ذوق مشترک." }
+      ],
+      "itinerary": [
+        { "time": "عصر", "title": "ورود و پذیرایی", "description": "ورود به محل رویداد، پذیرایی اولیه و آشنایی با فضا پیش از شروع برنامه.", "photoLabel": "Arrival" },
+        { "time": "غروب تا شب", "title": "شام و اجرای موسیقی", "description": "سفره مشترک همراه با اجرای زنده در طول شب.", "photoLabel": "Live Set" },
+        { "time": "پایان شب", "title": "ست پایانی", "description": "اجرای پایانی و جمع‌شدن دورهمی پیش از پایان رویداد.", "photoLabel": "Closing" }
+      ],
+      "reviewCategories": [
+        { "label": "موسیقی", "score": 4.8 },
+        { "label": "غذا", "score": 4.4 },
+        { "label": "فضا", "score": 4.5 },
+        { "label": "برنامه", "score": 4.2 }
+      ],
+      "dates": [
+        { "label": "۲۶ مهر", "capacity": 40, "seatsTaken": 33, "closed": false },
+        { "label": "۱۷ آبان", "capacity": 40, "seatsTaken": 5, "closed": false }
+      ]
+    },
+    {
+      "id": "animal-flow",
+      "status": "published",
+      "featured": true,
+      "ordinal": 2,
+      "dayLabel": "۰۱",
+      "monthLabel": "مهر",
+      "name": "ریتریت انیمال فلو",
+      "subtitleEn": "Animal Flow Retreat — 3 Days",
+      "tags": "حرکت · سلامتی",
+      "duration": "۳ روزه",
+      "price": 18000000,
+      "description": "سه روز اقامت در طبیعت، با محوریت حرکت، تنفس و بازگشت به بدن. برنامه‌ای ترکیبی از تمرین‌های Animal Flow، زمان آزاد در طبیعت و تغذیه‌ای متناسب با ریتم بدن.",
+      "included": "اقامت ۳ روزه · تمام وعده‌های غذایی · جلسات تمرین روزانه · مربی و راهنمای همراه · حمل‌ونقل رفت‌وبرگشت از تهران",
+      "gallery": ["Camp Among Trees", "Morning Flow Session", "Shared Meals", "Free Time in Nature", "Sunset Practice"],
+      "highlights": [
+        { "name": "تمرین روزانه", "description": "جلسات Animal Flow صبح و عصر، متناسب با سطح هر شرکت‌کننده." },
+        { "name": "اقامت در طبیعت", "description": "اقامتگاهی ساده و آرام، در دل طبیعت و دور از شهر." },
+        { "name": "تغذیه هماهنگ", "description": "وعده‌های غذایی طراحی‌شده برای همراهی با ریتم تمرین‌ها." },
+        { "name": "زمان آزاد", "description": "ساعاتی برای پیاده‌روی، سکوت و استراحت شخصی." },
+        { "name": "گروه کوچک", "description": "ظرفیت محدود، برای همراهی نزدیک‌تر مربی با هر فرد." }
+      ],
+      "itinerary": [
+        { "time": "روز اول", "title": "رسیدن و جلسه آشنایی", "description": "استقرار در اقامتگاه، جلسه آشنایی با بدن و اولین تمرین سبک عصرگاهی.", "photoLabel": "Arrival" },
+        { "time": "روز دوم", "title": "تمرین و زمان آزاد", "description": "دو جلسه تمرین در طول روز و زمان آزاد برای طبیعت و استراحت.", "photoLabel": "Flow Session" },
+        { "time": "روز سوم", "title": "تمرین پایانی و بازگشت", "description": "جلسه پایانی، جمع‌بندی گروهی و حرکت به سمت تهران.", "photoLabel": "Closing Practice" }
+      ],
+      "reviewCategories": [
+        { "label": "تمرین‌ها", "score": 4.8 },
+        { "label": "مربی", "score": 4.9 },
+        { "label": "اقامتگاه", "score": 4.3 },
+        { "label": "غذا", "score": 4.5 }
+      ],
+      "dates": [
+        { "label": "۱ مهر", "capacity": 14, "seatsTaken": 3, "closed": false },
+        { "label": "۳۰ آبان", "capacity": 14, "seatsTaken": 1, "closed": false }
+      ]
+    },
+    {
+      "id": "qeshm-hengam-hormuz",
+      "status": "published",
+      "featured": false,
+      "ordinal": 3,
+      "dayLabel": "۲۳",
+      "monthLabel": "آبان",
+      "name": "قشم، هنگام و هرمز",
+      "subtitleEn": "Qeshm, Hengam & Hormuz — Multi-day",
+      "tags": "جزیره · دریا · فرهنگ",
+      "duration": "چند روزه",
+      "price": 29000000,
+      "description": "سفری چندروزه بین سه جزیره جنوبی؛ ترکیبی از دریا، طبیعت رنگی هرمز، فرهنگ محلی هنگام و غروب‌های قشم. برنامه‌ای آرام، بدون شتاب، برای دیدن و شنیدن.",
+      "included": "اقامت چندشب · تمام وعده‌های غذایی · تورهای محلی در هر جزیره · بلیط قایق بین جزایر · راهنمای تور",
+      "gallery": ["Hormuz Colored Earth", "Local Boat Ride", "Hengam Beach", "Qeshm Sunset", "Local Village Visit"],
+      "highlights": [
+        { "name": "خاک رنگی هرمز", "description": "پیاده‌روی در دل طبیعت رنگی و کم‌نظیر جزیره هرمز." },
+        { "name": "فرهنگ محلی هنگام", "description": "دیدار با زندگی محلی و صنایع‌دستی جزیره هنگام." },
+        { "name": "غروب در قشم", "description": "ساعاتی آرام برای دیدن غروب از ساحل قشم." },
+        { "name": "قایق‌رانی بین جزایر", "description": "حرکت بین جزایر با قایق‌های محلی." },
+        { "name": "برنامه بدون شتاب", "description": "ریتمی آرام، بدون فشردگی زمانی معمول تورها." }
+      ],
+      "itinerary": [
+        { "time": "روز اول", "title": "رسیدن و قشم", "description": "رسیدن به قشم، استقرار و گشت اول در ساحل و بازار محلی.", "photoLabel": "Qeshm Arrival" },
+        { "time": "روز دوم", "title": "هرمز", "description": "قایق‌رانی به هرمز، پیاده‌روی در خاک رنگی و بازگشت غروب.", "photoLabel": "Hormuz" },
+        { "time": "روز سوم", "title": "هنگام و بازگشت", "description": "دیدار از هنگام، ناهار محلی و حرکت به سمت فرودگاه برای بازگشت.", "photoLabel": "Hengam" }
+      ],
+      "reviewCategories": [
+        { "label": "طبیعت", "score": 4.9 },
+        { "label": "راهنما", "score": 4.5 },
+        { "label": "اقامتگاه", "score": 4.2 },
+        { "label": "برنامه سفر", "score": 4.4 }
+      ],
+      "dates": [
+        { "label": "۲۳ آبان", "capacity": 20, "seatsTaken": 4, "closed": false },
+        { "label": "۱۴ آذر", "capacity": 20, "seatsTaken": 2, "closed": false }
+      ]
+    },
+    {
+      "id": "guchin-village",
+      "status": "published",
+      "featured": false,
+      "ordinal": 4,
+      "name": "دهکده گوچین",
+      "subtitleEn": "Guchin Village — Day Trip",
+      "tags": "جنگل · هنر · حرکت",
+      "duration": "یک‌روزه",
+      "price": 4200000,
+      "description": "یک‌روزه در دل جنگل، با ترکیبی از پیاده‌روی، هنر محلی و زمان برای حرکت و بازیابی. مناسب برای فاصله گرفتن کوتاه از شهر بدون اقامت شبانه.",
+      "included": "حمل‌ونقل رفت‌وبرگشت از تهران · ناهار محلی · راهنمای تور · کارگاه هنر محلی",
+      "gallery": ["Forest Trail", "Local Art Workshop", "Village Lunch", "Riverside Rest", "Return Path"],
+      "highlights": [
+        { "name": "پیاده‌روی در جنگل", "description": "مسیری آرام در دل جنگل، مناسب برای همه سطوح آمادگی." },
+        { "name": "کارگاه هنر محلی", "description": "آشنایی و تجربه دست‌ورزی با یک هنرمند محلی." },
+        { "name": "ناهار دهکده", "description": "غذایی محلی، آماده‌شده در همان دهکده." },
+        { "name": "بدون اقامت شبانه", "description": "رفت‌وبرگشت در همان روز، مناسب برنامه‌های فشرده." },
+        { "name": "گروه کوچک", "description": "ظرفیت محدود برای حفظ آرامش مسیر." }
+      ],
+      "itinerary": [
+        { "time": "صبح", "title": "حرکت از تهران", "description": "حرکت صبح زود و رسیدن به مسیر ورودی جنگل.", "photoLabel": "Departure" },
+        { "time": "ظهر", "title": "پیاده‌روی و کارگاه هنر", "description": "پیاده‌روی در جنگل، ناهار محلی و کارگاه هنر با هنرمند دهکده.", "photoLabel": "Workshop" },
+        { "time": "عصر", "title": "بازگشت", "description": "زمان آزاد کنار رودخانه و حرکت به سمت تهران.", "photoLabel": "Riverside" }
+      ],
+      "reviewCategories": [
+        { "label": "مسیر", "score": 4.6 },
+        { "label": "راهنما", "score": 4.5 },
+        { "label": "غذا", "score": 4.1 },
+        { "label": "برنامه", "score": 4.3 }
+      ],
+      "dates": [
+        { "label": "۵ آبان", "capacity": 16, "seatsTaken": 3, "closed": false },
+        { "label": "۱۹ آبان", "capacity": 16, "seatsTaken": 2, "closed": false }
+      ]
+    },
+    {
+      "id": "next-experience",
+      "status": "coming_soon",
+      "featured": false,
+      "ordinal": 5,
+      "name": "تجربه بعدی",
+      "subtitleEn": "",
+      "tags": "در حال طراحی",
+      "duration": "به‌زودی",
+      "price": null,
+      "description": "",
+      "included": "",
+      "gallery": [],
+      "highlights": [],
+      "itinerary": [],
+      "reviewCategories": [],
+      "dates": []
+    }
+  ]
+}

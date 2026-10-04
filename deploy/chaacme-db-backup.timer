@@ -1,0 +1,19 @@
+# Daily at 03:30 Iran time. systemd timer units have no per-timer TimeZone=
+# directive (systemd 255 on this host rejects it as an unknown key and
+# silently ignores it, which would have run this at 03:30 UTC / 07:00
+# Tehran) — OnCalendar is always evaluated in the host's system timezone,
+# which is UTC here. Iran abolished DST in 2022 and sits permanently at
+# UTC+3:30, so 03:30 Tehran is a fixed 00:00 UTC with no DST edge case to
+# worry about. If the host's own timezone ever changes, recompute this.
+# Persistent=true means a missed run (host down at 00:00 UTC) fires once at
+# next boot instead of silently skipping a day.
+[Unit]
+Description=Run chaacme-db-backup daily
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

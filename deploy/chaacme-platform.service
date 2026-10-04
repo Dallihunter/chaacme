@@ -1,0 +1,136 @@
+# chaacme-platform (booking API) — systemd unit
+#
+# Sibling service to chaacme.service, deliberately kept separate: different
+# system user, different port, different state directory. chaacme.service is
+# never touched by this unit or its install steps.
+#
+# Install to /etc/systemd/system/chaacme-platform.service
+# Paths assumed here:
+#   /srv/chaacme-platform/current   release (code, read-only)
+#   /srv/chaacme-platform/state     SQLite database (the only writable path)
+#   /etc/chaacme-platform/env       secrets, root-owned 0640
+#
+[Unit]
+Description=chaacme-platform booking API (Node + SQLite, no external dependencies)
+Documentation=file:/srv/chaacme-platform/current/README.md
+After=network-online.target
+Wants=network-online.target
+# A bad config makes the process exit(1) immediately; without these it would
+# restart forever. Five failures in a minute stops it so journalctl shows why.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=chaacme-platform
+Group=chaacme-platform
+WorkingDirectory=/srv/chaacme-platform/current
+
+# EVERY Environment= SETTING BELOW CAN BE OVERRIDDEN BY /etc/chaacme-platform/env,
+# no matter where its line sits — see chaacme.service's unit for the full
+# explanation (systemd.exec(5): EnvironmentFile= settings override Environment=
+# regardless of ordering). The grouping below is for readability only.
+
+# --- defaults, all overridable from /etc/chaacme-platform/env ---
+Environment=HOST=127.0.0.1
+Environment=PORT=3100
+Environment=CHAACME_PLATFORM_DB=/srv/chaacme-platform/state/platform.db
+
+# --- secrets ---
+# Secrets are NEVER inline in this unit: `systemctl cat` is readable by any
+# local user, and the unit file itself is world-readable. The env file is
+# root-owned 0640 root:chaacme-platform. Currently holds IP_HASH_SALT,
+# OTP_PEPPER, FRONTEND_STATIC_DIR (generated/set on-host, never left the
+# server). Admin login no longer uses a static token — see
+# scripts/admin-set-password.mjs. SMS_WEBHOOK_URL is NOT set yet — no SMS
+# vendor has been chosen.
+EnvironmentFile=/etc/chaacme-platform/env
+
+# ===========================================================================
+# TEMPORARY — NODE_ENV=development, unlike chaacme.service's unbeatable
+# production pin. server/util.js:assertRuntimeConfig() hard-refuses to boot
+# under NODE_ENV=production while SMS_WEBHOOK_URL is unset (no "log OTPs to
+# console" fallback is allowed in prod, by design). No SMS vendor exists yet,
+# so pinning production here would crash-loop this service forever.
+#
+# Effect while this stays development: OTP codes print to the journal instead
+# of being sent — fine for smoke-testing the deploy/nginx plumbing, NOT
+# acceptable once app.chaacme.ir is reachable by real users.
+#
+# TO FLIP TO PRODUCTION once an SMS vendor is chosen:
+#   1. Add SMS_WEBHOOK_URL (and SMS_API_KEY if needed) to /etc/chaacme-platform/env
+#   2. Change the Environment=NODE_ENV= line below to production
+#   3. Change ExecStart to the unbeatable form, mirroring chaacme.service:
+#        ExecStart=/usr/bin/env NODE_ENV=production /usr/local/bin/node server/index.js
+#      (/usr/local/bin/node, not /usr/bin/node — that path doesn't exist on
+#      this host; see the deploy notes for the discrepancy in chaacme.service's
+#      own unit file, which references the nonexistent path but happens to
+#      still be running under the old, correct ExecStart from before its last edit.)
+#   4. systemctl daemon-reload && systemctl restart chaacme-platform
+# ===========================================================================
+Environment=NODE_ENV=development
+
+ExecStart=/usr/local/bin/node server/index.js
+Restart=always
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chaacme-platform
+
+# --- hardening ---------------------------------------------------------
+# Verify the result after install with: systemd-analyze security chaacme-platform
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectProc=invisible
+ProcSubset=pid
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+UMask=0027
+
+# The app listens on TCP and talks to nothing else (until SMS_WEBHOOK_URL
+# is wired up, at which point it also makes outbound HTTPS — no capability
+# is needed for that either). Binding :3100 needs no capability at all, so
+# drop the whole bounding set.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# MUST stay false. V8 compiles JavaScript to machine code at runtime and needs
+# writable-then-executable pages; setting this true makes Node fail to start.
+MemoryDenyWriteExecute=false
+
+# ProtectSystem=strict mounts the whole filesystem read-only, so carve out the
+# directories the app actually writes to:
+#   state/            SQLite DB — not just the .db file: WAL mode creates and
+#                      deletes platform.db-wal/-shm beside it, which needs
+#                      write permission on the directory itself.
+#   frontend/images/   POST /api/admin/upload writes here (FRONTEND_STATIC_DIR
+#                      in env). Must also be owned/writable by this service's
+#                      user (chown -R chaacme-platform:chaacme-platform), and
+#                      readable by nginx's user — add that user to the
+#                      chaacme-platform group (UMask=0027 below means new
+#                      files/dirs land 0640/0750, group-readable only, not
+#                      world-readable) and reload nginx so its workers pick up
+#                      the new group membership.
+ReadWritePaths=/srv/chaacme-platform/state /srv/chaacme-platform/frontend/images
+
+[Install]
+WantedBy=multi-user.target

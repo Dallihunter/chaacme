@@ -1,0 +1,36 @@
+# chaacme-db-backup — daily online-safe snapshot of platform.db
+#
+# Documents (but doesn't itself deploy) the oneshot unit, the same way
+# chaacme-platform.service is documented here. Install to
+# /etc/systemd/system/chaacme-db-backup.service, then:
+#   systemctl daemon-reload
+#   systemctl enable --now chaacme-db-backup.timer
+#
+# Runs as chaacme-platform (same user the API runs as) so it can read
+# /srv/chaacme-platform/state/platform.db without widening that directory's
+# permissions. Writes only to /srv/chaacme-platform/backups, which is
+# 0750 chaacme-platform:ubuntu so the `ubuntu` SSH user can pull backups
+# without being able to read the live DB directory itself.
+[Unit]
+Description=chaacme-platform daily DB backup (VACUUM INTO snapshot + gzip)
+After=chaacme-platform.service
+
+[Service]
+Type=oneshot
+User=chaacme-platform
+Group=chaacme-platform
+WorkingDirectory=/srv/chaacme-platform/current
+Environment=CHAACME_PLATFORM_DB=/srv/chaacme-platform/state/platform.db
+Environment=CHAACME_BACKUP_DIR=/srv/chaacme-platform/backups
+Environment=CHAACME_BACKUP_RETENTION_DAYS=14
+ExecStart=/usr/local/bin/node scripts/backup-db.js
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chaacme-db-backup
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/chaacme-platform/backups
+ReadOnlyPaths=/srv/chaacme-platform/state
