@@ -7,7 +7,7 @@ import {
   json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie,
   normalisePhone, validateProfile, validateReview, validatePassword,
   validateHostProfile, validateHostApplication, validateHostMedia, validateUserName,
-  isValidHostSlug
+  isValidHostSlug, validateEditionDates
 } from './util.js';
 
 function bearerOrCookieToken(req) {
@@ -331,7 +331,7 @@ export async function handleApi(req, res, url) {
       return json(res, 201, { ok: true, booking: { id: booking.id, ref: booking.ref, total: booking.total, status: booking.status } });
     } catch (err) {
       if (err instanceof db.BookingError) {
-        const status = err.code === 'not_enough_seats' ? 409 : 404;
+        const status = (err.code === 'not_enough_seats' || err.code === 'date_in_past') ? 409 : 404;
         return json(res, status, { error: err.code });
       }
       throw err;
@@ -514,12 +514,19 @@ export async function handleApi(req, res, url) {
       if (!body.ok) return json(res, 400, { error: body.error });
       const { label, capacity } = body.value;
       if (!label || !Number.isInteger(capacity) || capacity < 0) return json(res, 422, { error: 'validation_failed' });
-      return json(res, 201, { date: db.addTourDate(m[1], { label, capacity }) });
+      const dates = validateEditionDates(body.value);
+      if (!dates.ok) return json(res, 422, { error: 'validation_failed', fields: dates.errors });
+      return json(res, 201, { date: db.addTourDate(m[1], { label, capacity, ...dates.value }) });
     }
     if ((m = new RegExp(`^/api/admin/tour-dates/${NUM}$`).exec(path)) && method === 'PUT') {
       const body = await readJson(req);
       if (!body.ok) return json(res, 400, { error: body.error });
-      return json(res, 200, { date: db.updateTourDate(Number(m[1]), body.value) });
+      const id = Number(m[1]);
+      const current = db.getTourDate(id);
+      if (!current) return json(res, 404, { error: 'not_found' });
+      const dates = validateEditionDates(body.value, { startsOn: current.starts_on, endsOn: current.ends_on });
+      if (!dates.ok) return json(res, 422, { error: 'validation_failed', fields: dates.errors });
+      return json(res, 200, { date: db.updateTourDate(id, { ...body.value, ...dates.value }) });
     }
 
     if (path === '/api/admin/reviews' && method === 'GET') {

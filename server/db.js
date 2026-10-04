@@ -2,6 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runMigrations } from './migrate.js';
+import migrations from './migrations/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
@@ -456,12 +458,27 @@ rebuildTable(
 // still has its old columns, and indexing user_id there fails the boot.
 db.exec('CREATE INDEX IF NOT EXISTS idx_host_applications_user ON host_applications(user_id, created_at DESC)');
 
+runMigrations(db, migrations);
+
 /** Availability status + booking eligibility derived from live capacity — never stored as static copy. */
-export function dateAvailability(capacity, seatsTaken, closed) {
+export function dateAvailability(capacity, seatsTaken, closed, past = false) {
   const available = Math.max(0, capacity - seatsTaken);
+  if (past) return { status: 'برگزار شد', disabled: true, available: 0 };
   if (closed || available <= 0) return { status: 'تکمیل ظرفیت', disabled: true, available: 0 };
   const lowStock = available <= Math.max(2, Math.ceil(capacity * 0.2));
   return { status: lowStock ? 'ظرفیت محدود' : 'رزرو باز است', disabled: false, available };
+}
+
+/** Today's calendar date in Iran (YYYY-MM-DD). Iran has no DST, so a fixed zone is exact. */
+export function todayIso(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran' }).format(now);
+}
+
+// An edition is past once its last day (ends_on, else starts_on) is before
+// today. Editions with no ISO date yet are never treated as past.
+function isPastEdition(row, today = todayIso()) {
+  const last = row.ends_on || row.starts_on;
+  return !!last && last < today;
 }
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -514,7 +531,7 @@ export function seed({ force = false } = {}) {
     'INSERT INTO tour_review_categories (tour_id, ordinal, label, score) VALUES (?, ?, ?, ?)'
   );
   const putDate = db.prepare(
-    'INSERT INTO tour_dates (tour_id, label, capacity, seats_taken, closed) VALUES (?, ?, ?, ?, ?)'
+    'INSERT INTO tour_dates (tour_id, label, capacity, seats_taken, closed, starts_on, ends_on) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
   // Reviews are deliberately not seeded and not cleared here: they are
   // user-generated content, so inventing them would put fabricated social
@@ -533,17 +550,22 @@ export function seed({ force = false } = {}) {
       putItinerary.run(t.id, i, it.time, it.title, it.description, it.photoLabel, it.photoPath || null,
         JSON.stringify(it.photos || [])));
     (t.reviewCategories || []).forEach((c, i) => putCategory.run(t.id, i, c.label, c.score));
-    (t.dates || []).forEach((d) => putDate.run(t.id, d.label, d.capacity, d.seatsTaken || 0, d.closed ? 1 : 0));
+    (t.dates || []).forEach((d) => putDate.run(t.id, d.label, d.capacity, d.seatsTaken || 0, d.closed ? 1 : 0, d.startsOn || null, d.endsOn || null));
   }
 
   return { seeded: true, tours: seedData.tours.length };
 }
 
 function tourDates(tourId) {
-  return db.prepare('SELECT * FROM tour_dates WHERE tour_id = ? ORDER BY id').all(tourId).map((d) => ({
+  const today = todayIso();
+  return db.prepare(
+    'SELECT * FROM tour_dates WHERE tour_id = ? ORDER BY starts_on IS NULL, starts_on, id'
+  ).all(tourId).map((d) => ({
     id: d.id,
     label: d.label,
-    ...dateAvailability(d.capacity, d.seats_taken, d.closed)
+    startsOn: d.starts_on,
+    endsOn: d.ends_on,
+    ...dateAvailability(d.capacity, d.seats_taken, d.closed, isPastEdition(d, today))
   }));
 }
 
@@ -560,7 +582,7 @@ export function listTours() {
       duration: t.duration, price: t.price, priceLine: formatPriceLine(t.price), photoPath: t.photo_path,
       date: (t.day_label && t.month_label) ? { day: t.day_label, month: t.month_label } : null,
       comingSoon: t.status === 'coming_soon',
-      nextDate: nextDate ? { label: nextDate.label, available: nextDate.available } : null,
+      nextDate: nextDate ? { label: nextDate.label, startsOn: nextDate.startsOn, available: nextDate.available } : null,
       availability: nextDate ? nextDate.status : null,
       seats: nextDate ? nextDate.status : null,
       review: reviewSummary(t.id),
@@ -770,10 +792,14 @@ export function reorderTourMedia(tourId, orderIds) {
   return db.prepare('SELECT id, label, image_path FROM tour_media WHERE tour_id = ? ORDER BY ordinal').all(tourId);
 }
 
-export function addTourDate(tourId, { label, capacity }) {
+export function getTourDate(id) {
+  return db.prepare('SELECT * FROM tour_dates WHERE id = ?').get(id);
+}
+
+export function addTourDate(tourId, { label, capacity, startsOn = null, endsOn = null }) {
   const info = db.prepare(
-    'INSERT INTO tour_dates (tour_id, label, capacity, seats_taken, closed) VALUES (?, ?, ?, 0, 0)'
-  ).run(tourId, label, capacity);
+    'INSERT INTO tour_dates (tour_id, label, capacity, seats_taken, closed, starts_on, ends_on) VALUES (?, ?, ?, 0, 0, ?, ?)'
+  ).run(tourId, label, capacity, startsOn, endsOn);
   return db.prepare('SELECT * FROM tour_dates WHERE id = ?').get(Number(info.lastInsertRowid));
 }
 
@@ -782,6 +808,9 @@ export function updateTourDate(id, patch) {
   const args = [];
   if ('capacity' in patch) { sets.push('capacity = ?'); args.push(patch.capacity); }
   if ('closed' in patch) { sets.push('closed = ?'); args.push(patch.closed ? 1 : 0); }
+  if ('label' in patch) { sets.push('label = ?'); args.push(patch.label); }
+  if ('startsOn' in patch) { sets.push('starts_on = ?'); args.push(patch.startsOn); }
+  if ('endsOn' in patch) { sets.push('ends_on = ?'); args.push(patch.endsOn); }
   if (!sets.length) return db.prepare('SELECT * FROM tour_dates WHERE id = ?').get(id);
   args.push(id);
   db.prepare(`UPDATE tour_dates SET ${sets.join(', ')} WHERE id = ?`).run(...args);
@@ -809,6 +838,7 @@ export function createBooking({ userId, tourId, tourDateId, guests }) {
   const tour = db.prepare(`SELECT * FROM tours WHERE id = ? AND status = 'published'`).get(tourId);
   if (!tour) throw new BookingError('tour_not_found');
 
+  if (isPastEdition(tourDate)) throw new BookingError('date_in_past');
   const avail = dateAvailability(tourDate.capacity, tourDate.seats_taken, tourDate.closed);
   if (avail.disabled || avail.available < guests) throw new BookingError('not_enough_seats');
 
@@ -907,16 +937,21 @@ export function getUserBookings(userId) {
   return db.prepare(
     `SELECT b.ref, b.guests, b.total, b.status, b.created_at AS createdAt,
             t.id AS tourId, t.name AS tourTitle, t.tags, t.status AS tourStatus,
-            d.label AS dateLabel, d.closed, d.capacity, d.seats_taken AS seatsTaken
+            d.label AS dateLabel, d.starts_on AS startsOn, d.ends_on, d.closed, d.capacity, d.seats_taken AS seatsTaken
      FROM bookings b
      JOIN tours t ON t.id = b.tour_id
      JOIN tour_dates d ON d.id = b.tour_date_id
      WHERE b.user_id = ?
      ORDER BY b.created_at DESC`
   ).all(userId).map((b) => {
-    const { closed, capacity, seatsTaken, tourStatus, ...row } = b;
+    const { closed, capacity, seatsTaken, tourStatus, ends_on: endsOn, ...row } = b;
     const stillVisible = tourStatus === 'published' || tourStatus === 'coming_soon';
-    return { ...row, upcoming: row.status !== 'cancelled' && stillVisible && !closed };
+    // With an ISO date the split is chronological; without one, fall back to
+    // the old "still open" meaning.
+    const upcoming = row.startsOn
+      ? row.status !== 'cancelled' && !isPastEdition({ starts_on: row.startsOn, ends_on: endsOn })
+      : row.status !== 'cancelled' && stillVisible && !closed;
+    return { ...row, upcoming };
   });
 }
 
@@ -929,7 +964,7 @@ export function listBookingsAdmin({ paymentStatus, limit } = {}) {
   return db.prepare(
     `SELECT b.id, b.ref, b.guests, b.total, b.status, b.payment_status AS paymentStatus,
             b.zarinpal_ref_id AS zarinpalRefId, b.created_at AS createdAt,
-            t.id AS tourId, t.name AS tourTitle, d.label AS dateLabel,
+            t.id AS tourId, t.name AS tourTitle, d.label AS dateLabel, d.starts_on AS startsOn,
             u.id AS userId, u.first_name AS firstName, u.last_name AS lastName, u.phone
      FROM bookings b
      JOIN tours t ON t.id = b.tour_id

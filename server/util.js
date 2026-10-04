@@ -511,3 +511,38 @@ export function validateUserName(input) {
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value: { firstName, lastName } };
 }
+
+// --- edition dates ---------------------------------------------------------
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isRealIsoDate(v) {
+  if (typeof v !== 'string' || !ISO_DATE.test(v)) return false;
+  const d = new Date(v + 'T00:00:00Z');
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
+/**
+ * Validates the machine-readable part of an edition. `startsOn` / `endsOn` are
+ * Gregorian YYYY-MM-DD; null clears one. Only keys present in `input` are
+ * returned, so a PUT can change one field without touching the others.
+ * `existing` ({ startsOn, endsOn }) lets a partial PUT be checked against the
+ * stored other bound.
+ */
+export function validateEditionDates(input, existing = {}) {
+  const errors = {};
+  const value = {};
+  for (const key of ['startsOn', 'endsOn']) {
+    if (!(key in input)) continue;
+    const v = input[key];
+    if (v === null) value[key] = null;
+    else if (isRealIsoDate(v)) value[key] = v;
+    else errors[key] = 'format';
+  }
+  const startsOn = 'startsOn' in value ? value.startsOn : existing.startsOn ?? null;
+  const endsOn = 'endsOn' in value ? value.endsOn : existing.endsOn ?? null;
+  if (endsOn && !startsOn) errors.endsOn = 'needs_startsOn';
+  else if (startsOn && endsOn && endsOn < startsOn) errors.endsOn = 'before_startsOn';
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value };
+}
