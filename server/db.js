@@ -792,6 +792,23 @@ export function reorderTourMedia(tourId, orderIds) {
   return db.prepare('SELECT id, label, image_path FROM tour_media WHERE tour_id = ? ORDER BY ordinal').all(tourId);
 }
 
+/** Admin view of a tour's editions: raw capacity state plus the ISO dates and a computed phase. */
+export function listEditionsAdmin(tourId) {
+  const today = todayIso();
+  return db.prepare(
+    'SELECT * FROM tour_dates WHERE tour_id = ? ORDER BY starts_on IS NULL, starts_on, id'
+  ).all(tourId).map((d) => ({
+    id: d.id,
+    label: d.label,
+    startsOn: d.starts_on,
+    endsOn: d.ends_on,
+    capacity: d.capacity,
+    seatsTaken: d.seats_taken,
+    closed: !!d.closed,
+    phase: !d.starts_on ? 'undated' : isPastEdition(d, today) ? 'past' : 'upcoming'
+  }));
+}
+
 export function getTourDate(id) {
   return db.prepare('SELECT * FROM tour_dates WHERE id = ?').get(id);
 }

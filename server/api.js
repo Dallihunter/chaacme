@@ -509,6 +509,10 @@ export async function handleApi(req, res, url) {
         return json(res, 422, { error: 'order_mismatch' });
       }
     }
+    if ((m = new RegExp(`^/api/admin/tours/${ID}/dates$`).exec(path)) && method === 'GET') {
+      if (!db.tourExists(m[1])) return json(res, 404, { error: 'not_found' });
+      return json(res, 200, { dates: db.listEditionsAdmin(m[1]) });
+    }
     if ((m = new RegExp(`^/api/admin/tours/${ID}/dates$`).exec(path)) && method === 'POST') {
       const body = await readJson(req);
       if (!body.ok) return json(res, 400, { error: body.error });
@@ -522,6 +526,11 @@ export async function handleApi(req, res, url) {
       const body = await readJson(req);
       if (!body.ok) return json(res, 400, { error: body.error });
       const id = Number(m[1]);
+      const v = body.value;
+      if (('capacity' in v && (!Number.isInteger(v.capacity) || v.capacity < 0)) ||
+          ('label' in v && (typeof v.label !== 'string' || !v.label.trim()))) {
+        return json(res, 422, { error: 'validation_failed' });
+      }
       const current = db.getTourDate(id);
       if (!current) return json(res, 404, { error: 'not_found' });
       const dates = validateEditionDates(body.value, { startsOn: current.starts_on, endsOn: current.ends_on });

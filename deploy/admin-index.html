@@ -57,7 +57,7 @@
   .btn.ghost:hover{ background:var(--paper); color:var(--ink); }
 
   label{ display:block; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; }
-  input[type=text], input[type=number], input[type=password], input[type=username], textarea, select{
+  input[type=text], input[type=number], input[type=date], input[type=password], input[type=username], textarea, select{
     width:100%; background:var(--paper); border:1px solid var(--line); padding:11px 13px; font-size:14px; color:var(--ink);
   }
   input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--ink); }
@@ -121,6 +121,18 @@
   .gphoto .gctrl button:hover{ background:#000; }
   .upload-row{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
   .upload-row .field{ flex:1; min-width:160px; margin-bottom:0; }
+
+  /* ---- editions (dates & capacity) ---- */
+  table.editions{ width:100%; border-collapse:collapse; margin-bottom:16px; }
+  table.editions th{ text-align:left; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); padding:0 8px 8px; border-bottom:1px solid var(--line); font-weight:500; }
+  table.editions td{ padding:8px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+  table.editions td input[type=text], table.editions td input[type=number], table.editions td input[type=date]{ padding:8px 9px; font-size:13px; }
+  table.editions .fa{ font-size:11px; color:var(--ink-faint); margin-top:4px; min-height:14px; }
+  table.editions tr.is-past td{ background:var(--paper); }
+  table.editions tr.is-past input{ color:var(--ink-faint); }
+  .badge.upcoming{ border-color:#bfe0c9; background:#f1faf4; color:var(--ok); }
+  .badge.past{ border-color:var(--line); color:var(--ink-faint); background:var(--paper); }
+  .badge.undated{ border-color:#e0d6b8; background:#fbf7ea; color:#8a6d1f; }
 
   /* ---- itinerary stage photos ---- */
   .iphoto-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:8px; margin:4px 0 10px; grid-column:1/-1; }
@@ -435,7 +447,7 @@
       return (
         '<tr' + (flagged ? ' class="needs-attention"' : '') + '>' +
           '<td>' + esc(b.ref) + '</td>' +
-          '<td>' + esc(b.tourTitle) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.dateLabel) + '</div></td>' +
+          '<td>' + esc(b.tourTitle) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.dateLabel) + (b.startsOn ? ' · ' + esc(b.startsOn) : '') + '</div></td>' +
           '<td>' + esc(b.guests) + '</td>' +
           '<td>' + esc(customer) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.phone) + '</div></td>' +
           '<td><span class="badge ' + esc(status) + '">' + (flagged ? '⚠ ' : '') + esc(status.replace(/_/g, ' ')) + '</span></td>' +
@@ -561,6 +573,14 @@
           : renderGallerySection(t)) +
       '</section>' +
 
+      // Saved per row through its own endpoints (POST/PUT /admin/tours/:id/dates,
+      // /admin/tour-dates/:id), like Partners, so it has its own buttons.
+      '<section class="panel" id="editionsPanel"><h2>Dates &amp; capacity</h2>' +
+        (ed.isNew
+          ? '<p style="color:var(--ink-faint);font-size:13px;">Save the tour first, then add its dates here.</p>'
+          : '<div class="empty">Loading…</div>') +
+      '</section>' +
+
       // Saved through its own endpoint (PUT /admin/tours/:id/hosts), so it has
       // its own save button rather than riding along with the tour fields.
       '<section class="panel" id="tourHostsPanel"><h2>Partners</h2>' +
@@ -576,7 +596,7 @@
     );
     bindLogout();
 
-    if (!ed.isNew) initTourHosts(ed.tour.id);
+    if (!ed.isNew) { initTourHosts(ed.tour.id); initEditions(ed.tour.id); }
 
     renderRepeat('highlightsList', ed.tour.highlights, [
       { key:'name', label:'Name' }, { key:'description', label:'Description', area:true }
@@ -866,6 +886,108 @@
     ed.tour = Object.assign(ed.tour, data.tour);
     document.getElementById('galleryPanel').innerHTML = '<h2>Gallery</h2>' + renderGallerySection(ed.tour);
     bindGallery(ed);
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Editions: dates + capacity (one row per bookable run of a tour)
+  // ---------------------------------------------------------------------
+  const PHASE_LABEL = { upcoming: 'Upcoming', past: 'Finished', undated: 'No date set' };
+  const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  // Shows the Jalali equivalent of the Gregorian date the <input type=date>
+  // holds, so an admin can sanity-check "۱۲ مهر ۱۴۰۵" against the label.
+  function faDate(iso){
+    if (!ISO_RE.test(iso || '')) return '';
+    try {
+      return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { dateStyle: 'long', timeZone: 'UTC' })
+        .format(new Date(iso + 'T00:00:00Z'));
+    } catch(e){ return ''; }
+  }
+
+  function editionRow(d){
+    const isNew = d.id == null;
+    const phase = d.phase || 'undated';
+    return '<tr data-id="' + (isNew ? '' : d.id) + '" class="' + (phase === 'past' ? 'is-past' : '') + '">' +
+      '<td><input type="text" class="e_label" dir="auto" value="' + esc(d.label) + '" placeholder="۱۲ مهر"></td>' +
+      '<td><input type="date" class="e_start" value="' + esc(d.startsOn || '') + '"><div class="fa e_start_fa">' + esc(faDate(d.startsOn)) + '</div></td>' +
+      '<td><input type="date" class="e_end" value="' + esc(d.endsOn || '') + '"><div class="fa e_end_fa">' + esc(faDate(d.endsOn)) + '</div></td>' +
+      '<td><input type="number" class="e_cap" min="0" step="1" value="' + esc(d.capacity == null ? '' : d.capacity) + '" style="width:80px"></td>' +
+      '<td>' + (isNew ? '—' : esc(d.seatsTaken)) + '</td>' +
+      '<td><div class="checkline"><input type="checkbox" class="e_closed"' + (d.closed ? ' checked' : '') + '></div></td>' +
+      '<td>' + (isNew ? '' : '<span class="badge ' + phase + '">' + PHASE_LABEL[phase] + '</span>') + '</td>' +
+      '<td style="white-space:nowrap"><button type="button" class="btn small primary e_save">' + (isNew ? 'Add' : 'Save') + '</button></td>' +
+    '</tr>';
+  }
+
+  function paintEditions(tourId, dates){
+    const panel = document.getElementById('editionsPanel');
+    if (!panel) return;
+    const rows = dates.map(editionRow).join('') + editionRow({ id: null, label: '', startsOn: '', endsOn: '', capacity: '', closed: false });
+    panel.innerHTML =
+      '<h2>Dates &amp; capacity</h2>' +
+      '<p style="color:var(--ink-faint);font-size:13px;margin-bottom:14px;">' +
+        'Dates are Gregorian (the Jalali date appears underneath). Once an edition\'s last day has passed it is shown as finished and can no longer be booked. ' +
+        'Editions with no date set stay bookable until you set one. Leave <em>Ends</em> empty for a single-day edition.' +
+      '</p>' +
+      '<table class="editions"><thead><tr><th>Label</th><th>Starts</th><th>Ends</th><th>Capacity</th><th>Booked</th><th>Closed</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+    panel.querySelectorAll('input[type=date]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        const out = inp.parentNode.querySelector('.fa');
+        if (out) out.textContent = faDate(inp.value);
+      });
+    });
+    panel.querySelectorAll('.e_save').forEach(function(btn){
+      btn.addEventListener('click', function(){ saveEdition(tourId, btn.closest('tr'), btn); });
+    });
+  }
+
+  async function loadEditions(tourId){
+    const data = await api('/admin/tours/' + encodeURIComponent(tourId) + '/dates');
+    paintEditions(tourId, data.dates);
+  }
+
+  async function initEditions(tourId){
+    try { await loadEditions(tourId); }
+    catch(e){
+      const panel = document.getElementById('editionsPanel');
+      if (panel) panel.innerHTML = '<h2>Dates &amp; capacity</h2><div class="empty">Could not load dates.</div>';
+    }
+  }
+
+  async function saveEdition(tourId, tr, btn){
+    const q = function(sel){ return tr.querySelector(sel); };
+    const id = tr.getAttribute('data-id');
+    const label = q('.e_label').value.trim();
+    const capRaw = q('.e_cap').value.trim();
+    const capacity = capRaw === '' ? NaN : Number(capRaw);
+    const startsOn = q('.e_start').value || null;
+    const endsOn = q('.e_end').value || null;
+
+    if (!label) { toast('Label is required', true); return; }
+    if (!Number.isInteger(capacity) || capacity < 0) { toast('Capacity must be a whole number, 0 or more', true); return; }
+    if (endsOn && !startsOn) { toast('Set a start date before an end date', true); return; }
+    if (startsOn && endsOn && endsOn < startsOn) { toast('End date is before the start date', true); return; }
+
+    btn.disabled = true;
+    try {
+      if (id) {
+        await api('/admin/tour-dates/' + id, { method: 'PUT',
+          body: { label: label, capacity: capacity, startsOn: startsOn, endsOn: endsOn, closed: q('.e_closed').checked } });
+      } else {
+        const body = { label: label, capacity: capacity };
+        if (startsOn) body.startsOn = startsOn;
+        if (endsOn) body.endsOn = endsOn;
+        await api('/admin/tours/' + encodeURIComponent(tourId) + '/dates', { method: 'POST', body: body });
+      }
+      toast(id ? 'Date saved' : 'Date added');
+      await loadEditions(tourId);
+    } catch(e){
+      const f = e.body && e.body.fields;
+      toast(f ? 'Invalid date: ' + Object.keys(f).join(', ') : 'Could not save date (' + e.message + ')', true);
+      btn.disabled = false;
+    }
   }
 
   // ---------------------------------------------------------------------
