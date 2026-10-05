@@ -314,6 +314,15 @@ export async function handleApi(req, res, url) {
     return json(res, 200, { profiles: db.listUserProfiles(user.id) });
   }
 
+  if ((m = /^\/api\/me\/bookings\/([^/]+)$/.exec(path)) && method === 'GET') {
+    const user = requireUser(req, res);
+    if (!user) return;
+    let ref = '';
+    try { ref = decodeURIComponent(m[1]); } catch { /* malformed: not found */ }
+    const booking = db.getUserBookingByRef(user.id, ref);
+    return booking ? json(res, 200, { booking }, { 'cache-control': 'private, no-store' }) : json(res, 404, { error: 'not_found' });
+  }
+
   if (path === '/api/me/reviews' && method === 'GET') {
     const user = requireUser(req, res);
     if (!user) return;

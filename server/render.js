@@ -13,6 +13,7 @@ import { assetVersion, importMapFor, versioned } from './static.js';
 import { siteContext } from './settings.js';
 import { renderTourPage, ogImageUrl, metaDescription } from '../deploy/assets/js/shared/pages/tour.js';
 import { renderNotFoundPage, renderErrorPage } from '../deploy/assets/js/shared/pages/errors.js';
+import { renderScreenShell } from '../deploy/assets/js/shared/pages/screen.js';
 import { renderHomePage } from '../deploy/assets/js/shared/pages/home.js';
 import { renderExperiencesPage } from '../deploy/assets/js/shared/pages/experiences.js';
 import { renderPlacesPage } from '../deploy/assets/js/shared/pages/places.js';
@@ -102,6 +103,11 @@ export function renderInfoDocument(key) {
   const page = buildInfoPage(key);
   if (!page) return renderNotFound({});
   return { status: 200, body: renderInfoPage(page, { assets: pageAssets(), site: siteContext(), canonical: absolute(page.path) }) };
+}
+
+/** The shell of a client-rendered screen; `script` is its entry module. Never cached: it sits in front of private data. */
+export function renderScreenDocument(name) {
+  return { status: 200, cache: 'no-cache', body: renderScreenShell(name, { assets: pageAssets([`/assets/js/screens/${name}.js`]), site: siteContext() }) };
 }
 
 /** Writes the response for a rendered document (HEAD-aware, with a weak ETag so revalidation is cheap). */

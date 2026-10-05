@@ -1061,8 +1061,9 @@ export function confirmBookingPayment(id, { refId }) {
  */
 export function getUserBookings(userId) {
   return db.prepare(
-    `SELECT b.ref, b.guests, b.total, b.status, b.created_at AS createdAt,
+    `SELECT b.ref, b.guests, b.total, b.status, b.payment_status AS paymentStatus, b.created_at AS createdAt,
             t.id AS tourId, t.name AS tourTitle, t.tags, t.status AS tourStatus,
+            COALESCE((SELECT image_path FROM tour_media m WHERE m.tour_id = t.id AND m.image_path IS NOT NULL ORDER BY m.ordinal LIMIT 1), t.photo_path) AS coverPath,
             d.label AS dateLabel, d.starts_on AS startsOn, d.ends_on, d.closed, d.capacity, d.seats_taken AS seatsTaken
      FROM bookings b
      JOIN tours t ON t.id = b.tour_id
@@ -1071,6 +1072,7 @@ export function getUserBookings(userId) {
      ORDER BY b.created_at DESC`
   ).all(userId).map((b) => {
     const { closed, capacity, seatsTaken, tourStatus, ends_on: endsOn, ...row } = b;
+    row.endsOn = endsOn;
     const stillVisible = tourStatus === 'published' || tourStatus === 'coming_soon';
     // With an ISO date the split is chronological; without one, fall back to
     // the old "still open" meaning.
@@ -1079,6 +1081,24 @@ export function getUserBookings(userId) {
       : row.status !== 'cancelled' && stillVisible && !closed;
     return { ...row, upcoming };
   });
+}
+
+/**
+ * One booking, for the signed-in user who owns it (the result page). Another user's ref, an unknown ref
+ * and a malformed ref all answer null, so a ref cannot be probed. Gateway identifiers are never included.
+ */
+export function getUserBookingByRef(userId, ref) {
+  if (!userId || typeof ref !== 'string' || !/^CHK-\d{5}$/.test(ref)) return null;
+  const b = db.prepare(
+    `SELECT b.ref, b.guests, b.total, b.price_per_person AS pricePerPerson, b.status, b.payment_status AS paymentStatus, b.created_at AS createdAt,
+            t.id AS tourSlug, t.name AS tourTitle, t.status AS tourStatus,
+            d.label AS dateLabel, d.starts_on AS startsOn, d.ends_on AS endsOn
+     FROM bookings b JOIN tours t ON t.id = b.tour_id JOIN tour_dates d ON d.id = b.tour_date_id
+     WHERE b.ref = ? AND b.user_id = ?`
+  ).get(ref, userId);
+  if (!b) return null;
+  const { tourStatus, ...rest } = b;
+  return { ...rest, tourPublic: tourStatus === 'published' || tourStatus === 'coming_soon' };
 }
 
 export function listBookingsAdmin({ paymentStatus, limit } = {}) {

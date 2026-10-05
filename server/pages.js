@@ -1,6 +1,6 @@
 import {
   renderTourDocument, renderHomeDocument, renderExperiencesDocument, renderPlacesDocument, renderHostDocument,
-  renderInfoDocument, renderNotFound, renderServerError, sendDocument
+  renderInfoDocument, renderScreenDocument, renderNotFound, renderServerError, sendDocument
 } from './render.js';
 import { HOST_SLUG_RE } from './util.js';
 
@@ -22,6 +22,8 @@ function renderOrError(req, res, build) {
 }
 
 const INFO_PATHS = { '/about': 'about', '/terms': 'terms', '/refund': 'refund', '/privacy': 'privacy' };
+const SCREEN_PATHS = { '/login': 'login', '/signup': 'signup', '/account': 'account', '/become-host': 'become-host', '/booking/result': 'booking-result' };
+const PARTNER_PATH_RE = /^\/partner(?:\/(?:experiences|propose)|\/profile\/[a-z0-9-]+)?$/;
 const HOST_PATH_RE = /^\/host\/([^/]+)\/?$/;
 // URLs the old single-page app used for an experience; they now live at /tour/<slug>.
 const OLD_TOUR_RE = /^\/(?:tours|experiences|experience)\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/;
@@ -48,6 +50,8 @@ export function handlePage(req, res, url) {
   if (trimmed === '/experiences') { renderOrError(req, res, () => renderExperiencesDocument(url.searchParams)); return true; }
   if (trimmed === '/places') { renderOrError(req, res, () => renderPlacesDocument()); return true; }
   if (Object.hasOwn(INFO_PATHS, trimmed)) { renderOrError(req, res, () => renderInfoDocument(INFO_PATHS[trimmed])); return true; }
+  if (Object.hasOwn(SCREEN_PATHS, trimmed)) { renderOrError(req, res, () => renderScreenDocument(SCREEN_PATHS[trimmed])); return true; }
+  if (PARTNER_PATH_RE.test(trimmed)) { renderOrError(req, res, () => renderScreenDocument('partner')); return true; }
   if (p.startsWith('/host/')) {
     m = HOST_PATH_RE.exec(p);
     let slug = null;
