@@ -238,10 +238,21 @@ const fa = (n) => faDigits(Math.round(n).toLocaleString('en-US').replace(/,/g, '
   await p.setInputFiles('[data-upload]', png);
   await p.waitForFunction(() => document.querySelectorAll('.pp-tile:not(.pp-tile--main)').length === 8);
   // a person profile
+  db.db.prepare("UPDATE hosts SET credentials_public = 0 WHERE slug = 'coach-fx'").run(); // the fixture person opted in; start from the default
   await p.goto(`${O}/partner/profile/coach-fx`);
   await p.waitForSelector('#pf-form');
   assert.equal(await p.locator('#houseRules').count(), 0);
-  assert.ok((await p.innerText('main')).includes('روی صفحهٔ عمومی شما نمایش داده می‌شود'), 'credentials are announced as public');
+  assert.ok((await p.innerText('main')).includes('نمایش عمومی سوابق و گواهینامه‌ها'), 'explicit opt-in checkbox next to the field');
+  assert.equal(await p.isChecked('#credentialsPublic'), false, 'off by default');
+  assert.ok((await p.innerText('[data-cred-hint]')).includes('فقط تیم چکمه'));
+  await p.check('#credentialsPublic');
+  assert.ok((await p.innerText('[data-cred-hint]')).includes('روی صفحهٔ عمومی شما نمایش داده می‌شود') && !(await p.innerText('[data-cred-hint]')).includes('فقط تیم چکمه'), 'the hint no longer says team-only once public');
+  await p.click('[data-submit]');
+  await p.waitForSelector('[data-withdraw]');
+  assert.equal(db.listRevisionsAdmin('pending').find((r) => r.host.slug === 'coach-fx').payload.credentialsPublic, true, 'opt-in is a pending revision');
+  assert.equal(db.getHostAdmin(person.id).credentialsPublic, false, 'live value unchanged until approved');
+  await p.click('[data-withdraw]');
+  await p.waitForFunction(() => !document.querySelector('[data-withdraw]'));
   await shot(p, 'd-partner-profile-person.png');
   await p.goto(`${O}/partner/experiences`);
   await p.waitForSelector('.pp-sec');

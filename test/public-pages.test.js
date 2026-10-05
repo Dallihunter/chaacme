@@ -176,6 +176,24 @@ ft('person profile (full): portrait, expertise, credentials, bio, no place-only 
   for (const absent of ['کجاست', 'pf-map', 'امکانات', 'قوانین مکان', 'ظرفیت گروه', 'PRIVATE', '09120000099']) assert.ok(!text.includes(absent), absent);
 });
 
+ft('credentials are team-only unless the owner opted in: hidden in the HTML, the meta and the view model', async () => {
+  const hidden = await get('/host/coach-private');
+  assert.equal(hidden.status, 200);
+  assert.ok(!hidden.text.includes('TEAM-ONLY-CREDENTIALS') && !hidden.text.includes('سوابق و گواهینامه‌ها'), 'no credentials block, no heading');
+  const vm = (await get('/api/pages/host/coach-private')).text;
+  assert.ok(!vm.includes('TEAM-ONLY-CREDENTIALS') && JSON.parse(vm).page.credentials === null);
+  assert.ok(!JSON.stringify(JSON.parse(vm)).includes('credentialsPublic'), 'the flag itself is not part of the public projection');
+  const shown = JSON.parse((await get('/api/pages/host/coach-fx')).text).page;
+  assert.ok(shown.credentials && (await get('/host/coach-fx')).text.includes(shown.credentials));
+  // switching it on shows it, switching it off hides it again
+  db.db.prepare("UPDATE hosts SET credentials_public = 1 WHERE slug = 'coach-private'").run();
+  assert.ok((await get('/host/coach-private')).text.includes('TEAM-ONLY-CREDENTIALS'));
+  db.db.prepare("UPDATE hosts SET credentials_public = 0 WHERE slug = 'coach-private'").run();
+  assert.ok(!(await get('/host/coach-private')).text.includes('TEAM-ONLY-CREDENTIALS'));
+  // the older public JSON never carried credentials either way
+  assert.ok(!(await get('/api/hosts/coach-fx')).text.includes('credentials'));
+});
+
 ft('profiles (minimal): name only -> no empty blocks, no placeholders', async () => {
   for (const [slug, name] of [['lodge-min', 'مکان کمینه'], ['coach-min', 'شخص کمینه']]) {
     const { text, status } = await get(`/host/${slug}`);
@@ -222,7 +240,7 @@ ft('XSS: payloads in every setting, host and card field render as text in the HT
   const h = db.createHost({ slug: 'xss-lodge', kind: 'place', displayName: `N${P}`, bio: `B${P}`, region: `R${P}`, lodgingType: `L${P}`, amenities: [`A${P}`], houseRules: `H${P}`, status: 'active',
     photoPath: null, expertise: null, instagramHandle: null, contactPhone: null, latitude: 36.1, longitude: 52.1 });
   db.setHostMedia(h.id, [{ photoPath: '/images/host-xss-lodge/a.jpg', caption: `C${P}`, alt: `T${P}` }]);
-  db.createHost({ slug: 'xss-coach', kind: 'person', displayName: `PN${P}`, expertise: `PE${P}`, credentials: `PC${P}`, bio: `PB${P}`, status: 'active', photoPath: null, instagramHandle: null, contactPhone: null });
+  db.createHost({ slug: 'xss-coach', kind: 'person', displayName: `PN${P}`, expertise: `PE${P}`, credentials: `PC${P}`, credentialsPublic: true, bio: `PB${P}`, status: 'active', photoPath: null, instagramHandle: null, contactPhone: null });
   for (const path of ['/', '/places', '/about', '/host/xss-lodge', '/host/xss-coach', '/experiences']) {
     const { text } = await get(path);
     assert.ok(!text.includes('<img src=x') && !text.includes('<script>alert'), `${path}: raw payload`);

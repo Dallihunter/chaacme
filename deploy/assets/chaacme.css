@@ -540,8 +540,8 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
 .ex-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .ex-dot--forest { background: var(--forest); } .ex-dot--clay { background: var(--clay); } .ex-dot--sea { background: var(--sea); }
 .ex-select { min-width: 180px; }
-.ex-check { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; cursor: pointer; }
-.ex-check input { accent-color: var(--clay); width: 20px; height: 20px; margin: 0; }
+.ex-check, .ck-check { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; cursor: pointer; }
+.ex-check input, .ck-check input { accent-color: var(--clay); width: 20px; height: 20px; margin: 0; }
 .ex-filters__actions { display: flex; gap: 16px; align-items: center; }
 .ex-clear { display: inline-flex; align-items: center; min-height: 44px; font: 500 14px var(--font-sans); }
 .ex-count { margin: 0; font-size: 14px; color: var(--ink-muted); }

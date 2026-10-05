@@ -42,18 +42,18 @@ Nothing is left on the old styling. The only thing that cannot be converted is `
 | | gallery alt text | **MISSING** → `host_media.alt` (caption exists) |
 | | number of experiences, linked experiences, reviews | derived from `tour_hosts`, `tours`, `reviews` |
 | | "suitable for" fact in the reference | **not built**: no field exists and the owner never entered it; the fact is omitted |
-| Person profile | portrait, expertise, credentials, bio, instagram | existing (`credentials` is **now public**, see risks) |
+| Person profile | portrait, expertise, credentials, bio, instagram | existing; credentials public only with the new `hosts.credentials_public` (migration 005) |
 | Info pages | four bodies | **MISSING** → `site_settings` |
 | Footer | links, Instagram handle | **MISSING** → `site_settings` |
 | Booking result | booking by ref for its owner (tour title, edition, party size, total, payment status) | existing in `bookings`; **new** owner-only endpoint `GET /api/me/bookings/<ref>` |
 | Account | bookings with cover + payment status | `payment_status` and cover were not in `GET /api/bookings/me` → added (additive) |
 
-### Risk to decide before deploy: `credentials` becomes public
-The old partner form told owners that «سوابق و گواهینامه‌ها» is seen **only by the chaacme team**. The person profile in this PR
-shows it publicly, as requested. The form copy is changed, but values already entered were entered under the old promise.
-Before deploying, review `SELECT slug, credentials FROM hosts WHERE kind='person' AND status='active' AND credentials IS NOT NULL`
-and clear or confirm each one. `house_rules` and `capacity_guests` are public for places in the same way (the form never promised secrecy
-for them). `seeking_place_types` and `accepts_experience_types` stay private.
+### Credentials stay private unless the owner opts in
+The partner form told owners that «سوابق و گواهینامه‌ها» is seen **only by the chaacme team**, so existing values are not published.
+Migration 005 adds `hosts.credentials_public` (default 0 for every existing row). The person profile shows credentials only when it is 1;
+the owner turns it on with the checkbox «نمایش عمومی سوابق و گواهینامه‌ها» (a normal pending revision), or an admin sets it.
+`house_rules` and `capacity_guests` are public for places (the form never promised secrecy for them). `seeking_place_types` and
+`accepts_experience_types` stay private.
 
 ## 3. Old code that becomes dead (removed in this PR)
 * `deploy/index.html` SPA (≈4 000 lines): pages home / experiences / about / contact / tour / login / signup / account / booking /

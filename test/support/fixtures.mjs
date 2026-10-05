@@ -66,8 +66,10 @@ export async function seedFullSite({ db, upload, settings, makeImage, videoPath 
   const person = H({
     slug: 'coach-fx', kind: 'person', displayName: 'مربی نمونه', status: 'active', photoPath: await img({ hostSlug: 'coach-fx' }, 900, 900),
     bio: 'سال‌هاست حرکت و طبیعت را کنار هم تمرین می‌کنم.', expertise: 'مربی حرکت', credentials: 'گواهینامهٔ نمونه از مرکز نمونه', instagramHandle: 'coach_fx',
-    contactPhone: '09120000099', userId, seekingPlaceTypes: ['PRIVATE-SEEK'], verified: true
+    contactPhone: '09120000099', userId, seekingPlaceTypes: ['PRIVATE-SEEK'], verified: true, credentialsPublic: true
   });
+  // credentials the owner never agreed to publish (the default): must never reach a page
+  H({ slug: 'coach-private', kind: 'person', displayName: 'مربی خصوصی', status: 'active', expertise: 'مربی', credentials: 'TEAM-ONLY-CREDENTIALS' });
   H({ slug: 'lodge-min', kind: 'place', displayName: 'مکان کمینه', status: 'active' });
   H({ slug: 'coach-min', kind: 'person', displayName: 'شخص کمینه', status: 'active' });
   H({ slug: 'hidden-fx', kind: 'place', displayName: 'مخفی', status: 'hidden' });

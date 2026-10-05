@@ -633,7 +633,8 @@ export function getHostForPage(slug) {
     regionKey: h.region_key,
     bio: h.bio,
     instagramHandle: h.instagram_handle,
-    credentials: h.credentials,
+    // owners were told credentials are team-only: they are public only after an explicit opt-in
+    credentials: h.credentials_public ? h.credentials : null,
     capacityGuests: h.capacity_guests,
     houseRules: h.house_rules,
     gallery: hostMedia(h.id),
@@ -1273,6 +1274,7 @@ function adminHostFields(h) {
 function matchingFields(h) {
   return {
     credentials: h.credentials,
+    credentialsPublic: !!h.credentials_public,
     seekingPlaceTypes: parseAmenities(h.seeking_place_types),
     capacityGuests: h.capacity_guests,
     houseRules: h.house_rules,
@@ -1451,14 +1453,14 @@ export function createHost(v) {
   const info = db.prepare(
     `INSERT INTO hosts (slug, kind, display_name, photo_path, bio, expertise, instagram_handle, contact_phone,
                         user_id, region, lodging_type, amenities, latitude, longitude, status, verified_at,
-                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types, region_key)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types, region_key, credentials_public)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(v.slug, v.kind || 'person', v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle,
     v.contactPhone, v.userId ?? null, v.region ?? null, v.lodgingType ?? null,
     v.amenities ? JSON.stringify(v.amenities) : null, v.latitude ?? null, v.longitude ?? null,
     v.status || 'hidden', v.verified ? new Date().toISOString() : null,
     v.credentials ?? null, jsonList(v.seekingPlaceTypes), v.capacityGuests ?? null, v.houseRules ?? null,
-    jsonList(v.acceptsExperienceTypes), v.regionKey ?? null);
+    jsonList(v.acceptsExperienceTypes), v.regionKey ?? null, v.credentialsPublic ? 1 : 0);
   return getHostAdmin(Number(info.lastInsertRowid));
 }
 
@@ -1478,7 +1480,7 @@ export function updateHost(id, v) {
     `UPDATE hosts SET display_name = ?, photo_path = ?, bio = ?, expertise = ?, instagram_handle = ?,
        contact_phone = ?, region = ?, lodging_type = ?, amenities = ?, latitude = ?, longitude = ?,
        status = ?, verified_at = ?, credentials = ?, seeking_place_types = ?, capacity_guests = ?,
-       house_rules = ?, accepts_experience_types = ?, region_key = ?, updated_at = datetime('now')
+       house_rules = ?, accepts_experience_types = ?, region_key = ?, credentials_public = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle, v.contactPhone,
     v.region ?? null, v.lodgingType ?? null, v.amenities ? JSON.stringify(v.amenities) : null,
@@ -1490,6 +1492,7 @@ export function updateHost(id, v) {
     keep(v.houseRules, existing.house_rules),
     v.acceptsExperienceTypes === undefined ? existing.accepts_experience_types : jsonList(v.acceptsExperienceTypes),
     keep(v.regionKey, existing.region_key),
+    v.credentialsPublic === undefined ? existing.credentials_public : (v.credentialsPublic ? 1 : 0),
     id);
   return getHostAdmin(id);
 }
@@ -1716,6 +1719,7 @@ export function revisionSnapshot(h) {
     ...base,
     expertise: h.expertise,
     credentials: h.credentials,
+    credentialsPublic: !!h.credentials_public,
     seekingPlaceTypes: parseAmenities(h.seeking_place_types).length ? parseAmenities(h.seeking_place_types) : null
   };
 }
@@ -1868,9 +1872,9 @@ export function approveRevision(id, ops) {
     } else {
       db.prepare(
         `UPDATE hosts SET display_name = ?, bio = ?, photo_path = ?, instagram_handle = ?, expertise = ?,
-           credentials = ?, seeking_place_types = ?, updated_at = datetime('now') WHERE id = ?`
+           credentials = ?, credentials_public = ?, seeking_place_types = ?, updated_at = datetime('now') WHERE id = ?`
       ).run(payload.displayName, payload.bio ?? null, photoPath, payload.instagramHandle ?? null,
-        payload.expertise ?? null, payload.credentials ?? null, jsonList(payload.seekingPlaceTypes), host.id);
+        payload.expertise ?? null, payload.credentials ?? null, payload.credentialsPublic ? 1 : 0, jsonList(payload.seekingPlaceTypes), host.id);
     }
     db.prepare(
       `UPDATE host_revisions SET status = 'approved', reviewed_at = datetime('now'), payload = ? WHERE id = ?`

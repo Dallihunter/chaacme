@@ -611,6 +611,11 @@ export function validateHostProfile(input) {
     else errors.regionKey = 'value';
   }
   const credentials = optText(input.credentials, 600, errors, 'credentials');
+  let credentialsPublic;
+  if (input.credentialsPublic !== undefined) {
+    if (typeof input.credentialsPublic !== 'boolean') errors.credentialsPublic = 'type';
+    else credentialsPublic = input.credentialsPublic;
+  }
   const seekingPlaceTypes = validateTagList(input.seekingPlaceTypes, errors, 'seekingPlaceTypes');
   const capacityGuests = validateCapacity(input.capacityGuests, errors);
   const houseRules = optText(input.houseRules, 1000, errors, 'houseRules');
@@ -640,6 +645,8 @@ export function validateHostProfile(input) {
       longitude: isPlace ? longitude : null,
       // undefined (key absent) means "leave the stored value alone".
       credentials: isPlace ? null : credentials,
+      // undefined (key absent) keeps what is stored; only a person has credentials
+      credentialsPublic: isPlace ? false : credentialsPublic,
       seekingPlaceTypes: isPlace ? null : seekingPlaceTypes,
       capacityGuests: isPlace ? capacityGuests : null,
       houseRules: isPlace ? houseRules : null,
@@ -800,6 +807,8 @@ export function validateRevision(input, ctx) {
   } else {
     value.expertise = optText(input.expertise, 120, errors, 'expertise') ?? null;
     value.credentials = optText(input.credentials, 600, errors, 'credentials') ?? null;
+    if (input.credentialsPublic !== undefined && typeof input.credentialsPublic !== 'boolean') errors.credentialsPublic = 'type';
+    value.credentialsPublic = input.credentialsPublic === true;
     value.seekingPlaceTypes = validateTagList(input.seekingPlaceTypes, errors, 'seekingPlaceTypes') ?? null;
   }
 

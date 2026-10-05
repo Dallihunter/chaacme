@@ -166,6 +166,9 @@ async function profileScreen(profiles, slug) {
   }
   const pendingChip = (name) => { const inp = $(`[data-chip-input="${name}"]`, root); if (inp && inp.value.trim()) commitChip(name); };
 
+  const credBox = $('#credentialsPublic', root);
+  if (credBox) credBox.addEventListener('change', () => { $('[data-cred-hint]', root).textContent = credBox.checked ? V.CRED_PUBLIC : V.CRED_PRIVATE; });
+
   const w = $('[data-withdraw]', root);
   if (w) w.addEventListener('click', async () => { w.disabled = true; await api('DELETE', `/partner/profiles/${encodeURIComponent(slug)}/revision`); profileScreen(profiles, slug); });
 
@@ -183,7 +186,7 @@ async function profileScreen(profiles, slug) {
         media: state.gallery.map((g) => ({ photoPath: g.photoPath, caption: (g.caption || '').trim(), alt: g.alt || '' }))
       });
     } else {
-      Object.assign(body, { expertise: form.expertise.value.trim(), credentials: form.credentials.value.trim(), seekingPlaceTypes: chips.seekingPlaceTypes });
+      Object.assign(body, { expertise: form.expertise.value.trim(), credentials: form.credentials.value.trim(), credentialsPublic: form.credentialsPublic.checked, seekingPlaceTypes: chips.seekingPlaceTypes });
     }
     withBusy($('[data-submit]'), async () => {
       try {

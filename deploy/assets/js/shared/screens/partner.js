@@ -7,6 +7,8 @@ import { photo } from '../components/photo.js';
 import { textField, selectField } from './forms.js';
 import { toFaDigits } from '../format.js';
 
+export const CRED_PUBLIC = 'این بخش روی صفحهٔ عمومی شما نمایش داده می‌شود (بعد از تأیید چکمه).';
+export const CRED_PRIVATE = 'این بخش روی صفحهٔ عمومی نمایش داده نمی‌شود و فقط تیم چکمه آن را می‌بیند.';
 export const KIND = { person: 'شخص', place: 'مکان' };
 const STATUS = { active: ['active', 'فعال'], hidden: ['hidden', 'پنهان'] };
 const ROLE = { lead: 'برگزارکننده', co_host: 'همراه برگزارکننده', venue: 'محل برگزاری' };
@@ -130,7 +132,12 @@ export function profileBody({ view, state, chips }) {
         ${place ? html`<div class="ck-field fm-span${ch.has('amenities') ? ' ck-field--changed' : ''}"><span class="ck-field__label">امکانات</span><div data-chips="amenities">${chipsView('amenities', chips.amenities, { max: 20, placeholder: 'مثلاً آب گرم' })}</div><span class="ck-field__error" data-error="amenities" hidden></span></div>
           ${f('houseRules', { id: 'houseRules', label: 'قوانین مکان', value: src.houseRules, area: true, maxlength: 1000, span: true, hint: 'روی صفحهٔ عمومی نمایش داده می‌شود. تا ۱۰۰۰ نویسه.' })}
           <div class="ck-field fm-span"><span class="ck-field__label">چه تجربه‌هایی را می‌پذیرید؟</span><div data-chips="acceptsExperienceTypes">${chipsView('acceptsExperienceTypes', chips.acceptsExperienceTypes, { max: 10, placeholder: 'مثلاً ریتریت حرکتی' })}</div><span class="ck-field__help">فقط برای تیم چکمه است و منتشر نمی‌شود.</span><span class="ck-field__error" data-error="acceptsExperienceTypes" hidden></span></div>`
-    : html`${f('credentials', { id: 'credentials', label: 'سوابق و گواهینامه‌ها', value: src.credentials, area: true, maxlength: 600, span: true, hint: 'روی صفحهٔ عمومی شما نمایش داده می‌شود. تا ۶۰۰ نویسه.' })}
+    : html`${f('credentials', { id: 'credentials', label: 'سوابق و گواهینامه‌ها', value: src.credentials, area: true, maxlength: 600, span: true, hint: 'تا ۶۰۰ نویسه.' })}
+          <div class="ck-field fm-span${ch.has('credentialsPublic') ? ' ck-field--changed' : ''}">
+            <label class="ck-check" for="credentialsPublic"><input type="checkbox" id="credentialsPublic" name="credentialsPublic" aria-describedby="credentialsPublic-hint"${src.credentialsPublic ? html` checked` : ''}> نمایش عمومی سوابق و گواهینامه‌ها</label>
+            <span class="ck-field__help" id="credentialsPublic-hint" data-cred-hint>${src.credentialsPublic ? CRED_PUBLIC : CRED_PRIVATE}</span>
+            ${ch.has('credentialsPublic') ? html`<span class="ck-field__help">تغییر کرده · در انتظار بررسی</span>` : ''}
+          </div>
           <div class="ck-field fm-span"><span class="ck-field__label">چه نوع مکانی می‌خواهید؟</span><div data-chips="seekingPlaceTypes">${chipsView('seekingPlaceTypes', chips.seekingPlaceTypes, { max: 10, placeholder: 'مثلاً اقامتگاه جنگلی' })}</div><span class="ck-field__help">فقط برای تیم چکمه و هنگام جور کردن برنامه‌ها است و منتشر نمی‌شود.</span><span class="ck-field__error" data-error="seekingPlaceTypes" hidden></span></div>`}
       </section>
       ${place ? html`<section class="pp-sec"><h2 class="pp-h2">موقعیت</h2>

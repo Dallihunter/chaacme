@@ -1302,7 +1302,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       host = { slug:'', kind: newKind === 'place' ? 'place' : 'person', displayName:'', bio:'',
                expertise:'', instagramHandle:'', contactPhone:'', photoPath:'', region:'',
                lodgingType:'', amenities:[], latitude:null, longitude:null, media:[],
-               credentials:'', seekingPlaceTypes:[], capacityGuests:null, houseRules:'', acceptsExperienceTypes:[],
+               credentials:'', credentialsPublic:false, seekingPlaceTypes:[], capacityGuests:null, houseRules:'', acceptsExperienceTypes:[],
                owner:null, status:'hidden', verified:false };
     } else {
       try {
@@ -1340,7 +1340,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       '<div class="field"><label>Expertise</label>' +
         '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>' +
       '<div class="field"><label>Credentials</label><textarea id="h_credentials" rows="4" maxlength="600">' + esc(host.credentials || '') + '</textarea>' +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters. <b>Shown on the public profile.</b></p></div>';
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters.</p></div>' +
+      '<div class="field checkline"><input type="checkbox" id="h_credentialsPublic"' + (host.credentialsPublic ? ' checked' : '') + '>' +
+        '<label for="h_credentialsPublic">نمایش عمومی سوابق و گواهینامه‌ها</label></div>' +
+      '<p class="hint" style="margin:-10px 0 18px">پیش‌فرض خاموش است: مالکان پروفایل در فرم خود می‌دانند این بخش فقط برای چکمه است. فقط وقتی روشن می‌شود که مالک خودش (از پنل همکار، با بازبینی) یا شما با اطلاع او آن را روشن کرده باشید.</p>';
 
     // Matching inputs: stored, edited by the owner in the partner panel too,
     // and NEVER part of a public response. They will drive pairing later.
@@ -1668,6 +1671,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     } else {
       patch.expertise = (document.getElementById('h_expertise').value || '').trim();
       patch.credentials = (document.getElementById('h_credentials').value || '').trim();
+      patch.credentialsPublic = document.getElementById('h_credentialsPublic').checked;
       patch.seekingPlaceTypes = splitTags(document.getElementById('h_seeking').value);
     }
     return patch;
@@ -1897,6 +1901,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
           }).join('') + '</span><div class="app-meta">' + v.length + ' image(s)</div>'
         : '<i>none</i>';
     }
+    if (key === 'credentialsPublic') return v ? 'عمومی' : 'فقط چکمه';
     if (Array.isArray(v)) return v.length ? v.map(esc).join('، ') : '<i>—</i>';
     if (v == null || v === '') return '<i>—</i>';
     return esc(String(v));
@@ -1904,7 +1909,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
   function revSame(key, a, b){
     if (key === 'media'){
-      const norm = function(x){ return JSON.stringify((x || []).map(function(m){ return [m.photoPath, m.caption || null]; })); };
+      const norm = function(x){ return JSON.stringify((x || []).map(function(m){ return [m.photoPath, m.caption || null, m.alt || null]; })); };
       return norm(a) === norm(b);
     }
     return JSON.stringify(a == null || a === '' ? null : a) === JSON.stringify(b == null || b === '' ? null : b);

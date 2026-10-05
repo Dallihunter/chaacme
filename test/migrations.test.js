@@ -29,7 +29,7 @@ const oldSchema = (db) => db.exec(`
 test('upgrades an old tour_dates table without losing rows, then is a no-op', () => {
   const db = new DatabaseSync(':memory:');
   oldSchema(db);
-  assert.deepEqual(runMigrations(db, migrations), [1, 2, 3, 4]);
+  assert.deepEqual(runMigrations(db, migrations), [1, 2, 3, 4, 5]);
   assert.ok(hasColumn(db, 'tour_dates', 'starts_on'));
   assert.ok(hasColumn(db, 'tour_dates', 'ends_on'));
   const row = db.prepare('SELECT * FROM tour_dates').get();
@@ -37,7 +37,7 @@ test('upgrades an old tour_dates table without losing rows, then is a no-op', ()
   assert.equal(row.seats_taken, 9);
   assert.equal(row.starts_on, null); // no guessed years
   assert.deepEqual(runMigrations(db, migrations), []);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 4);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 5);
   // partner panel: new columns/tables exist, existing rows untouched
   for (const c of ['credentials', 'seeking_place_types', 'capacity_guests', 'house_rules', 'accepts_experience_types']) {
     assert.ok(hasColumn(db, 'hosts', c), c);
@@ -90,4 +90,16 @@ test('site content migration is additive: new table and columns, old rows untouc
   const m = db.prepare('SELECT * FROM host_media').get();
   assert.deepEqual([m.path, m.caption, m.alt], ['/images/host-keep-me/a.jpg', 'خانه', null]);
   assert.equal(db.prepare('SELECT region_key FROM hosts').get().region_key, null);
+});
+
+test('credentials stay private after the migration: the flag is added at 0 for every existing row', () => {
+  const db = new DatabaseSync(':memory:');
+  oldSchema(db);
+  runMigrations(db, migrations.slice(0, 2)); // the schema as it was when owners entered their credentials
+  db.exec("UPDATE hosts SET credentials = 'سابقهٔ خصوصی'");
+  db.exec("INSERT INTO hosts (slug, credentials) VALUES ('second', 'دومی')");
+  assert.deepEqual(runMigrations(db, migrations), [3, 4, 5]);
+  assert.ok(hasColumn(db, 'hosts', 'credentials_public'));
+  const rows = db.prepare('SELECT credentials, credentials_public AS p FROM hosts ORDER BY id').all();
+  assert.deepEqual(rows.map((r) => [r.credentials, r.p]), [['سابقهٔ خصوصی', 0], ['دومی', 0]]);
 });

@@ -274,8 +274,9 @@ owner edit their own profile is a deliberate later step.
 - **Public vs private profile fields.** `/host/<slug>` is server-rendered with its own OG tags. A place page
   shows: name, verified, region stamp (`region_key`, admin-set), lodging type, region text, bio, capacity,
   amenities, house rules, instagram, the gallery (caption + alt), the **rounded** area and its experiences. A person page shows
-  name, verified, portrait, expertise, **credentials** (public since the unify-site work; the old partner form promised
-  they were team-only, so review existing values before deploying), bio and instagram. Never public:
+  name, verified, portrait, expertise, bio and instagram, and **credentials only when `hosts.credentials_public` is 1**
+  (migration 005; default 0 for every row, because owners were told the field is team-only. The owner opts in with the
+  checkbox «نمایش عمومی سوابق و گواهینامه‌ها» in the partner panel, which goes through the normal review; an admin can set it too). Never public:
   `contact_phone`, `user_id`, exact coordinates, `seeking_place_types`, `accepts_experience_types`.
 - **No staging environment and no `scripts/deploy.sh`.** `app.chaacme.ir` is a
   retired nginx 301 to the main site, not a staging server. This feature ships
