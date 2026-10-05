@@ -181,8 +181,12 @@ export function processImageFile(file, type, { stripOriginal = false } = {}) {
     const probe = await run(t.bin, [...LIMITS, input, '-auto-orient', '-format', '%w %h', 'info:'], t.env);
     const sizes = /^(\d+) (\d+)$/.exec(probe.stdout.trim());
     if (probe.error || !sizes) {
-      // The tool is there but cannot read the file: corrupt, a disguised format, or beyond the policy limits.
-      return probe.error && probe.error.code === 'ENOENT' ? { status: 'tool_missing' } : { status: 'rejected', reason: 'unreadable' };
+      const code = probe.error && probe.error.code;
+      if (code === 'ENOENT') return { status: 'tool_missing' };
+      // Exit status 1 is ImageMagick saying "I cannot use this file" (corrupt, a disguised format, over the policy
+      // limits): the upload is refused. Anything else (killed by a sandbox/seccomp filter, a timeout, no output) is
+      // a problem with the environment, not the image: keep the original rather than reject a good upload.
+      return code === 1 && !probe.error.killed ? { status: 'rejected', reason: 'unreadable' } : { status: 'error', reason: 'probe_failed' };
     }
     const width = Number(sizes[1]);
     const height = Number(sizes[2]);
@@ -214,8 +218,6 @@ export function processImageFile(file, type, { stripOriginal = false } = {}) {
     for (const n of partials) renameSync(tmpOf(n), join(dir, n));
 
     // 3. originals carry EXIF (often GPS): re-encode without metadata, orientation baked in
-    let finalWidth = width;
-    let finalHeight = height;
     if (stripOriginal) {
       const tmp = tmpOf(basename(file));
       const q = type === 'png' ? [] : ['-quality', '92'];
@@ -224,7 +226,7 @@ export function processImageFile(file, type, { stripOriginal = false } = {}) {
     }
 
     const meta = {
-      v: 1, width: finalWidth, height: finalHeight,
+      v: 1, width, height,
       variants: jobs.map((j) => ({ width: j.width, height: j.height, file: j.name })),
       og: makeOg ? { ...OG_SIZE, file: ogName(file) } : null
     };
