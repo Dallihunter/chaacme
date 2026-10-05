@@ -588,6 +588,60 @@ export function listRelatedTours(excludeId, region, limit = 3) {
   return rows;
 }
 
+/**
+ * Rows for the experience cards (home, experiences, a profile's own experiences): published and
+ * coming-soon tours in catalogue order, each with the first gallery image as its cover.
+ * `hostId` limits it to the tours that profile is linked to.
+ */
+export function listTourCardRows({ hostId = null } = {}) {
+  const sql = `SELECT t.*, (SELECT image_path FROM tour_media m WHERE m.tour_id = t.id AND m.image_path IS NOT NULL ORDER BY m.ordinal LIMIT 1) AS cover_path
+     FROM tours t WHERE t.status IN ('published','coming_soon')
+     ${hostId ? 'AND t.id IN (SELECT tour_id FROM tour_hosts WHERE host_id = ?)' : ''}
+     ORDER BY t.ordinal, t.created_at`;
+  return hostId ? db.prepare(sql).all(hostId) : db.prepare(sql).all();
+}
+
+/** Active place profiles for the home page and /places: with a photo first, then verified, then oldest. */
+export function listActivePlaces(limit = 200) {
+  return db.prepare(
+    `SELECT * FROM hosts WHERE kind = 'place' AND status = 'active'
+     ORDER BY (photo_path IS NULL), (verified_at IS NULL), id LIMIT ?`
+  ).all(limit);
+}
+
+/**
+ * Everything the profile page reads, from the row. Unlike getHostBySlug (the older public JSON, left
+ * as it was) this includes the fields the profile page now shows: house rules, capacity,
+ * credentials, gallery captions + alt. The page model picks field by field from it; contact_phone,
+ * user_id, the exact coordinates and the two matching lists are never copied out.
+ */
+export function getHostForPage(slug) {
+  const h = db.prepare(`SELECT * FROM hosts WHERE slug = ? AND status = 'active'`).get(slug);
+  if (!h) return null;
+  const summary = db.prepare(
+    `SELECT COUNT(*) AS count, AVG(r.rating) AS average FROM reviews r JOIN tour_hosts th ON th.tour_id = r.tour_id
+     WHERE th.host_id = ? AND r.status = 'published' AND r.user_id IS NOT NULL`
+  ).get(h.id);
+  const reviews = db.prepare(
+    `SELECT r.display_name AS displayName, r.rating, r.body, r.created_at AS createdAt, t.name AS tourTitle
+     FROM reviews r JOIN tour_hosts th ON th.tour_id = r.tour_id JOIN tours t ON t.id = r.tour_id
+     WHERE th.host_id = ? AND r.status = 'published' AND r.user_id IS NOT NULL ORDER BY r.created_at DESC LIMIT 50`
+  ).all(h.id);
+  return {
+    id: h.id, row: h,
+    ...publicHostFields(h),
+    regionKey: h.region_key,
+    bio: h.bio,
+    instagramHandle: h.instagram_handle,
+    credentials: h.credentials,
+    capacityGuests: h.capacity_guests,
+    houseRules: h.house_rules,
+    gallery: hostMedia(h.id),
+    reviews,
+    reviewSummary: { count: summary.count, average: summary.count ? Math.round(summary.average * 10) / 10 : null }
+  };
+}
+
 /** Public catalog listing: published + coming_soon tours, ordered for display. */
 export function listTours() {
   const rows = db.prepare(

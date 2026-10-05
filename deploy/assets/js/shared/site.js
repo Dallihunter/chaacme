@@ -7,7 +7,8 @@ export const SITE = {
 };
 
 export const NAV_LINKS = [
-  { key: 'experiences', label: 'تجربه‌ها', href: '/' },
+  { key: 'experiences', label: 'تجربه‌ها', href: '/experiences' },
+  { key: 'places', label: 'مکان‌ها', href: '/places' },
   { key: 'become-host', label: 'همکاری با چکمه', href: '/become-host' }
 ];
 

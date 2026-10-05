@@ -3,7 +3,7 @@ import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
 import * as settings from './settings.js';
-import { buildTourPage } from './pagemodels.js';
+import { buildTourPage, buildHomePage, buildExperiencesPage, buildPlacesPage, buildHostPage, buildInfoPage } from './pagemodels.js';
 import { PAGE_CACHE_CONTROL } from './render.js';
 import { handleUpload, handleVideoUpload, MAX_VIDEO_BYTES, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
 import {
@@ -88,6 +88,13 @@ export async function handleApi(req, res, url) {
     if (!page) return json(res, 404, { error: 'not_found' });
     return json(res, 200, { page }, { 'cache-control': PAGE_CACHE_CONTROL });
   }
+
+  const pageJson = (page) => (page ? json(res, 200, { page }, { 'cache-control': PAGE_CACHE_CONTROL }) : json(res, 404, { error: 'not_found' }));
+  if (path === '/api/pages/home' && method === 'GET') return pageJson(buildHomePage());
+  if (path === '/api/pages/experiences' && method === 'GET') return pageJson(buildExperiencesPage(url.searchParams));
+  if (path === '/api/pages/places' && method === 'GET') return pageJson(buildPlacesPage());
+  if ((m = new RegExp(`^/api/pages/host/${SLUG}$`).exec(path)) && method === 'GET') return pageJson(buildHostPage(m[1]));
+  if ((m = /^\/api\/pages\/info\/(about|terms|refund|privacy)$/.exec(path)) && method === 'GET') return pageJson(buildInfoPage(m[1]));
 
   if ((m = new RegExp(`^/api/tours/${ID}$`).exec(path)) && method === 'GET') {
     const tour = db.getTourDetail(m[1]);

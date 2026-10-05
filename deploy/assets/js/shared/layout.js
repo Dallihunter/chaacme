@@ -43,12 +43,13 @@ ${body}
  *   headerOptions  passed to header(); false = the page renders its own (home puts it inside the hero)
  *   site           { footerLinks } from siteContext()
  *   footer         false for the partner panel
- *   before/after   template output placed before <main> / after the footer (sticky bar)
+ *   before/after   template output placed before <main> (home hero) / after the footer (sticky bar)
  */
-export function pageFrame({ main, mainClass = '', mainId = 'main', headerOptions = {}, site = {}, withFooter = true, rootClass = '', after = null, mainAttrs = null }) {
+export function pageFrame({ main, mainClass = '', mainId = 'main', headerOptions = {}, site = {}, withFooter = true, rootClass = '', before = null, after = null, mainAttrs = null }) {
   return html`<div class="ck-root ${rootClass}" dir="rtl">
   <a class="ck-skip" href="#${mainId}">پرش به محتوا</a>
   ${headerOptions === false ? '' : header(headerOptions)}
+  ${before}
   <main class="${mainClass}" id="${mainId}"${mainAttrs}>${main}</main>
   ${withFooter ? footer({ links: site.footerLinks || [] }) : ''}
   ${after}

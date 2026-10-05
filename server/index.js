@@ -56,7 +56,7 @@ const server = createServer(async (req, res) => {
     }
     if (handleStatic(req, res, url)) return;
     if (handlePage(req, res, url)) return;
-    return json(res, 404, { error: 'not_found', message: 'This service serves /api/*, /tour/<slug> and /assets/*.' });
+    return json(res, 404, { error: 'not_found', message: 'Not found.' });
   } catch (err) {
     console.error('[chaacme-platform]', err);
     if (!res.headersSent) json(res, 500, { error: 'internal_error' });

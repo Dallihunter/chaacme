@@ -8,7 +8,10 @@
 // than an edition's booking id) can end up in the page or in the JSON.
 import * as db from './db.js';
 import { describeImage } from './images.js';
-import { regionInfo } from '../deploy/assets/js/shared/regions.js';
+import { regionInfo, REGION_KEYS } from '../deploy/assets/js/shared/regions.js';
+import { jalaliMonthKey, jalaliMonthLabel } from '../deploy/assets/js/shared/format.js';
+import { getSettings, infoParagraphs } from './settings.js';
+import { INFO_PAGES } from '../deploy/assets/js/shared/site.js';
 
 const MAX_RELATED = 3;
 
@@ -50,12 +53,16 @@ function venueView(h) {
   };
 }
 
-/** Everything the experience card needs, for the related-tours row. */
-function cardView(row) {
+/**
+ * Everything an experience card needs (home, experiences, a profile's experiences, related row).
+ * `editions` lists the upcoming dated editions with their openness: the experiences filters read it.
+ */
+export function cardView(row) {
   const hosts = db.tourHostsPublic(row.id);
   const lead = hosts.find((h) => h.role === 'lead') || hosts.find((h) => h.role !== 'venue') || null;
   const venue = hosts.find((h) => h.role === 'venue') || null;
-  const next = db.tourDates(row.id).find((d) => !d.disabled) || null;
+  const dates = row.status === 'published' ? db.tourDates(row.id).filter((d) => !d.past) : [];
+  const next = dates.find((d) => !d.disabled) || null;
   return {
     slug: row.id,
     name: row.name,
@@ -64,8 +71,11 @@ function cardView(row) {
     cover: imageOrNull(row.cover_path || row.photo_path, { alt: row.name }),
     leadName: lead ? lead.displayName : null,
     venueName: venue ? venue.displayName : null,
-    nextEdition: next ? { label: next.label, startsOn: next.startsOn, endsOn: next.endsOn } : null,
-    price: row.price ?? null
+    nextEdition: next ? { label: next.label, startsOn: next.startsOn, endsOn: next.endsOn, available: next.available } : null,
+    price: row.price ?? null,
+    duration: row.duration || null,
+    experienceType: row.experience_type || null,
+    editions: dates.filter((d) => d.startsOn).map((d) => ({ startsOn: d.startsOn, open: !d.disabled }))
   };
 }
 
@@ -139,3 +149,180 @@ export function buildTourPage(slug) {
     related: db.listRelatedTours(t.id, t.region, MAX_RELATED).map(cardView)
   };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Home
+// ---------------------------------------------------------------------------------------------
+const MAX_HOME_TOURS = 6;
+const MAX_HOME_PLACES = 4;
+
+/** A card for a place profile (home, /places): name, line under it, photo. */
+export function placeCardView(h) {
+  return {
+    slug: h.slug,
+    name: h.display_name,
+    verified: !!h.verified_at,
+    lodgingType: h.lodging_type || null,
+    region: h.region || null,
+    regionTone: regionInfo(h.region_key),
+    photo: imageOrNull(h.photo_path, { alt: h.display_name })
+  };
+}
+
+const textOrNull = (v) => (typeof v === 'string' && v.trim() ? v : null);
+
+/** GET /api/pages/home */
+export function buildHomePage() {
+  const st = getSettings();
+  const upcoming = db.listTourCardRows()
+    .filter((r) => r.status === 'published')
+    .map(cardView)
+    .filter((c) => c.nextEdition && c.nextEdition.startsOn)
+    .sort((a, b) => a.nextEdition.startsOn.localeCompare(b.nextEdition.startsOn))
+    .slice(0, MAX_HOME_TOURS);
+
+  const cards = [1, 2, 3].map((n) => ({
+    title: textOrNull(st[`explainer_${n}_title`]),
+    text: textOrNull(st[`explainer_${n}_text`]),
+    image: imageOrNull(st[`explainer_${n}_image`], { alt: '' })
+  })).filter((c) => c.title || c.text || c.image);
+  const explainer = st.explainer_title || st.explainer_text || cards.length
+    ? { title: textOrNull(st.explainer_title), text: textOrNull(st.explainer_text), cards }
+    : null;
+
+  const hero = {
+    video: textOrNull(st.home_hero_video),
+    poster: imageOrNull(st.home_hero_poster || st.home_hero_image, { alt: '' }),
+    image: imageOrNull(st.home_hero_image || st.home_hero_poster, { alt: '' }),
+    headline: textOrNull(st.home_hero_headline),
+    subline: textOrNull(st.home_hero_subline),
+    ctaPrimary: textOrNull(st.home_cta_primary),
+    ctaSecondary: textOrNull(st.home_cta_secondary)
+  };
+  const hasHero = !!(hero.video || hero.poster || hero.image || hero.headline);
+
+  return {
+    hero: hasHero ? hero : null,
+    upcoming,
+    explainer,
+    places: db.listActivePlaces(MAX_HOME_PLACES).map(placeCardView),
+    hostBand: st.become_host_title || st.become_host_text
+      ? { title: textOrNull(st.become_host_title), text: textOrNull(st.become_host_text), cta: textOrNull(st.become_host_cta) }
+      : null
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Experiences listing (filters come from the query string, validated against what exists)
+// ---------------------------------------------------------------------------------------------
+const MONTH_PARAM = /^\d{4}-\d{2}$/;
+
+/**
+ * GET /api/pages/experiences?region=&type=&month=&open=1
+ * Filtering is done in memory over the loaded cards: no query text is ever built from the input,
+ * and a value that is not one of the options (an unknown region, a month nobody runs) is ignored.
+ */
+export function buildExperiencesPage(params = new URLSearchParams()) {
+  const cards = db.listTourCardRows().map(cardView);
+
+  // options come from what exists, so a visitor can never pick a filter that has no results by construction
+  const regions = REGION_KEYS.filter((k) => cards.some((c) => c.region && c.region.key === k)).map((k) => regionInfo(k));
+  const types = [...new Set(cards.map((c) => c.experienceType).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fa'));
+  const monthLabels = new Map();
+  for (const c of cards) for (const e of c.editions) {
+    const key = jalaliMonthKey(e.startsOn);
+    if (key && !monthLabels.has(key)) monthLabels.set(key, jalaliMonthLabel(e.startsOn));
+  }
+  const months = [...monthLabels.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, label]) => ({ key, label }));
+  const hasEditions = cards.some((c) => c.editions.length);
+
+  const pick = (name) => { const v = params.get(name); return typeof v === 'string' ? v : ''; };
+  const region = regions.some((r) => r.key === pick('region')) ? pick('region') : null;
+  const type = types.includes(pick('type')) ? pick('type') : null;
+  const month = MONTH_PARAM.test(pick('month')) && monthLabels.has(pick('month')) ? pick('month') : null;
+  const openOnly = pick('open') === '1' && hasEditions;
+
+  const shown = cards.filter((c) => {
+    if (region && !(c.region && c.region.key === region)) return false;
+    if (type && c.experienceType !== type) return false;
+    const eds = c.editions.filter((e) => !openOnly || e.open);
+    if (openOnly && !eds.length) return false;
+    if (month && !eds.some((e) => jalaliMonthKey(e.startsOn) === month)) return false;
+    return true;
+  });
+  const openEditions = shown.reduce((n, c) => n + c.editions.filter((e) => e.open).length, 0);
+
+  return {
+    filters: { region, type, month, open: openOnly },
+    options: { regions, types, months, canFilterOpen: hasEditions },
+    active: !!(region || type || month || openOnly),
+    total: cards.length,
+    count: shown.length,
+    openEditions,
+    cards: shown
+  };
+}
+
+/** GET /api/pages/places */
+export function buildPlacesPage() {
+  return { places: db.listActivePlaces().map(placeCardView) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Info pages (/about /terms /refund /privacy): null (-> 404) while the body is empty
+// ---------------------------------------------------------------------------------------------
+export function buildInfoPage(key) {
+  const def = INFO_PAGES.find((p) => p.key === key);
+  if (!def) return null;
+  const paragraphs = infoParagraphs(getSettings()[def.setting]);
+  return paragraphs.length ? { key: def.key, path: def.path, title: def.label, paragraphs } : null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Place / person profile (/host/<slug>)
+// ---------------------------------------------------------------------------------------------
+/** GET /api/pages/host/:slug — public projection, built field by field. */
+export function buildHostPage(slug) {
+  const h = db.getHostForPage(slug);
+  if (!h) return null;
+  const isPlace = h.kind === 'place';
+  const name = h.displayName;
+
+  const gallery = h.gallery
+    .map((m) => describeImage(m.photoPath, { alt: m.alt || m.caption || name, caption: m.caption || null }))
+    .filter(Boolean);
+  const experiences = db.listTourCardRows({ hostId: h.id }).map(cardView);
+
+  const base = {
+    slug: h.slug,
+    kind: isPlace ? 'place' : 'person',
+    name,
+    verified: !!h.verified,
+    bio: h.bio || null,
+    instagram: h.instagramHandle || null,
+    photo: imageOrNull(h.photoPath, { alt: name }),
+    gallery,
+    experiences,
+    reviews: {
+      count: h.reviewSummary.count,
+      average: h.reviewSummary.average,
+      items: h.reviews.map((r) => ({
+        displayName: r.displayName, rating: r.rating, body: r.body, tourTitle: r.tourTitle, createdAt: String(r.createdAt || '').slice(0, 10)
+      }))
+    }
+  };
+  if (!isPlace) return { ...base, expertise: h.expertise || null, credentials: h.credentials || null };
+
+  const loc = h.approximateLocation; // already rounded to two decimals by publicHostFields()
+  return {
+    ...base,
+    region: regionInfo(h.regionKey),
+    regionText: h.region || null,
+    lodgingType: h.lodgingType || null,
+    capacity: h.capacityGuests || null,
+    amenities: Array.isArray(h.amenities) ? h.amenities : [],
+    houseRules: h.houseRules || null,
+    area: loc ? { lat: loc.lat, lng: loc.lng } : null
+  };
+}
+
