@@ -1,11 +1,14 @@
 import { readFileSync, statSync } from 'node:fs';
 import { getTourDetail } from './db.js';
+import { renderTourDocument, sendDocument } from './render.js';
 
-// Crawlers (Instagram, Telegram, WhatsApp) don't run JS, so /tour/<slug> needs
-// its title and Open Graph tags in the HTML itself. When FRONTEND_INDEX_FILE
-// points at the deployed index.html, this serves that file with the per-tour
-// tags filled in; the SPA then boots and renders the page exactly as before.
-// Unset, the route does nothing and nginx's plain index.html fallback applies.
+// /tour/<slug> is rendered by the server as a full HTML page (render.js: view
+// model -> shared templates), so crawlers and visitors without JavaScript get
+// the real content, title and Open Graph tags.
+//
+// If rendering ever throws, and FRONTEND_INDEX_FILE points at the deployed
+// index.html, the previous mechanism below is the safety net: that file is
+// served with the per-tour tags filled in and the SPA renders the page itself.
 
 const INDEX_FILE = (process.env.FRONTEND_INDEX_FILE || '').trim();
 const SITE_ORIGIN = (process.env.SITE_ORIGIN || 'https://chaacme.ir').trim().replace(/\/+$/, '');
@@ -68,10 +71,22 @@ function readShell() {
 
 /** Returns true when it handled the request. */
 export function handleTourPage(req, res, url) {
-  if (!INDEX_FILE || (req.method !== 'GET' && req.method !== 'HEAD')) return false;
+  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
   if (!url.pathname.startsWith('/tour/')) return false;
   const m = TOUR_PATH_RE.exec(url.pathname);
 
+  try {
+    sendDocument(req, res, renderTourDocument(m ? m[1] : null));
+    return true;
+  } catch (err) {
+    console.error('[chaacme-platform] tour page render failed', err);
+    if (res.headersSent) { res.end(); return true; }
+  }
+  return serveShellFallback(req, res, m);
+}
+
+function serveShellFallback(req, res, m) {
+  if (!INDEX_FILE) return false;
   let shell;
   try { shell = readShell(); } catch { return false; } // unreadable file: let nginx's fallback serve it
 

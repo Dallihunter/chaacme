@@ -143,6 +143,14 @@
   .istage-photos{ grid-column:1/-1; border-top:1px dashed var(--line-soft); padding-top:12px; margin-top:2px; }
   .istage-photos > label{ margin-bottom:8px; }
 
+  .iphoto .ialt, .gphoto .ialt{ display:block; width:100%; border:none; border-top:1px solid var(--line-soft); padding:5px 6px; font-size:11px; }
+  .gphoto{ cursor:grab; }
+  .gphoto.dragging{ opacity:.4; }
+  .gphoto.dragover{ outline:2px solid var(--ink); }
+  .gphoto .cover-flag{ position:absolute; top:6px; left:6px; background:#000; color:#fff; font-size:10px; padding:2px 6px; }
+  .hl-image{ grid-column:1/-1; border-top:1px dashed var(--line-soft); padding-top:12px; display:grid; gap:8px; }
+  .hl-image img{ width:120px; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--paper); }
+
   /* ---- hosts (organizers) ---- */
   .host-photo-box{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
   .host-photo{ width:120px; height:120px; border:1px solid var(--line-soft); background:var(--paper); display:flex; align-items:center; justify-content:center; flex:none; }
@@ -489,10 +497,21 @@
   // ---------------------------------------------------------------------
   // Editor — shared for create + edit
   // ---------------------------------------------------------------------
+  const MAX_ITIN_IMAGES = 6;
+  const REGIONS = [['', '— none —'], ['desert', 'Desert (کویر)'], ['forest', 'Forest (جنگل شمال)'], ['sea', 'Island / sea (جزیره)']];
+  function limitedField(label, id, value, max, area){
+    const v = value == null ? '' : value;
+    return '<div class="field"><label>' + esc(label) + ' <span style="color:var(--ink-faint)">(max ' + max + ')</span></label>' +
+      (area ? '<textarea id="' + id + '" maxlength="' + max + '">' + esc(v) + '</textarea>'
+            : '<input type="text" id="' + id + '" maxlength="' + max + '" value="' + esc(v) + '">') + '</div>';
+  }
+  function emptyTourHighlight(){ return { name:'', description:'', image:'', imageAlt:'', imageCaption:'' }; }
+
   function emptyTour(){
     return {
       id: '', name: '', status: 'draft', featured: false, ordinal: 0,
       subtitleEn: '', tags: '', duration: '', price: '', description: '', included: '',
+      story: '', region: '', experienceType: '', level: '', bringList: '', seoDescription: '',
       photoPath: '', dayLabel: '', monthLabel: '',
       highlights: [], itinerary: [], reviewCategories: [],
       gallery: [], galleryPhotos: [], galleryMedia: []
@@ -512,7 +531,15 @@
         const data = await api('/admin/tours/' + encodeURIComponent(id));
         tour = data.tour;
         if (!Array.isArray(tour.galleryMedia)) tour.galleryMedia = [];
-        (tour.itinerary || []).forEach(function(it){ if (!Array.isArray(it.photos)) it.photos = []; });
+        (tour.itinerary || []).forEach(function(it){
+          if (!Array.isArray(it.photos)) it.photos = [];
+          if (!Array.isArray(it.images)) it.images = [];
+          // Older rows keep their photos in photoPath/photos; fold them into images (which carry alt + caption).
+          if (!it.images.length && (it.photoPath || it.photos.length)){
+            it.images = [it.photoPath].concat(it.photos).filter(Boolean).map(function(path){ return { path: path, alt: '', caption: '' }; }).slice(0, MAX_ITIN_IMAGES);
+            it.photoPath = ''; it.photos = [];
+          }
+        });
       } catch(e){
         if (e.status === 401){ state.admin = null; renderLogin(); return; }
         toast('Could not load tour', true);
@@ -562,7 +589,22 @@
         '<div class="field checkline"><input type="checkbox" id="f_featured"' + (t.featured ? ' checked' : '') + '>' +
           '<label for="f_featured">Featured (shown on the homepage — also needs Card day/month label above, or it won’t appear there)</label></div>' +
         '<div class="field"><label>Description</label><textarea id="f_description">' + esc(t.description) + '</textarea></div>' +
-        '<div class="field"><label>What\'s included</label><textarea id="f_included">' + esc(t.included) + '</textarea></div>' +
+      '</section>' +
+
+      // What the public experience page (/tour/<slug>) shows. Every block stays hidden until its field is filled.
+      '<section class="panel"><h2>Experience page</h2>' +
+        '<div class="grid3">' +
+          '<div class="field"><label>Region (stamp colour)</label><select id="f_region">' +
+            REGIONS.map(function(r){ return '<option value="' + r[0] + '"' + (r[0] === (t.region || '') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select></div>' +
+          limitedField('Experience type', 'f_experienceType', t.experienceType, 60) +
+          limitedField('Level', 'f_level', t.level, 60) +
+        '</div>' +
+        limitedField('Story', 'f_story', t.story, 1500, true) +
+        '<div class="grid2">' +
+          limitedField('What\'s included (separate items with ·)', 'f_included', t.included, 600, true) +
+          limitedField('What to bring', 'f_bringList', t.bringList, 600, true) +
+        '</div>' +
+        limitedField('SEO description (search + link previews; empty = story)', 'f_seoDescription', t.seoDescription, 160, true) +
       '</section>' +
 
       '<section class="panel"><h2>Highlights</h2>' +
@@ -611,22 +653,18 @@
 
     if (!ed.isNew) { initTourHosts(ed.tour.id); initEditions(ed.tour.id); }
 
-    renderRepeat('highlightsList', ed.tour.highlights, [
-      { key:'name', label:'Name' }, { key:'description', label:'Description', area:true }
-    ]);
+    renderHighlightList(ed);
     renderItineraryList(ed);
     renderRepeat('categoriesList', ed.tour.reviewCategories, [
       { key:'label', label:'Label' }, { key:'score', label:'Score (0-5)', number:true }
     ]);
 
     document.getElementById('addHighlight').addEventListener('click', function(){
-      ed.tour.highlights.push({ name:'', description:'' });
-      renderRepeat('highlightsList', ed.tour.highlights, [
-        { key:'name', label:'Name' }, { key:'description', label:'Description', area:true }
-      ]);
+      ed.tour.highlights.push(emptyTourHighlight());
+      renderHighlightList(ed);
     });
     document.getElementById('addStep').addEventListener('click', function(){
-      ed.tour.itinerary.push({ time:'', title:'', description:'', photoLabel:'', photoPath:'', photos:[] });
+      ed.tour.itinerary.push({ time:'', title:'', description:'', photoLabel:'', photoPath:'', photos:[], images:[] });
       renderItineraryList(ed);
     });
     document.getElementById('addCategory').addEventListener('click', function(){
@@ -723,6 +761,56 @@
     });
   }
 
+  // ---- highlights: name + description + optional image (with alt text and caption).
+  // Saved with the tour (replace-all), so removing an image only edits local state. ----
+  function renderHighlightList(ed){
+    const el = document.getElementById('highlightsList');
+    const items = ed.tour.highlights;
+    if (!items.length){ el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">None yet.</p>'; return; }
+    el.innerHTML = items.map(function(h, i){
+      const img = h.image
+        ? '<div class="hl-image"><img src="' + esc(h.image) + '" alt="" onerror="this.style.opacity=0.15">' +
+            '<div class="field" style="margin:0"><label>Alt text (max 160)</label><input type="text" maxlength="160" data-i="' + i + '" data-k="imageAlt" value="' + esc(h.imageAlt || '') + '"></div>' +
+            '<div class="field" style="margin:0"><label>Caption (max 120)</label><input type="text" maxlength="120" data-i="' + i + '" data-k="imageCaption" value="' + esc(h.imageCaption || '') + '"></div>' +
+            '<div><button type="button" class="btn small ghost hlImgDel" data-i="' + i + '">Remove image</button></div></div>'
+        : '<div class="hl-image upload-row"><input type="file" class="hlFile" data-i="' + i + '" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
+            '<button type="button" class="btn small ghost hlImgAdd" data-i="' + i + '">Add image</button></div>';
+      return '<div class="repeat-row" style="grid-template-columns:repeat(2,1fr);">' +
+        '<div class="field" style="margin-bottom:0;"><label>Name</label><input type="text" data-i="' + i + '" data-k="name" value="' + esc(h.name || '') + '"></div>' +
+        '<div class="field" style="margin-bottom:0;"><label>Description</label><textarea data-i="' + i + '" data-k="description" style="min-height:50px;">' + esc(h.description || '') + '</textarea></div>' +
+        img + '<button type="button" class="btn small ghost rm" data-i="' + i + '">✕</button></div>';
+    }).join('');
+    el.querySelectorAll('input[data-k], textarea[data-k]').forEach(function(inp){
+      inp.addEventListener('input', function(){ items[Number(inp.dataset.i)][inp.dataset.k] = inp.value; });
+    });
+    el.querySelectorAll('.rm').forEach(function(btn){
+      btn.addEventListener('click', function(){ items.splice(Number(btn.dataset.i), 1); renderHighlightList(ed); });
+    });
+    el.querySelectorAll('.hlImgDel').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const h = items[Number(btn.dataset.i)];
+        h.image = ''; h.imageAlt = ''; h.imageCaption = '';
+        renderHighlightList(ed);
+      });
+    });
+    el.querySelectorAll('.hlImgAdd').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const i = Number(btn.dataset.i);
+        const fileInput = el.querySelector('.hlFile[data-i="' + i + '"]');
+        if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+        btn.disabled = true;
+        try {
+          const tourId = document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id;
+          items[i].image = await uploadFile(fileInput.files[0], tourId);
+          renderHighlightList(ed);
+          toast('Image uploaded — add alt text, then click Save changes');
+        } catch(e){
+          toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
+        } finally { btn.disabled = false; }
+      });
+    });
+  }
+
   // ---- itinerary (own renderer, not the generic renderRepeat: each stage
   // also carries a multi-photo array using the same /admin/upload endpoint
   // and magic-byte/5MB validation as the gallery, just without gallery's
@@ -750,19 +838,23 @@
           : '<input type="text" data-i="' + i + '" data-k="' + f.key + '" value="' + esc(val) + '">';
         return '<div class="field" style="margin-bottom:0;"><label>' + esc(f.label) + '</label>' + inputHtml + '</div>';
       }).join('');
-      const photos = (item.photos || []).map(function(path, pi){
+      const images = (item.images || []);
+      const photos = images.map(function(img, pi){
         return '<div class="iphoto" data-si="' + i + '" data-pi="' + pi + '">' +
-          '<img src="' + esc(path) + '" onerror="this.style.opacity=0.15" alt="">' +
+          '<img src="' + esc(img.path) + '" onerror="this.style.opacity=0.15" alt="">' +
           '<button type="button" class="iPhotoDel" title="Remove">✕</button>' +
+          '<input type="text" class="ialt" maxlength="160" placeholder="Alt text" data-si="' + i + '" data-pi="' + pi + '" data-ik="alt" value="' + esc(img.alt || '') + '">' +
+          '<input type="text" class="ialt" maxlength="120" placeholder="Caption" data-si="' + i + '" data-pi="' + pi + '" data-ik="caption" value="' + esc(img.caption || '') + '">' +
         '</div>';
       }).join('');
       const photoBlock = '<div class="istage-photos">' +
-        '<label>Photos</label>' +
+        '<label>Images (' + images.length + ' of ' + MAX_ITIN_IMAGES + ')</label>' +
         '<div class="iphoto-grid">' + photos + '</div>' +
+        (images.length >= MAX_ITIN_IMAGES ? '' :
         '<div class="upload-row">' +
           '<input type="file" class="iPhotoFile" data-i="' + i + '" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-          '<button type="button" class="btn small ghost iPhotoAdd" data-i="' + i + '">Add photo</button>' +
-        '</div>' +
+          '<button type="button" class="btn small ghost iPhotoAdd" data-i="' + i + '">Add image</button>' +
+        '</div>') +
       '</div>';
       return '<div class="repeat-row" style="grid-template-columns:repeat(' + Math.min(ITINERARY_FIELDS.length,3) + ',1fr);">' +
         cols + photoBlock + '<button type="button" class="btn small ghost rm" data-i="' + i + '">✕</button></div>';
@@ -784,8 +876,13 @@
       btn.addEventListener('click', function(){
         const cell = btn.closest('.iphoto');
         const si = Number(cell.dataset.si), pi = Number(cell.dataset.pi);
-        items[si].photos.splice(pi, 1);
+        items[si].images.splice(pi, 1);
         renderItineraryList(ed);
+      });
+    });
+    el.querySelectorAll('input[data-ik]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        items[Number(inp.dataset.si)].images[Number(inp.dataset.pi)][inp.dataset.ik] = inp.value;
       });
     });
     el.querySelectorAll('.iPhotoAdd').forEach(function(btn){
@@ -797,9 +894,9 @@
         try {
           const tourId = document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id;
           const path = await uploadFile(fileInput.files[0], tourId);
-          items[i].photos.push(path);
+          items[i].images.push({ path: path, alt: '', caption: '' });
           renderItineraryList(ed);
-          toast('Photo uploaded — click Save changes to attach it to this stage');
+          toast('Image uploaded — add alt text, then click Save changes');
         } catch(e){
           toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
         } finally { btn.disabled = false; }
@@ -810,18 +907,22 @@
   // ---- gallery (edit mode only — needs real tour_media ids) ----
   function renderGallerySection(t){
     const photos = (t.galleryMedia || []).map(function(m, i){
-      return '<div class="gphoto" data-id="' + m.id + '">' +
-        '<img src="' + esc(m.photoPath || '') + '" onerror="this.style.opacity=0.15" alt="">' +
+      return '<div class="gphoto" data-id="' + m.id + '" draggable="true">' +
+        (i === 0 ? '<span class="cover-flag">Cover</span>' : '') +
+        '<img src="' + esc(m.photoPath || '') + '" onerror="this.style.opacity=0.15" alt="" draggable="false">' +
         '<div class="gctrl">' +
           (i > 0 ? '<button type="button" class="gUp" title="Move earlier">↑</button>' : '') +
           (i < t.galleryMedia.length - 1 ? '<button type="button" class="gDown" title="Move later">↓</button>' : '') +
           '<button type="button" class="gDel" title="Delete">✕</button>' +
         '</div>' +
         '<div class="gcap">' + esc(m.label || '(no label)') + '</div>' +
+        '<input type="text" class="ialt gAlt" maxlength="160" placeholder="Alt text" value="' + esc(m.alt || '') + '">' +
+        '<input type="text" class="ialt gCaption" maxlength="120" placeholder="Caption" value="' + esc(m.caption || '') + '">' +
       '</div>';
     }).join('');
 
-    return '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-faint);font-size:13px;">No photos yet.</p>') + '</div>' +
+    return '<p style="color:var(--ink-faint);font-size:12px;margin-bottom:10px;">Drag photos to reorder — the first one is the cover of the experience page. Alt text is saved when you leave the field.</p>' +
+      '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-faint);font-size:13px;">No photos yet.</p>') + '</div>' +
       '<div class="upload-row">' +
         '<div class="field"><label>New photo label</label><input type="text" id="newPhotoLabel" placeholder="e.g. Sunrise departure"></div>' +
         '<input type="file" id="newPhotoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
@@ -850,6 +951,42 @@
       });
     });
     document.getElementById('addPhotoBtn').addEventListener('click', function(){ addGalleryPhoto(ed); });
+
+    // Alt text / caption: one PUT per image when its field loses focus.
+    grid.querySelectorAll('.gphoto').forEach(function(cell){
+      const id = Number(cell.dataset.id);
+      ['.gAlt', '.gCaption'].forEach(function(sel){
+        cell.querySelector(sel).addEventListener('change', async function(){
+          try {
+            await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/' + id, { method:'PUT',
+              body:{ alt: cell.querySelector('.gAlt').value, caption: cell.querySelector('.gCaption').value } });
+            toast('Saved');
+          } catch(e){ toast('Could not save alt text / caption', true); }
+        });
+      });
+    });
+
+    // Drag to reorder (the arrow buttons remain for keyboard use).
+    let dragId = null;
+    grid.querySelectorAll('.gphoto').forEach(function(cell){
+      cell.addEventListener('dragstart', function(ev){ dragId = Number(cell.dataset.id); cell.classList.add('dragging'); ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(dragId)); });
+      cell.addEventListener('dragend', function(){ cell.classList.remove('dragging'); grid.querySelectorAll('.dragover').forEach(function(c){ c.classList.remove('dragover'); }); });
+      cell.addEventListener('dragover', function(ev){ if (dragId == null) return; ev.preventDefault(); cell.classList.add('dragover'); });
+      cell.addEventListener('dragleave', function(){ cell.classList.remove('dragover'); });
+      cell.addEventListener('drop', async function(ev){
+        ev.preventDefault();
+        const targetId = Number(cell.dataset.id);
+        if (dragId == null || dragId === targetId) return;
+        const ids = ed.tour.galleryMedia.map(function(m){ return m.id; });
+        ids.splice(ids.indexOf(dragId), 1);
+        ids.splice(ids.indexOf(targetId), 0, dragId);
+        dragId = null;
+        try {
+          await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/reorder', { method:'PUT', body:{ order: ids } });
+          await refreshGalleryFull(ed);
+        } catch(e){ toast('Reorder failed', true); }
+      });
+    });
   }
 
   async function deleteGalleryPhoto(ed, mediaId){
@@ -1014,6 +1151,8 @@
       dayLabel: val('f_dayLabel'), monthLabel: val('f_monthLabel'),
       photoPath: val('coverPath'), featured: document.getElementById('f_featured').checked,
       description: val('f_description'), included: val('f_included'),
+      story: val('f_story'), region: val('f_region'), experienceType: val('f_experienceType'),
+      level: val('f_level'), bringList: val('f_bringList'), seoDescription: val('f_seoDescription'),
       highlights: t.highlights.filter(function(h){ return h.name; }),
       itinerary: t.itinerary.filter(function(s){ return s.title; }),
       reviewCategories: t.reviewCategories.filter(function(c){ return c.label; })
@@ -1063,7 +1202,7 @@
       }
     } catch(e){
       if (e.status === 409) msg.textContent = 'That tour ID is already taken.';
-      else if (e.status === 422) msg.textContent = 'Please check the highlighted fields.';
+      else if (e.status === 422) msg.textContent = 'Please check these fields: ' + Object.keys((e.body && e.body.fields) || {}).join(', ');
       else msg.textContent = 'Save failed. Try again.';
     } finally {
       btn.disabled = false;

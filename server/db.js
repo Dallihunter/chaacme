@@ -556,17 +556,36 @@ export function seed({ force = false } = {}) {
   return { seeded: true, tours: seedData.tours.length };
 }
 
-function tourDates(tourId) {
+export function tourDates(tourId) {
   const today = todayIso();
   return db.prepare(
     'SELECT * FROM tour_dates WHERE tour_id = ? ORDER BY starts_on IS NULL, starts_on, id'
-  ).all(tourId).map((d) => ({
-    id: d.id,
-    label: d.label,
-    startsOn: d.starts_on,
-    endsOn: d.ends_on,
-    ...dateAvailability(d.capacity, d.seats_taken, d.closed, isPastEdition(d, today))
-  }));
+  ).all(tourId).map((d) => {
+    const past = isPastEdition(d, today);
+    return {
+      id: d.id,
+      label: d.label,
+      startsOn: d.starts_on,
+      endsOn: d.ends_on,
+      capacity: d.capacity,
+      past,
+      ...dateAvailability(d.capacity, d.seats_taken, d.closed, past)
+    };
+  });
+}
+
+/**
+ * Other publicly visible tours for the "more experiences" row: published only,
+ * same region first, then catalog order. Returns raw rows plus the first gallery
+ * image path (the cover), which is what the page shows.
+ */
+export function listRelatedTours(excludeId, region, limit = 3) {
+  const rows = db.prepare(
+    `SELECT t.*, (SELECT image_path FROM tour_media m WHERE m.tour_id = t.id AND m.image_path IS NOT NULL ORDER BY m.ordinal LIMIT 1) AS cover_path
+     FROM tours t WHERE t.status = 'published' AND t.id != ?
+     ORDER BY (t.region IS NOT NULL AND t.region = ?) DESC, t.ordinal LIMIT ?`
+  ).all(excludeId, region ?? '', limit);
+  return rows;
 }
 
 /** Public catalog listing: published + coming_soon tours, ordered for display. */
@@ -591,25 +610,34 @@ export function listTours() {
   });
 }
 
+function parseJsonList(raw) {
+  if (!raw) return [];
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
 function tourDetailFields(t) {
   const id = t.id;
-  const media = db.prepare('SELECT id, label, image_path FROM tour_media WHERE tour_id = ? ORDER BY ordinal').all(id);
+  const media = db.prepare('SELECT id, label, image_path, alt, caption FROM tour_media WHERE tour_id = ? ORDER BY ordinal').all(id);
   return {
     id: t.id, status: t.status, active: !!t.featured, featured: !!t.featured, name: t.name,
     subtitleEn: t.subtitle_en, tags: t.tags, duration: t.duration, price: t.price,
     priceLine: formatPriceLine(t.price), description: t.description, included: t.included,
     photoPath: t.photo_path,
+    story: t.story, region: t.region, experienceType: t.experience_type, level: t.level,
+    bringList: t.bring_list, seoDescription: t.seo_description,
     date: (t.day_label && t.month_label) ? { day: t.day_label, month: t.month_label } : null,
     gallery: media.map((r) => r.label),
     galleryPhotos: media.map((r) => r.image_path).filter(Boolean),
     // Same data as gallery/galleryPhotos, but carrying each row's stable id
     // so the admin UI can target one photo for delete/reorder without
     // relying on array position (which the replace-array PUT would shift).
-    galleryMedia: media.map((r) => ({ id: r.id, label: r.label, photoPath: r.image_path })),
-    highlights: db.prepare('SELECT name, description FROM tour_highlights WHERE tour_id = ? ORDER BY ordinal').all(id),
+    galleryMedia: media.map((r) => ({ id: r.id, label: r.label, photoPath: r.image_path, alt: r.alt, caption: r.caption })),
+    highlights: db.prepare(
+      'SELECT name, description, image_path AS image, image_alt AS imageAlt, image_caption AS imageCaption FROM tour_highlights WHERE tour_id = ? ORDER BY ordinal'
+    ).all(id),
     itinerary: db.prepare(
-      'SELECT time_label AS time, title, description, photo_label AS photoLabel, photo_path AS photoPath, photos FROM tour_itinerary WHERE tour_id = ? ORDER BY ordinal'
-    ).all(id).map((it) => ({ ...it, photos: it.photos ? JSON.parse(it.photos) : [] })),
+      'SELECT time_label AS time, title, description, photo_label AS photoLabel, photo_path AS photoPath, photos, images FROM tour_itinerary WHERE tour_id = ? ORDER BY ordinal'
+    ).all(id).map((it) => ({ ...it, photos: parseJsonList(it.photos), images: parseJsonList(it.images) })),
     reviewCategories: db.prepare(
       'SELECT label, score FROM tour_review_categories WHERE tour_id = ? ORDER BY ordinal'
     ).all(id),
@@ -652,26 +680,37 @@ export function listToursAdmin() {
 function replaceTourChildren(tourId, data) {
   if ('highlights' in data) {
     db.prepare('DELETE FROM tour_highlights WHERE tour_id = ?').run(tourId);
-    const put = db.prepare('INSERT INTO tour_highlights (tour_id, ordinal, name, description) VALUES (?, ?, ?, ?)');
-    data.highlights.forEach((h, i) => put.run(tourId, i, h.name, h.description ?? h.desc ?? null));
+    const put = db.prepare(
+      'INSERT INTO tour_highlights (tour_id, ordinal, name, description, image_path, image_alt, image_caption) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+    data.highlights.forEach((h, i) => put.run(tourId, i, h.name, h.description ?? h.desc ?? null,
+      h.image ?? null, h.imageAlt ?? null, h.imageCaption ?? null));
   }
   if ('itinerary' in data) {
     db.prepare('DELETE FROM tour_itinerary WHERE tour_id = ?').run(tourId);
     const put = db.prepare(
-      'INSERT INTO tour_itinerary (tour_id, ordinal, time_label, title, description, photo_label, photo_path, photos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO tour_itinerary (tour_id, ordinal, time_label, title, description, photo_label, photo_path, photos, images) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     data.itinerary.forEach((it, i) =>
       put.run(tourId, i, it.time ?? null, it.title, it.description ?? it.text ?? null,
         it.photoLabel ?? null, it.photo ?? it.photoPath ?? null,
-        JSON.stringify(Array.isArray(it.photos) ? it.photos : [])));
+        JSON.stringify(Array.isArray(it.photos) ? it.photos : []),
+        Array.isArray(it.images) && it.images.length ? JSON.stringify(it.images) : null));
   }
   if ('gallery' in data || 'galleryImages' in data || 'galleryPhotos' in data) {
+    // alt text / captions belong to the image, not its position: keep them across a replace-all
+    // unless the caller sends galleryAlt / galleryCaption arrays of its own.
+    const kept = new Map(db.prepare('SELECT image_path, alt, caption FROM tour_media WHERE tour_id = ?').all(tourId)
+      .filter((r) => r.image_path).map((r) => [r.image_path, r]));
     db.prepare('DELETE FROM tour_media WHERE tour_id = ?').run(tourId);
     const labels = data.galleryImages ?? data.gallery ?? [];
     const photos = data.galleryPhotos ?? [];
-    const put = db.prepare('INSERT INTO tour_media (tour_id, ordinal, label, image_path) VALUES (?, ?, ?, ?)');
+    const put = db.prepare('INSERT INTO tour_media (tour_id, ordinal, label, image_path, alt, caption) VALUES (?, ?, ?, ?, ?, ?)');
     for (let i = 0; i < Math.max(labels.length, photos.length); i++) {
-      put.run(tourId, i, labels[i] ?? null, photos[i] ?? null);
+      const old = photos[i] ? kept.get(photos[i]) : null;
+      const alt = Array.isArray(data.galleryAlt) ? data.galleryAlt[i] : old?.alt;
+      const caption = Array.isArray(data.galleryCaption) ? data.galleryCaption[i] : old?.caption;
+      put.run(tourId, i, labels[i] ?? null, photos[i] ?? null, alt ?? null, caption ?? null);
     }
   }
   if ('reviewCategories' in data) {
@@ -685,11 +724,13 @@ export function createTour(t) {
   db.exec('BEGIN');
   try {
     db.prepare(
-      `INSERT INTO tours (id, status, featured, ordinal, name, subtitle_en, tags, duration, price, description, included, photo_path, day_label, month_label)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tours (id, status, featured, ordinal, name, subtitle_en, tags, duration, price, description, included, photo_path, day_label, month_label,
+                          story, region, experience_type, level, bring_list, seo_description)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(t.id, t.status || 'draft', t.featured ? 1 : 0, t.ordinal ?? 0, t.name, t.subtitleEn ?? null,
       t.tags ?? null, t.duration ?? null, t.price ?? null, t.description ?? null, t.included ?? null,
-      t.photoPath ?? null, t.dayLabel ?? null, t.monthLabel ?? null);
+      t.photoPath ?? null, t.dayLabel ?? null, t.monthLabel ?? null,
+      t.story ?? null, t.region ?? null, t.experienceType ?? null, t.level ?? null, t.bringList ?? null, t.seoDescription ?? null);
     replaceTourChildren(t.id, t);
     db.exec('COMMIT');
   } catch (err) {
@@ -702,7 +743,9 @@ export function createTour(t) {
 const TOUR_FIELDS = {
   status: 'status', featured: 'featured', ordinal: 'ordinal', name: 'name', subtitleEn: 'subtitle_en',
   tags: 'tags', duration: 'duration', price: 'price', description: 'description', included: 'included',
-  photoPath: 'photo_path', dayLabel: 'day_label', monthLabel: 'month_label'
+  photoPath: 'photo_path', dayLabel: 'day_label', monthLabel: 'month_label',
+  story: 'story', region: 'region', experienceType: 'experience_type', level: 'level',
+  bringList: 'bring_list', seoDescription: 'seo_description'
 };
 
 export function updateTour(id, patch) {
@@ -789,7 +832,19 @@ export function reorderTourMedia(tourId, orderIds) {
     db.exec('ROLLBACK');
     throw err;
   }
-  return db.prepare('SELECT id, label, image_path FROM tour_media WHERE tour_id = ? ORDER BY ordinal').all(tourId);
+  return db.prepare('SELECT id, label, image_path, alt, caption FROM tour_media WHERE tour_id = ? ORDER BY ordinal').all(tourId);
+}
+
+/** Sets one gallery image's alt text / caption. Returns the updated row, or undefined if that image is not in this tour. */
+export function updateTourMediaMeta(tourId, mediaId, { alt, caption }) {
+  const row = db.prepare('SELECT id FROM tour_media WHERE id = ? AND tour_id = ?').get(mediaId, tourId);
+  if (!row) return undefined;
+  const sets = [];
+  const args = [];
+  if (alt !== undefined) { sets.push('alt = ?'); args.push(alt); }
+  if (caption !== undefined) { sets.push('caption = ?'); args.push(caption); }
+  if (sets.length) db.prepare(`UPDATE tour_media SET ${sets.join(', ')} WHERE id = ?`).run(...args, mediaId);
+  return db.prepare('SELECT id, label, image_path, alt, caption FROM tour_media WHERE id = ?').get(mediaId);
 }
 
 /** Admin view of a tour's editions: raw capacity state plus the ISO dates and a computed phase. */

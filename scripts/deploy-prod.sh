@@ -324,8 +324,8 @@ run_post_checks() {
   done <<< "$slugs"
   [ "$n" -gt 0 ] || log "  info no active host profile to scan"
 
-  # Per-tour link previews (server-side Open Graph tags) are deliberately OFF:
-  # /tour/<id> is the plain app shell served by nginx's SPA fallback.
+  # /tour/<id> is rendered by the app as full HTML (server/render.js) once nginx proxies /tour/ to it
+  # (deploy/nginx-tour.conf.example); until then nginx's SPA fallback serves the plain app shell.
   local tid
   tid="$(printf '%s' "$tours_json" | node -e '
     let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
@@ -335,9 +335,11 @@ run_post_checks() {
   if [ -n "$tid" ]; then
     expect "GET /tour/$tid is 200" "$(site "/tour/$tid")" 200 || rc=1
     if [ "$(site_body "/tour/$tid" | sha256sum)" = "$(site_body / | sha256sum)" ]; then
-      log "  ok   /tour/$tid serves the plain app shell (link-preview pages are off)"
+      log "  info /tour/$tid serves the plain app shell (server-rendered tour pages are not routed to the app yet)"
+    elif site_body "/tour/$tid" | grep -q 'class="tp-title"'; then
+      log "  ok   /tour/$tid is server-rendered"
     else
-      log "  WARN /tour/$tid is not the plain app shell -- server-rendered link previews appear to be ON"
+      log "  WARN /tour/$tid is neither the plain app shell nor the server-rendered page"
     fi
   fi
 
