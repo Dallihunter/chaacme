@@ -80,23 +80,19 @@ adminAuth.upsertAdminUser('root', 'pw-pw-pw-pw-1');
 const tour = db.listTours().find((t) => !t.comingSoon);
 const edition = db.listEditionsAdmin(tour.id)[0];
 
-const indexHtml = readFileSync(repo + '/deploy/index.html', 'utf8');
-const adminHtml = readFileSync(repo + '/deploy/admin-index.html', 'utf8');
-// A stand-in for nginx, so the redirect chain behaves exactly as in production: the SPA shell for every
-// non-API path, /api/* proxied to the app with the original Host and Cookie/Origin headers.
+// A stand-in for nginx, so the redirect chain behaves exactly as in production: every path proxied to the app
+// with the original Host and Cookie/Origin headers (the app renders the pages itself).
 const wire = []; // what the server really RECEIVED from the browser (headers the browser actually sent)
 const front = createHttpServer((req, res) => {
   const u = new URL(req.url, 'http://x');
-  if (u.pathname.startsWith('/api/')) {
-    wire.push({ method: req.method, url: req.url, cookie: req.headers.cookie || '', origin: req.headers.origin || '',
+  {
+    if (u.pathname.startsWith('/api/')) wire.push({ method: req.method, url: req.url, cookie: req.headers.cookie || '', origin: req.headers.origin || '',
       site: req.headers['sec-fetch-site'] || '', mode: req.headers['sec-fetch-mode'] || '', dest: req.headers['sec-fetch-dest'] || '' });
     const up = httpRequest({ host: '127.0.0.1', port: APP_PORT, method: req.method, path: req.url, headers: req.headers },
       (ur) => { res.writeHead(ur.statusCode, ur.headers); ur.pipe(res); });
     up.on('error', () => { res.statusCode = 502; res.end(); });
     return req.pipe(up);
   }
-  res.setHeader('content-type', 'text/html; charset=utf-8');
-  res.end(u.pathname.startsWith('/admin') ? adminHtml : indexHtml);
 });
 await new Promise((r) => front.listen(PORT, '127.0.0.1', r));
 const { chromium } = await import(process.env.PLAYWRIGHT_CORE || 'playwright-core');
@@ -139,7 +135,7 @@ wire.length = 0;
 await page.evaluate((u) => { window.location.href = u; }, pay.body.redirectUrl); // exactly what the SPA does
 // merchant (127.0.0.1) -> gateway page (localhost) -> gateway page navigates back -> callback -> 302 -> /booking/result
 await page.waitForURL((u) => u.origin === O && u.pathname === '/booking/result', { timeout: 15000 });
-await page.waitForFunction(() => /رزرو شما ثبت شد/.test(document.getElementById('bookingDoneTitle')?.textContent || ''), null, { timeout: 15000 })
+await page.waitForSelector('.br-list', { timeout: 15000 })
   .catch((e) => { // say where the browser ended up, instead of just timing out
     console.error('result page not rendered; url:', page.url(), '| wire:', JSON.stringify(wire.map((x) => [x.method, x.url, x.site])), '| verified:', verified);
     throw e;
@@ -153,7 +149,7 @@ assert.equal(verified.length, 1, 'the server verified the payment with the gatew
 const me = await fetchJson('/auth/me');
 assert.equal(me.status, 200, 'still logged in on the result page');
 assert.equal(me.body.user.username, 'lax_user');
-assert.match(await page.textContent('#bookingRef'), /\S/, 'the booking reference is shown');
+assert.ok((await page.textContent('.br-list')).includes(bookingRef), 'the booking reference is shown on the result page');
 const mine = (await fetchJson('/bookings/me')).body;
 const paid = JSON.stringify(mine).includes(bookingRef);
 assert.ok(paid, 'the booking is listed for the returning user');

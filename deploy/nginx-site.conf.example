@@ -1,0 +1,73 @@
+# Add inside the chaacme.ir server { } block, next to the existing /api proxy.
+# Example only: adjust the upstream to match your existing /api location.
+#
+# EVERY page of the site is rendered by the Node service (docs/PUBLIC-PAGES.md): the public pages,
+# the screens behind login (their shell; the screens fill it in the browser), the 404 page. nginx only
+# serves what it serves today straight off disk: /images/, /admin/ (admin/index.html) and the static
+# fallback below. The stylesheet, fonts and client scripts the pages load are under /assets/ in the
+# release, served by the same service.
+#
+# The old single-page app (index.html with try_files ... /index.html) is gone: remove that
+# fallback from `location /`. If the service is down, nginx answers with the small static page
+# deploy/index.html (error_page below).
+
+# --- the pages (proxy to the service) --------------------------------------------------------------
+# One block with a regex does it; or list them. Paths: / /experiences /places /host/<slug> /tour/<slug>
+# /about /contact /terms /refund /privacy /login /signup /account /become-host /booking/result /partner[/...]
+location ~ ^/(?:experiences|places|about|contact|terms|refund|privacy|login|signup|account|become-host|partner(?:/.*)?|booking/result|tour/[^/]+|host/[^/]+|tours/[^/]+|experience/[^/]+|experiences/[^/]+)/?$ {
+    proxy_pass http://127.0.0.1:3100;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    error_page 502 503 504 = /index.html;
+}
+location = / {
+    proxy_pass http://127.0.0.1:3100;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    error_page 502 503 504 = /index.html;
+}
+# (An unknown path such as /nope still reaches the service only if you route it there. To get the
+# designed 404 page for EVERY unknown path, replace the SPA `location /` with a proxy to the service
+# instead of the regex above.)
+
+location /assets/ {
+    proxy_pass http://127.0.0.1:3100;
+    proxy_set_header Host $host;
+}
+
+# The static fallback (published to the web root by scripts/deploy-prod.sh).
+location = /index.html { internal; }
+
+# --- uploads --------------------------------------------------------------------------------------
+# The home-page video is uploaded through /api/admin/upload-video (mp4, up to 30 MB). nginx's default
+# client_max_body_size (1 MB) would refuse it; the images routes already need more than that.
+location = /api/admin/upload-video {
+    client_max_body_size 32m;
+    proxy_pass http://127.0.0.1:3100;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+# The video sits next to the images under /images/site/. Whatever serves /images/ today must serve
+# *.mp4 with Content-Type video/mp4 and Range support (nginx does both by default for files on disk;
+# check that no `location ~* \.(jpg|png|webp)$`-style rule hides it).
+
+# NEEDS A CHECK ON THE SERVER: the two regex locations below use `try_files $uri` against the server's root. If
+# /images/ is currently served by a `location /images/ { alias ...; }` block, copy that alias/root and any add_header
+# lines (security headers) into these locations; a regex location takes precedence over a prefix location and
+# add_header lines are not inherited into a location that has its own add_header.
+#
+# Image variants sit next to the originals under /images/ (already served from the
+# web root). Their names are unique per upload, so they can be cached for good:
+location ~* ^/images/.+\.(?:w\d+\.webp|og\.jpg)$ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    try_files $uri =404;
+}
+
+# Not needed for the pages: the .meta.json files next to the images are internal.
+location ~* ^/images/.+\.meta\.json$ { return 404; }
+
+# CDN (ArvanCloud) rules to match:
+#   /tour/*                -> cache, honour the origin's Cache-Control (public, max-age=60, stale-while-revalidate=300)
+#   /assets/*              -> cache, honour Cache-Control (?v= URLs and /assets/fonts/* are immutable for a year)
+#   /images/*.webp, *.og.jpg -> cache for a year (immutable)
+#   /api/*                 -> bypass

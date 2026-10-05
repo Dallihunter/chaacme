@@ -95,16 +95,14 @@ db.db.prepare('UPDATE tour_dates SET closed = 1 WHERE id = (SELECT MAX(id) FROM 
 db.createTour({ id: 'fixture-minimal', status: 'published', name: 'تجربهٔ کمینه', price: 4200000 });
 db.addTourDate('fixture-minimal', { label: 'تاریخ', capacity: 8, startsOn: future(15) });
 
-// ---- a stand-in for nginx: /api, /tour, /assets, /images -> the app; everything else the SPA shell ---------------
-const indexHtml = readFileSync(repo + '/deploy/index.html', 'utf8');
+// ---- a stand-in for nginx: everything goes to the app ---------------
 const front = createHttpServer((req, res) => {
   const u = new URL(req.url, 'http://x');
-  if (/^\/(api|tour|assets|images)\//.test(u.pathname)) {
+  {
     const up = httpRequest({ host: '127.0.0.1', port: APP_PORT, method: req.method, path: req.url, headers: req.headers }, (ur) => { res.writeHead(ur.statusCode, ur.headers); ur.pipe(res); });
     up.on('error', () => { res.statusCode = 502; res.end(); });
     return req.pipe(up);
   }
-  res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(indexHtml);
 });
 await new Promise((r) => front.listen(PORT, '127.0.0.1', r));
 
@@ -162,11 +160,11 @@ console.log('  ok  lightbox: open, next (RTL), close');
 // not logged in -> sign-in, then back to the page
 const loginRequest = page.waitForRequest((r) => r.url() === `${O}/login?next=%2Ftour%2Ffixture-retreat`);
 await page.locator('[data-submit]').click();
-await loginRequest; // (the SPA rewrites the address bar to "/" as soon as it shows its sign-in screen)
-await page.waitForSelector('#page-login.active');
+await loginRequest;
+await page.waitForSelector('#password');
 const signup = await post('/auth/signup', { phone: '09121110077', firstName: 'سارا', lastName: 'تست', username: 'tour_user', password: 'Passw0rd!xyz' });
 assert.equal(signup.status, 201);
-await page.goto(`${O}/login?next=%2Ftour%2Ffixture-retreat`); // the SPA sees the session and returns to the server-rendered page
+await page.goto(`${O}/login?next=%2Ftour%2Ffixture-retreat`); // the login screen sees the session and returns to the tour page
 await page.waitForURL((u) => u.pathname === '/tour/fixture-retreat', { timeout: 15000 });
 assert.ok(await page.locator('h1.tp-title').isVisible(), 'back on the server-rendered tour page');
 // open redirect: nothing but /tour/<slug> is ever followed, whatever the encoding (logged in, so a bad next WOULD be followed)
@@ -175,10 +173,10 @@ page.on('request', (r) => { if (r.isNavigationRequest()) attacked.push(r.url());
 for (const evil of ['https://evil.example/', '//evil.example/x', '/\\evil.example', '/%2F%2Fevil.example', 'javascript:alert(1)', '/tour/../admin', '/tour/x%0a', '/admin', 'data:text/html,x']) {
   attacked.length = 0;
   await page.goto(`${O}/login?next=${encodeURIComponent(evil)}`);
-  await page.waitForSelector('#page-account.active, #page-login.active');
+  await page.waitForURL(`${O}/account`);
   await page.waitForTimeout(300);
   assert.equal(new URL(page.url()).origin, O, `stays on the site for next=${evil}`);
-  assert.ok(attacked.every((u) => u.startsWith(O + '/login')), `no navigation for next=${evil}: ${attacked.join(' ')}`);
+  assert.ok(attacked.every((u) => u.startsWith(O + '/login') || u === `${O}/account`), `only the safe fallback (/account) is followed for next=${evil}: ${attacked.join(' ')}`);
 }
 page.removeAllListeners('request');
 console.log('  ok  not logged in: redirected to sign-in and returned; off-site next ignored');
@@ -195,7 +193,8 @@ assert.ok(await page.locator('.tp-ed.is-selected').count() === 1);
 const editionId = Number(await radios.nth(1).getAttribute('value'));
 await page.locator('[data-submit]').click();
 await page.waitForURL((u) => u.origin === O && u.pathname === '/booking/result', { timeout: 20000 });
-await page.waitForFunction(() => /رزرو شما ثبت شد/.test(document.getElementById('bookingDoneTitle')?.textContent || ''), null, { timeout: 15000 });
+await page.waitForSelector('.br-list', { timeout: 15000 });
+assert.ok((await page.innerText('main')).includes('رزرو شما ثبت شد') && (await page.innerText('main')).includes('ریتریت نمونه در جنگل'));
 const row = db.db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 1').get();
 assert.deepEqual([row.tour_id, row.tour_date_id, row.guests, row.total, row.payment_status], ['fixture-retreat', editionId, 2, 46000000, 'paid']);
 assert.equal(db.getTourDate(editionId).seats_taken, 2);
@@ -222,7 +221,12 @@ await ctx.close();
   await m.evaluate(() => document.fonts.ready);
   await m.waitForLoadState('networkidle');
   assert.equal(await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no horizontal scroll at 390');
-  assert.equal(await m.locator('.ck-site-header').isVisible(), false);
+  assert.ok(await m.locator('.ck-site-header .ck-menu__btn').isVisible(), 'compact bar with a menu button on phones');
+  assert.equal(await m.locator('.ck-site-header .ck-site-nav').isVisible(), false);
+  assert.ok((await m.locator('.ck-menu__btn').boundingBox()).height >= 44, 'menu button is a 44px touch target');
+  await m.locator('.ck-menu__btn').tap();
+  assert.ok(await m.locator('.ck-menu__panel a[href="/experiences"]').isVisible(), 'menu opens');
+  await m.locator('.ck-menu__btn').tap();
   assert.ok(await m.locator('.tp-sticky').isVisible(), 'sticky bar');
   assert.match(await m.textContent('.tp-sticky'), /۲۳٬۰۰۰٬۰۰۰ تومان \/ نفر/);
   assert.equal(await m.locator('.tp-days').isVisible(), false);

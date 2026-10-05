@@ -50,3 +50,15 @@ export function formatDateRangeFa(startIso, endIso) {
   if (a.year === b.year) return toFaDigits(`${a.day} ${a.monthName} تا ${b.day} ${b.monthName} ${a.year}`);
   return toFaDigits(`${a.day} ${a.monthName} ${a.year} تا ${b.day} ${b.monthName} ${b.year}`);
 }
+
+/** "2026-10-30" -> "1405-08": the Jalali year-month an edition starts in (filter key). null for an invalid date. */
+export function jalaliMonthKey(iso) {
+  const p = parts(iso);
+  return p ? `${p.year}-${String(p.month).padStart(2, '0')}` : null;
+}
+
+/** "2026-10-30" -> "آبان ۱۴۰۵": label of that edition's Jalali month. '' for an invalid date. */
+export function jalaliMonthLabel(iso) {
+  const p = parts(iso);
+  return p ? toFaDigits(`${p.monthName} ${p.year}`) : '';
+}

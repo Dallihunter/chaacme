@@ -588,6 +588,61 @@ export function listRelatedTours(excludeId, region, limit = 3) {
   return rows;
 }
 
+/**
+ * Rows for the experience cards (home, experiences, a profile's own experiences): published and
+ * coming-soon tours in catalogue order, each with the first gallery image as its cover.
+ * `hostId` limits it to the tours that profile is linked to.
+ */
+export function listTourCardRows({ hostId = null } = {}) {
+  const sql = `SELECT t.*, (SELECT image_path FROM tour_media m WHERE m.tour_id = t.id AND m.image_path IS NOT NULL ORDER BY m.ordinal LIMIT 1) AS cover_path
+     FROM tours t WHERE t.status IN ('published','coming_soon')
+     ${hostId ? 'AND t.id IN (SELECT tour_id FROM tour_hosts WHERE host_id = ?)' : ''}
+     ORDER BY t.ordinal, t.created_at`;
+  return hostId ? db.prepare(sql).all(hostId) : db.prepare(sql).all();
+}
+
+/** Active place profiles for the home page and /places: with a photo first, then verified, then oldest. */
+export function listActivePlaces(limit = 200) {
+  return db.prepare(
+    `SELECT * FROM hosts WHERE kind = 'place' AND status = 'active'
+     ORDER BY (photo_path IS NULL), (verified_at IS NULL), id LIMIT ?`
+  ).all(limit);
+}
+
+/**
+ * Everything the profile page reads, from the row. Unlike getHostBySlug (the older public JSON, left
+ * as it was) this includes the fields the profile page now shows: house rules, capacity,
+ * credentials, gallery captions + alt. The page model picks field by field from it; contact_phone,
+ * user_id, the exact coordinates and the two matching lists are never copied out.
+ */
+export function getHostForPage(slug) {
+  const h = db.prepare(`SELECT * FROM hosts WHERE slug = ? AND status = 'active'`).get(slug);
+  if (!h) return null;
+  const summary = db.prepare(
+    `SELECT COUNT(*) AS count, AVG(r.rating) AS average FROM reviews r JOIN tour_hosts th ON th.tour_id = r.tour_id
+     WHERE th.host_id = ? AND r.status = 'published' AND r.user_id IS NOT NULL`
+  ).get(h.id);
+  const reviews = db.prepare(
+    `SELECT r.display_name AS displayName, r.rating, r.body, r.created_at AS createdAt, t.name AS tourTitle
+     FROM reviews r JOIN tour_hosts th ON th.tour_id = r.tour_id JOIN tours t ON t.id = r.tour_id
+     WHERE th.host_id = ? AND r.status = 'published' AND r.user_id IS NOT NULL ORDER BY r.created_at DESC LIMIT 50`
+  ).all(h.id);
+  return {
+    id: h.id, row: h,
+    ...publicHostFields(h),
+    regionKey: h.region_key,
+    bio: h.bio,
+    instagramHandle: h.instagram_handle,
+    // owners were told credentials are team-only: they are public only after an explicit opt-in
+    credentials: h.credentials_public ? h.credentials : null,
+    capacityGuests: h.capacity_guests,
+    houseRules: h.house_rules,
+    gallery: hostMedia(h.id),
+    reviews,
+    reviewSummary: { count: summary.count, average: summary.count ? Math.round(summary.average * 10) / 10 : null }
+  };
+}
+
 /** Public catalog listing: published + coming_soon tours, ordered for display. */
 export function listTours() {
   const rows = db.prepare(
@@ -1007,8 +1062,9 @@ export function confirmBookingPayment(id, { refId }) {
  */
 export function getUserBookings(userId) {
   return db.prepare(
-    `SELECT b.ref, b.guests, b.total, b.status, b.created_at AS createdAt,
+    `SELECT b.ref, b.guests, b.total, b.status, b.payment_status AS paymentStatus, b.created_at AS createdAt,
             t.id AS tourId, t.name AS tourTitle, t.tags, t.status AS tourStatus,
+            COALESCE((SELECT image_path FROM tour_media m WHERE m.tour_id = t.id AND m.image_path IS NOT NULL ORDER BY m.ordinal LIMIT 1), t.photo_path) AS coverPath,
             d.label AS dateLabel, d.starts_on AS startsOn, d.ends_on, d.closed, d.capacity, d.seats_taken AS seatsTaken
      FROM bookings b
      JOIN tours t ON t.id = b.tour_id
@@ -1017,6 +1073,7 @@ export function getUserBookings(userId) {
      ORDER BY b.created_at DESC`
   ).all(userId).map((b) => {
     const { closed, capacity, seatsTaken, tourStatus, ends_on: endsOn, ...row } = b;
+    row.endsOn = endsOn;
     const stillVisible = tourStatus === 'published' || tourStatus === 'coming_soon';
     // With an ISO date the split is chronological; without one, fall back to
     // the old "still open" meaning.
@@ -1025,6 +1082,24 @@ export function getUserBookings(userId) {
       : row.status !== 'cancelled' && stillVisible && !closed;
     return { ...row, upcoming };
   });
+}
+
+/**
+ * One booking, for the signed-in user who owns it (the result page). Another user's ref, an unknown ref
+ * and a malformed ref all answer null, so a ref cannot be probed. Gateway identifiers are never included.
+ */
+export function getUserBookingByRef(userId, ref) {
+  if (!userId || typeof ref !== 'string' || !/^CHK-\d{5}$/.test(ref)) return null;
+  const b = db.prepare(
+    `SELECT b.ref, b.guests, b.total, b.price_per_person AS pricePerPerson, b.status, b.payment_status AS paymentStatus, b.created_at AS createdAt,
+            t.id AS tourSlug, t.name AS tourTitle, t.status AS tourStatus,
+            d.label AS dateLabel, d.starts_on AS startsOn, d.ends_on AS endsOn
+     FROM bookings b JOIN tours t ON t.id = b.tour_id JOIN tour_dates d ON d.id = b.tour_date_id
+     WHERE b.ref = ? AND b.user_id = ?`
+  ).get(ref, userId);
+  if (!b) return null;
+  const { tourStatus, ...rest } = b;
+  return { ...rest, tourPublic: tourStatus === 'published' || tourStatus === 'coming_soon' };
 }
 
 export function listBookingsAdmin({ paymentStatus, limit } = {}) {
@@ -1176,6 +1251,7 @@ function adminHostFields(h) {
     userId: h.user_id,
     owner: h.user_id ? ownerSummary(h.user_id) : null,
     region: h.region,
+    regionKey: h.region_key,
     lodgingType: h.lodging_type,
     amenities: parseAmenities(h.amenities),
     latitude: h.latitude,
@@ -1198,6 +1274,7 @@ function adminHostFields(h) {
 function matchingFields(h) {
   return {
     credentials: h.credentials,
+    credentialsPublic: !!h.credentials_public,
     seekingPlaceTypes: parseAmenities(h.seeking_place_types),
     capacityGuests: h.capacity_guests,
     houseRules: h.house_rules,
@@ -1215,7 +1292,7 @@ function ownerSummary(userId) {
 
 export function hostMedia(hostId) {
   return db.prepare(
-    'SELECT id, path AS photoPath, caption, sort_order AS sortOrder FROM host_media WHERE host_id = ? ORDER BY sort_order, id'
+    'SELECT id, path AS photoPath, caption, alt, sort_order AS sortOrder FROM host_media WHERE host_id = ? ORDER BY sort_order, id'
   ).all(hostId);
 }
 
@@ -1231,9 +1308,9 @@ export function hostMedia(hostId) {
 /** Writes the gallery rows; the caller owns the transaction. Returns the paths that were replaced. */
 function writeHostMedia(hostId, items) {
   const before = db.prepare('SELECT path FROM host_media WHERE host_id = ?').all(hostId).map((r) => r.path);
-  const ins = db.prepare('INSERT INTO host_media (host_id, path, caption, sort_order) VALUES (?, ?, ?, ?)');
+  const ins = db.prepare('INSERT INTO host_media (host_id, path, caption, alt, sort_order) VALUES (?, ?, ?, ?, ?)');
   db.prepare('DELETE FROM host_media WHERE host_id = ?').run(hostId);
-  items.forEach((it, i) => ins.run(hostId, it.photoPath, it.caption || null, i));
+  items.forEach((it, i) => ins.run(hostId, it.photoPath, it.caption || null, it.alt || null, i));
   return before;
 }
 
@@ -1376,14 +1453,14 @@ export function createHost(v) {
   const info = db.prepare(
     `INSERT INTO hosts (slug, kind, display_name, photo_path, bio, expertise, instagram_handle, contact_phone,
                         user_id, region, lodging_type, amenities, latitude, longitude, status, verified_at,
-                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types, region_key, credentials_public)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(v.slug, v.kind || 'person', v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle,
     v.contactPhone, v.userId ?? null, v.region ?? null, v.lodgingType ?? null,
     v.amenities ? JSON.stringify(v.amenities) : null, v.latitude ?? null, v.longitude ?? null,
     v.status || 'hidden', v.verified ? new Date().toISOString() : null,
     v.credentials ?? null, jsonList(v.seekingPlaceTypes), v.capacityGuests ?? null, v.houseRules ?? null,
-    jsonList(v.acceptsExperienceTypes));
+    jsonList(v.acceptsExperienceTypes), v.regionKey ?? null, v.credentialsPublic ? 1 : 0);
   return getHostAdmin(Number(info.lastInsertRowid));
 }
 
@@ -1403,7 +1480,7 @@ export function updateHost(id, v) {
     `UPDATE hosts SET display_name = ?, photo_path = ?, bio = ?, expertise = ?, instagram_handle = ?,
        contact_phone = ?, region = ?, lodging_type = ?, amenities = ?, latitude = ?, longitude = ?,
        status = ?, verified_at = ?, credentials = ?, seeking_place_types = ?, capacity_guests = ?,
-       house_rules = ?, accepts_experience_types = ?, updated_at = datetime('now')
+       house_rules = ?, accepts_experience_types = ?, region_key = ?, credentials_public = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle, v.contactPhone,
     v.region ?? null, v.lodgingType ?? null, v.amenities ? JSON.stringify(v.amenities) : null,
@@ -1414,6 +1491,8 @@ export function updateHost(id, v) {
     keep(v.capacityGuests, existing.capacity_guests),
     keep(v.houseRules, existing.house_rules),
     v.acceptsExperienceTypes === undefined ? existing.accepts_experience_types : jsonList(v.acceptsExperienceTypes),
+    keep(v.regionKey, existing.region_key),
+    v.credentialsPublic === undefined ? existing.credentials_public : (v.credentialsPublic ? 1 : 0),
     id);
   return getHostAdmin(id);
 }
@@ -1633,13 +1712,14 @@ export function revisionSnapshot(h) {
       acceptsExperienceTypes: parseAmenities(h.accepts_experience_types).length ? parseAmenities(h.accepts_experience_types) : null,
       latitude: h.latitude,
       longitude: h.longitude,
-      media: hostMedia(h.id).map((m) => ({ photoPath: m.photoPath, caption: m.caption }))
+      media: hostMedia(h.id).map((m) => ({ photoPath: m.photoPath, caption: m.caption, alt: m.alt }))
     };
   }
   return {
     ...base,
     expertise: h.expertise,
     credentials: h.credentials,
+    credentialsPublic: !!h.credentials_public,
     seekingPlaceTypes: parseAmenities(h.seeking_place_types).length ? parseAmenities(h.seeking_place_types) : null
   };
 }
@@ -1773,7 +1853,7 @@ export function approveRevision(id, ops) {
     return moved.get(p);
   };
   const photoPath = live(payload.photoPath) || null;
-  const media = payload.media ? payload.media.map((m) => ({ photoPath: live(m.photoPath), caption: m.caption })) : null;
+  const media = payload.media ? payload.media.map((m) => ({ photoPath: live(m.photoPath), caption: m.caption, alt: m.alt })) : null;
 
   const oldPhoto = host.photo_path;
   let before = [];
@@ -1792,9 +1872,9 @@ export function approveRevision(id, ops) {
     } else {
       db.prepare(
         `UPDATE hosts SET display_name = ?, bio = ?, photo_path = ?, instagram_handle = ?, expertise = ?,
-           credentials = ?, seeking_place_types = ?, updated_at = datetime('now') WHERE id = ?`
+           credentials = ?, credentials_public = ?, seeking_place_types = ?, updated_at = datetime('now') WHERE id = ?`
       ).run(payload.displayName, payload.bio ?? null, photoPath, payload.instagramHandle ?? null,
-        payload.expertise ?? null, payload.credentials ?? null, jsonList(payload.seekingPlaceTypes), host.id);
+        payload.expertise ?? null, payload.credentials ?? null, payload.credentialsPublic ? 1 : 0, jsonList(payload.seekingPlaceTypes), host.id);
     }
     db.prepare(
       `UPDATE host_revisions SET status = 'approved', reviewed_at = datetime('now'), payload = ? WHERE id = ?`

@@ -294,6 +294,13 @@ run_post_checks() {
 
   expect "GET /api/hosts/does-not-exist is 404" "$(site /api/hosts/does-not-exist)" 404 || rc=1
   expect "GET /become-host is 200" "$(site /become-host)" 200 || rc=1
+  # --- pages rendered by the app (nginx must proxy these paths to it: see deploy/nginx-site.conf.example) ---
+  for p in / /experiences /places /login /signup /account /booking/result; do
+    expect "GET $p is 200" "$(site "$p")" 200 || rc=1
+  done
+  if site_body / | grep -q 'ck-site-header'; then log "  ok   / is rendered by the app"; else log "  FAIL / is not rendered by the app (nginx still serves the static fallback?)"; rc=1; fi
+  expect "GET an unknown page is 404" "$(site /deploycheck-no-such-page)" 404 || rc=1
+  expect "GET /api/pages/home is 200" "$(site /api/pages/home)" 200 || rc=1
   expect "GET /admin/ is 200" "$(site /admin/)" 200 || rc=1
   # --- partner panel ---
   expect "GET /partner is 200" "$(site /partner)" 200 || rc=1
@@ -320,12 +327,16 @@ run_post_checks() {
     hj="$(site_body "/api/hosts/$slug")"
     json_banned_keys "/api/hosts/$slug" "$PRIVATE_KEYS" "$hj" || rc=1
     coord_scan "/api/hosts/$slug" "$hj" || rc=1
+    # the page view model shows capacity, house rules and credentials publicly; the rest stays private
+    hj="$(site_body "/api/pages/host/$slug")"
+    json_banned_keys "/api/pages/host/$slug" "seekingPlaceTypes,acceptsExperienceTypes,seeking_place_types,accepts_experience_types,contactPhone,contact_phone,userId,user_id,latitude,longitude" "$hj" || rc=1
+    coord_scan "/api/pages/host/$slug" "$hj" || rc=1
     n=$((n + 1))
   done <<< "$slugs"
   [ "$n" -gt 0 ] || log "  info no active host profile to scan"
 
-  # /tour/<id> is rendered by the app as full HTML (server/render.js) once nginx proxies /tour/ to it
-  # (deploy/nginx-tour.conf.example); until then nginx's SPA fallback serves the plain app shell.
+  # /tour/<id> is rendered by the app as full HTML (server/render.js); nginx proxies it to the app
+  # (deploy/nginx-site.conf.example).
   local tid
   tid="$(printf '%s' "$tours_json" | node -e '
     let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{

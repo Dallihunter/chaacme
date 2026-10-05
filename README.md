@@ -5,8 +5,7 @@ A zero-dependency Node API for the booking platform designed in
 (Home, Experiences, TourDetail, Booking, Login, Account, …). Those `.dc.html`
 files are Claude Design canvas *source* — a design-tool preview, not a
 deployable frontend — so this backend is not paired with a `public/`
-directory yet. It's a plain JSON API that whatever frontend gets built from
-those designs (or the canvas pages themselves, once exported) can call.
+directory yet. Besides the JSON API it renders every page of the site itself (see `docs/PUBLIC-PAGES.md`).
 
 Modeled on the conventions already established in `../chaacme/site`: no
 framework, no build step, `node:sqlite`, fail-fast on missing secrets rather
@@ -119,8 +118,9 @@ PUT-ing a reordered `gallery`/`galleryPhotos` pair through this same
 replace-all path; the dedicated `/gallery/reorder` endpoint exists so the
 admin UI can reorder without resending every other field.
 
-A vanilla-JS admin panel (login, tour list, create/edit form, gallery
-manager, bookings/payments list) is served as a static page at `/admin` — it
+A vanilla-JS admin panel (login, tour list, create/edit form with page sections, gallery
+manager, bookings/payments list, partner profiles, review queue, and the «صفحهٔ اول و تنظیمات» screen for the home page, footer and
+info pages) is served as a static page at `/admin` — it uses the same `chaacme.css` and shared header as the site, and
 lives in the frontend's own static tree
 (`/srv/chaacme-platform/frontend/admin/index.html` in production), not
 alongside this backend's own routes, since this backend ships no `public/`

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "chaacme booking platform — API for the production frontend (design source in 'Chaacme design system refinement/'): tours, phone/OTP auth, bookings, reviews.",
-  "engines": { "node": ">=22.5" },
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
@@ -12,6 +14,7 @@
     "smoke": "node scripts/smoke.js",
     "admin:set-password": "node scripts/admin-set-password.mjs",
     "test": "node --test \"test/*.test.js\"",
-    "backfill:images": "node scripts/backfill-image-variants.mjs"
+    "backfill:images": "node scripts/backfill-image-variants.mjs",
+    "test:e2e": "for f in test/e2e/*.e2e.mjs; do node \"$f\" || exit 1; done"
   }
 }
