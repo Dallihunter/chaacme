@@ -155,11 +155,11 @@ ft('place profile (full): hero, facts, gallery with captions, amenities, rules, 
   clean(text, 'place-full');
   for (const needle of ['<title>اقامتگاه نمونه — CHAACME</title>', 'rel="canonical" href="https://example.test/host/lodge-fx"', 'ck-stamp ck-stamp--forest', 'تأییدشده توسط چکمه',
     '<h1 class="pf-title">اقامتگاه نمونه</h1>', 'اقامتگاه بوم‌گردی · روستای نمونه', 'خانه‌های گلی میان جنگل', 'href="#experiences"', 'href="https://instagram.com/lodge_fx"', '@lodge_fx',
-    'نوع اقامت', 'ظرفیت گروه', 'تا ۲۰ نفر', 'تجربه‌ها با چکمه', '۲ تجربه', 'فضا و حال‌وهوا', 'همهٔ عکس‌ها', 'data-lb-caption="زیرنویس 1"', '<figcaption>زیرنویس 2</figcaption>',
+    'نوع اقامت', 'ظرفیت گروه', 'تا ۲۰ نفر', 'تجربه‌ها با چکمه', '۲ تجربه', 'فضا و حال‌وهوا', 'همهٔ عکس‌ها', 'data-lb-caption="زیرنویس ۱"', '<figcaption>زیرنویس ۲</figcaption>',
     'امکانات', 'حوضچهٔ سنگی', 'قوانین مکان', 'ساعت سکوت از ده شب', 'کجاست', 'pf-map', '۳۶٫۱۲، ۵۲٫۶۵', 'محدودهٔ تقریبی', 'id="experiences"', 'تجربه‌ها در اقامتگاه نمونه', 'نظر مسافران', 'علی م.', 'دربارهٔ ریتریت نمونه']) {
     assert.ok(text.includes(needle), `missing ${needle}`);
   }
-  assert.ok(text.includes('alt="توضیح تصویر 1"'), 'gallery alt text is used');
+  assert.ok(text.includes('alt="توضیح تصویر ۱"'), 'gallery alt text is used');
   assert.match(text, /<meta property="og:image" content="https:\/\/example\.test\/images\/host-lodge-fx\/[^"]+\.og\.jpg">/);
   assert.ok(!/36\.1234|52\.6543|36\.123|PRIVATE|09120000098/.test(text), 'exact coordinates / private fields');
   assert.equal((text.match(/class="pf-tile"/g) || []).length, 6);

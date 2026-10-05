@@ -639,6 +639,9 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
 .fm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .fm-span { grid-column: span 2; }
 .ck-field__help, .ck-field__error { display: block; }
+/* the × inside a chip keeps the chip's size but gets a 44px hit area */
+.ck-chip { position: relative; }
+.ck-chip__remove { min-width: 44px; min-height: 44px; margin: -12px -10px; display: inline-grid; place-items: center; }
 .ck-field--changed > .ck-input { outline: 2px dashed var(--saffron); outline-offset: 2px; }
 .ck-field--changed > .ck-field__label::after { content: ""; }
 .ck-input, .ck-btn, select.ck-input { font-family: var(--font-sans); }
@@ -913,7 +916,7 @@ select.ck-input { appearance: auto; }
 .ad .app-actions input { width: 220px; }
 .ad .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .ad .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-sm); font: 500 13px/22px var(--font-sans); background: var(--paper-raised); border: 1px solid var(--line); }
-.ad .chip-x { border: 0; background: none; cursor: pointer; font-size: 16px; line-height: 1; color: var(--ink-muted); min-width: 28px; min-height: 28px; }
+.ad .chip-x { border: 0; background: none; cursor: pointer; font-size: 16px; line-height: 1; color: var(--ink-muted); min-width: 44px; min-height: 44px; margin: -12px -8px; }
 .ad .chip-x:hover { color: var(--danger); }
 .ad .rev-table td, .ad .rev-table th { vertical-align: top; }
 .ad .rev-k { white-space: nowrap; color: var(--ink-muted); }

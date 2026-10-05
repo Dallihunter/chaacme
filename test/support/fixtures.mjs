@@ -60,7 +60,7 @@ export async function seedFullSite({ db, upload, settings, makeImage, videoPath 
     acceptsExperienceTypes: ['PRIVATE-ACCEPT'], regionKey: 'forest', verified: true
   });
   const gal = [];
-  for (let i = 0; i < 7; i++) gal.push({ photoPath: await img({ hostSlug: 'lodge-fx' }, i % 2 ? 1200 : 1800, 1200), caption: i < 5 ? `زیرنویس ${i + 1}` : null, alt: `توضیح تصویر ${i + 1}` });
+  for (let i = 0; i < 7; i++) gal.push({ photoPath: await img({ hostSlug: 'lodge-fx' }, i % 2 ? 1200 : 1800, 1200), caption: i < 5 ? `زیرنویس ${'۱۲۳۴۵۶۷'[i]}` : null, alt: `توضیح تصویر ${'۱۲۳۴۵۶۷'[i]}` });
   db.setHostMedia(place.id, gal);
 
   const person = H({
