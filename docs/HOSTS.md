@@ -271,12 +271,12 @@ owner edit their own profile is a deliberate later step.
   while it is publicly visible and still open (or marked `coming_soon`). A
   real split needs an ISO `start_date` column alongside the label, which would
   also let past dates auto-hide.
-- **Owners cannot edit their own profiles yet.** `hosts.user_id` now carries
-  the owner and `/api/me/profiles` reads it back, so the remaining work is an
-  owner-scoped write endpoint and a form — not a schema change.
-- **No per-host Open Graph tags.** The SPA serves one static `index.html`, so
-  a shared `/host/<slug>` link previews as the site, not the organizer. Needs
-  either server-rendered meta tags for that route or a prerender step.
+- **Public vs private profile fields.** `/host/<slug>` is server-rendered with its own OG tags. A place page
+  shows: name, verified, region stamp (`region_key`, admin-set), lodging type, region text, bio, capacity,
+  amenities, house rules, instagram, the gallery (caption + alt), the **rounded** area and its experiences. A person page shows
+  name, verified, portrait, expertise, **credentials** (public since the unify-site work; the old partner form promised
+  they were team-only, so review existing values before deploying), bio and instagram. Never public:
+  `contact_phone`, `user_id`, exact coordinates, `seeking_place_types`, `accepts_experience_types`.
 - **No staging environment and no `scripts/deploy.sh`.** `app.chaacme.ir` is a
   retired nginx 301 to the main site, not a staging server. This feature ships
   through the pipeline built in roadmap Step 2, not by hand.

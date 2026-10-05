@@ -15,7 +15,8 @@ function link(href, text, className) {
 async function getJson(url) {
   try {
     const res = await fetch(url, { credentials: 'same-origin' });
-    return res.ok ? await res.json() : null;
+    const data = await res.json().catch(() => null); // always read the body so the request completes
+    return res.ok ? data : null;
   } catch { return null; }
 }
 

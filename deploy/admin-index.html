@@ -376,7 +376,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       const status = t.status || 'draft';
       return (
         '<tr>' +
-          '<td>' + esc(t.name) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(t.id) + '</div></td>' +
+          '<td>' + esc(t.name) + '<div style="color:var(--ink-muted);font-size:12px;">' + esc(t.id) + '</div></td>' +
           '<td><span class="badge ' + esc(status) + '">' + esc(status.replace('_',' ')) + '</span></td>' +
           '<td>' + (t.featured ? '★' : '') + '</td>' +
           '<td>' + (t.price != null ? Number(t.price).toLocaleString('en-US') : '—') + '</td>' +
@@ -428,13 +428,13 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       return (
         '<tr' + (flagged ? ' class="needs-attention"' : '') + '>' +
           '<td>' + esc(b.ref) + '</td>' +
-          '<td>' + esc(b.tourTitle) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.dateLabel) + (b.startsOn ? ' · ' + esc(b.startsOn) : '') + '</div></td>' +
+          '<td>' + esc(b.tourTitle) + '<div style="color:var(--ink-muted);font-size:12px;">' + esc(b.dateLabel) + (b.startsOn ? ' · ' + esc(b.startsOn) : '') + '</div></td>' +
           '<td>' + esc(b.guests) + '</td>' +
-          '<td>' + esc(customer) + '<div style="color:var(--ink-faint);font-size:12px;">' + esc(b.phone) + '</div></td>' +
+          '<td>' + esc(customer) + '<div style="color:var(--ink-muted);font-size:12px;">' + esc(b.phone) + '</div></td>' +
           '<td><span class="badge ' + esc(status) + '">' + (flagged ? '⚠ ' : '') + esc(status.replace(/_/g, ' ')) + '</span></td>' +
           '<td>' + Number(b.total || 0).toLocaleString('en-US') + '</td>' +
-          '<td style="font-size:12px;color:var(--ink-faint);">' + esc(b.zarinpalRefId || '—') + '</td>' +
-          '<td style="font-size:12px;color:var(--ink-faint);">' + esc(b.createdAt) + '</td>' +
+          '<td style="font-size:12px;color:var(--ink-muted);">' + esc(b.zarinpalRefId || '—') + '</td>' +
+          '<td style="font-size:12px;color:var(--ink-muted);">' + esc(b.createdAt) + '</td>' +
         '</tr>'
       );
     }).join('');
@@ -461,7 +461,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   const REGIONS = [['', '— none —'], ['desert', 'Desert (کویر)'], ['forest', 'Forest (جنگل شمال)'], ['sea', 'Island / sea (جزیره)']];
   function limitedField(label, id, value, max, area){
     const v = value == null ? '' : value;
-    return '<div class="field"><label>' + esc(label) + ' <span style="color:var(--ink-faint)">(max ' + max + ')</span></label>' +
+    return '<div class="field"><label>' + esc(label) + ' <span style="color:var(--ink-muted)">(max ' + max + ')</span></label>' +
       (area ? '<textarea id="' + id + '" maxlength="' + max + '">' + esc(v) + '</textarea>'
             : '<input type="text" id="' + id + '" maxlength="' + max + '" value="' + esc(v) + '">') + '</div>';
   }
@@ -711,7 +711,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   function renderRepeat(containerId, items, fields){
     const el = document.getElementById(containerId);
     if (!items.length){
-      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</p>';
+      el.innerHTML = '<p style="color:var(--ink-muted);font-size:13px;">هنوز موردی نیست.</p>';
       return;
     }
     el.innerHTML = items.map(function(item, i){
@@ -746,7 +746,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   function renderHighlightList(ed){
     const el = document.getElementById('highlightsList');
     const items = ed.tour.highlights;
-    if (!items.length){ el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</p>'; return; }
+    if (!items.length){ el.innerHTML = '<p style="color:var(--ink-muted);font-size:13px;">هنوز موردی نیست.</p>'; return; }
     el.innerHTML = items.map(function(h, i){
       const img = h.image
         ? '<div class="hl-image"><img src="' + esc(h.image) + '" alt="" onerror="this.style.opacity=0.15">' +
@@ -807,7 +807,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const el = document.getElementById('itineraryList');
     const items = ed.tour.itinerary;
     if (!items.length){
-      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</p>';
+      el.innerHTML = '<p style="color:var(--ink-muted);font-size:13px;">هنوز موردی نیست.</p>';
       return;
     }
     el.innerHTML = items.map(function(item, i){
@@ -901,8 +901,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       '</div>';
     }).join('');
 
-    return '<p style="color:var(--ink-faint);font-size:12px;margin-bottom:10px;">با کشیدن عکس‌ها ترتیب را عوض کنید؛ اولی کاور صفحهٔ تجربه است. متن جایگزین و زیرنویس وقتی از فیلد بیرون می‌روید ذخیره می‌شود.</p>' +
-      '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-faint);font-size:13px;">هنوز عکسی نیست.</p>') + '</div>' +
+    return '<p style="color:var(--ink-muted);font-size:12px;margin-bottom:10px;">با کشیدن عکس‌ها ترتیب را عوض کنید؛ اولی کاور صفحهٔ تجربه است. متن جایگزین و زیرنویس وقتی از فیلد بیرون می‌روید ذخیره می‌شود.</p>' +
+      '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-muted);font-size:13px;">هنوز عکسی نیست.</p>') + '</div>' +
       '<div class="upload-row">' +
         '<div class="field"><label>برچسب عکس تازه</label><input type="text" id="newPhotoLabel" placeholder="e.g. Sunrise departure"></div>' +
         '<input type="file" id="newPhotoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
@@ -1055,7 +1055,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     if (!panel) return;
     const rows = dates.map(editionRow).join('') + editionRow({ id: null, label: '', startsOn: '', endsOn: '', capacity: '', closed: false });
     panel.innerHTML =
-      '<p style="color:var(--ink-faint);font-size:13px;margin-bottom:14px;">' +
+      '<p style="color:var(--ink-muted);font-size:13px;margin-bottom:14px;">' +
         'Dates are Gregorian (the Jalali date appears underneath). Once an edition\'s last day has passed it is shown as finished and can no longer be booked. ' +
         'Editions with no date set stay bookable until you set one. Leave <em>Ends</em> empty for a single-day edition.' +
       '</p>' +
@@ -1239,14 +1239,14 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       return (
         '<tr>' +
           '<td>' + esc(h.displayName) +
-            '<div style="color:var(--ink-faint);font-size:12px;">/host/' + esc(h.slug) + '</div></td>' +
+            '<div style="color:var(--ink-muted);font-size:12px;">/host/' + esc(h.slug) + '</div></td>' +
           '<td><span class="badge ' + esc(h.kind) + '">' + esc(KIND_LABEL[h.kind] || h.kind) + '</span></td>' +
           '<td><span class="badge ' + esc(status) + '">' + esc(status) + '</span></td>' +
           '<td>' + (h.verified ? '✓' : '') + '</td>' +
           '<td>' + esc(about || '—') + '</td>' +
           '<td>' + (h.owner
-            ? esc(h.owner.firstName + ' ' + h.owner.lastName) + '<div style="color:var(--ink-faint);font-size:12px;" dir="ltr">' + esc(h.owner.phone) + '</div>'
-            : '<span style="color:var(--ink-faint);">بدون حساب</span>') + '</td>' +
+            ? esc(h.owner.firstName + ' ' + h.owner.lastName) + '<div style="color:var(--ink-muted);font-size:12px;" dir="ltr">' + esc(h.owner.phone) + '</div>'
+            : '<span style="color:var(--ink-muted);">بدون حساب</span>') + '</td>' +
           '<td><div class="row-actions">' +
             '<a class="btn small ghost" href="#/hosts/' + h.id + '/edit">ویرایش</a>' +
           '</div></td>' +
@@ -1262,7 +1262,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       '<div class="list-head"><h1>همکاران</h1>' +
         '<span><a class="btn ghost" href="#/hosts/new?kind=place">+ مکان جدید</a> ' +
         '<a class="btn primary" href="#/hosts/new">+ شخص جدید</a></span></div>' +
-      '<p style="color:var(--ink-faint);font-size:13px;margin:-8px 0 18px;">' +
+      '<p style="color:var(--ink-muted);font-size:13px;margin:-8px 0 18px;">' +
         'A <b>person</b> runs a tour (lead or co-host); a <b>place</b> is where it is held (the venue). ' +
         'A profile appears on the site only when its status is <b>active</b> and it is linked to a tour ' +
         '(Tours → edit a tour → Partners). Profiles are never deleted — set them back to hidden instead.</p>' +
@@ -1326,21 +1326,21 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<input type="text" id="h_lodging" value="' + esc(host.lodgingType || '') + '" placeholder="اقامتگاه بوم‌گردی" maxlength="60"></div>' +
       '<div class="field"><label>Region</label>' +
         '<input type="text" id="h_region" value="' + esc(host.region || '') + '" placeholder="سه‌هزار، تنکابن، مازندران" maxlength="120">' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>' +
       '<div class="field"><label>Region stamp (colour on the profile)</label><select id="h_regionKey">' +
         REGIONS.map(function(r){ return '<option value="' + r[0] + '"' + (r[0] === (host.regionKey || '') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select>' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown as the coloured pill at the top of the public place page. Empty = no pill.</p></div>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shown as the coloured pill at the top of the public place page. Empty = no pill.</p></div>' +
       '<div class="field"><label>Capacity (guests)</label>' +
         '<input type="number" id="h_capacity" min="1" max="500" value="' + esc(host.capacityGuests == null ? '' : host.capacityGuests) + '" dir="ltr">' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">1–500. Shown on the public place page («ظرفیت گروه»).</p></div>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">1–500. Shown on the public place page («ظرفیت گروه»).</p></div>' +
       '<div class="field"><label>House rules</label><textarea id="h_rules" rows="4" maxlength="1000">' + esc(host.houseRules || '') + '</textarea>' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Max 1000 characters. Shown on the public place page.</p></div>';
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Max 1000 characters. Shown on the public place page.</p></div>';
 
     const personFields =
       '<div class="field"><label>Expertise</label>' +
         '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>' +
       '<div class="field"><label>Credentials</label><textarea id="h_credentials" rows="4" maxlength="600">' + esc(host.credentials || '') + '</textarea>' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters. <b>Shown on the public profile.</b></p></div>';
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters. <b>Shown on the public profile.</b></p></div>';
 
     // Matching inputs: stored, edited by the owner in the partner panel too,
     // and NEVER part of a public response. They will drive pairing later.
@@ -1351,7 +1351,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
               '<textarea id="h_accepts" rows="3" placeholder="ریتریت حرکتی، کارگاه هنری، اقامت گروهی">' + esc((host.acceptsExperienceTypes || []).join('، ')) + '</textarea></div>'
           : '<div class="field"><label>Seeking place types</label>' +
               '<textarea id="h_seeking" rows="3" placeholder="اقامتگاه جنگلی، باغ">' + esc((host.seekingPlaceTypes || []).join('، ')) + '</textarea></div>') +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Separate items with a comma or «،». At most 10 items of 40 characters. ' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Separate items with a comma or «،». At most 10 items of 40 characters. ' +
         'These are internal matching inputs — they are not returned by any public endpoint.</p>' +
       '</section>';
 
@@ -1365,35 +1365,35 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
             ? '<select id="h_kind">' + HOST_KINDS.map(function(k){
                 return '<option value="' + k + '"' + (host.kind === k ? ' selected' : '') + '>' + KIND_LABEL[k] + '</option>';
               }).join('') + '</select>' +
-              '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+              '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
                 'A <b>person</b> runs tours; a <b>place</b> hosts them. Like the slug, this <b>cannot be changed later</b> — ' +
                 'the two kinds do not use the same fields.</p>'
             : '<input type="text" value="' + esc(KIND_LABEL[host.kind] || host.kind) + '" disabled>' +
-              '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Fixed once created.</p>') +
+              '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Fixed once created.</p>') +
         '</div>' +
 
         (isNew
           ? '<div class="field"><label>Public slug</label>' +
             '<input type="text" id="h_slug" placeholder="' + (isPlace ? 'dood-lodge' : 'arash-niko') + '" autocomplete="off">' +
-            '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+            '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
               'Lowercase letters, digits and hyphens. This becomes the public address ' +
               '<b>/host/&lt;slug&gt;</b> and <b>cannot be changed later</b>.</p></div>'
           : '<div class="field"><label>Public address</label>' +
             '<input type="text" value="/host/' + esc(host.slug) + '" disabled>' +
-            '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">The slug is fixed once created.</p></div>') +
+            '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">The slug is fixed once created.</p></div>') +
 
         '<div class="field"><label>' + (isPlace ? 'Place name' : 'Display name') + '</label>' +
           '<input type="text" id="h_name" value="' + esc(host.displayName || '') + '"></div>' +
         (isPlace ? placeFields : personFields) +
         '<div class="field"><label>' + (isPlace ? 'Description' : 'Bio') + '</label><textarea id="h_bio" rows="6">' + esc(host.bio || '') + '</textarea>' +
-          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown on the public profile. Max 1500 characters.</p></div>' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shown on the public profile. Max 1500 characters.</p></div>' +
         '<div class="field"><label>Instagram handle</label><input type="text" id="h_instagram" value="' + esc(host.instagramHandle || '') + '" placeholder="arash.niko" dir="ltr">' +
-          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Username only — no @, no link. Shown publicly.</p></div>' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Username only — no @, no link. Shown publicly.</p></div>' +
         '<div class="field"><label>Contact phone</label><input type="text" id="h_phone" value="' + esc(host.contactPhone || '') + '" placeholder="09xxxxxxxxx" dir="ltr">' +
-          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;"><b>Internal only</b> — never shown on the site.</p></div>' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;"><b>Internal only</b> — never shown on the site.</p></div>' +
         '<div class="field"><label>Owner account</label>' +
           '<input type="text" value="' + esc(host.owner ? (host.owner.firstName + ' ' + host.owner.lastName + ' — ' + host.owner.phone) : 'بدون حساب — admin-created') + '" disabled>' +
-          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
             'Set when an application is approved. The owner sees this profile on their account page.</p></div>' +
       '</section>' +
 
@@ -1409,7 +1409,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
               '<button type="button" class="btn small primary" id="h_photoBtn">بارگذاری</button>' +
               (ed.photoPath ? '<button type="button" class="btn small danger" id="h_photoClear">حذف</button>' : '') +
             '</div>' +
-            '<p style="color:var(--ink-faint);font-size:12px;margin-top:10px;">' +
+            '<p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">' +
               (isNew ? 'Save the profile first — the photo is stored under its slug.' : 'Square images work best. Uploaded to /images/host-' + esc(host.slug) + '/.') +
             '</p>' +
           '</div>' +
@@ -1424,11 +1424,11 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
             return '<option value="' + v + '"' + ((host.status || 'hidden') === v ? ' selected' : '') + '>' + v + '</option>';
           }).join('') +
         '</select>' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
           '<b>hidden</b> keeps the profile off the site entirely (/host/&lt;slug&gt; returns not-found, and it vanishes from any tour it is on). ' +
           '<b>active</b> publishes it.</p></div>' +
         '<div class="field"><label><input type="checkbox" id="h_verified"' + (host.verified ? ' checked' : '') + '> Verified by chaacme</label>' +
-          '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shows a “تأییدشده توسط چکمه” badge. This is a claim about a real check you have done — only tick it if you have.</p></div>' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shows a “تأییدشده توسط چکمه” badge. This is a claim about a real check you have done — only tick it if you have.</p></div>' +
       '</section>' +
 
       '<div class="save-bar"><span class="msg" id="hostMsg"></span>' +
@@ -1494,7 +1494,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
           '<input type="text" id="h_amenityInput" maxlength="40" placeholder="وای‌فای"></div>' +
         '<button type="button" class="btn small ghost" id="h_amenityAdd">+ Add</button>' +
       '</div>' +
-      '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
+      '<p style="color:var(--ink-muted);font-size:12px;margin-top:12px;">' +
         'Up to 20, each up to 40 characters. Saved with the rest of the profile.</p>' +
     '</section>';
   }
@@ -1505,7 +1505,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<input type="text" id="h_lat" dir="ltr" value="' + esc(host.latitude == null ? '' : host.latitude) + '" placeholder="36.812"></div>' +
       '<div class="field" style="display:inline-block;width:48%;"><label>Longitude</label>' +
         '<input type="text" id="h_lng" dir="ltr" value="' + esc(host.longitude == null ? '' : host.longitude) + '" placeholder="50.898"></div>' +
-      '<p style="color:var(--ink-faint);font-size:12px;">' +
+      '<p style="color:var(--ink-muted);font-size:12px;">' +
         'Enter the real point — it is kept for you, not published. The public page only ever shows it ' +
         '<b>rounded to 2 decimals (~1 km)</b> as a map area, never an exact pin or an address. ' +
         'Both fields together or both empty; must be inside Iran.</p>' +
@@ -1519,7 +1519,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       ? ed.amenities.map(function(a, i){
           return '<span class="chip">' + esc(a) + '<button type="button" class="chip-x" data-i="' + i + '" title="Remove">×</button></span>';
         }).join('')
-      : '<span style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</span>';
+      : '<span style="color:var(--ink-muted);font-size:13px;">هنوز موردی نیست.</span>';
     box.querySelectorAll('.chip-x').forEach(function(btn){
       btn.addEventListener('click', function(){
         ed.amenities.splice(Number(btn.dataset.i), 1);
@@ -1567,14 +1567,14 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
     panel.innerHTML =
       '<h2>گالری <span class="where">روی صفحه: «فضا و حال‌وهوا» با زیرنویس و متن جایگزین</span></h2>' +
-      (ed.media.length ? rows : '<p style="color:var(--ink-faint);font-size:13px;">No images yet.</p>') +
+      (ed.media.length ? rows : '<p style="color:var(--ink-muted);font-size:13px;">No images yet.</p>') +
       '<div class="th-add">' +
         '<input type="file" id="gmFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
         '<button type="button" class="btn small ghost" id="gmAdd">+ Upload</button>' +
         '<button type="button" class="btn small primary" id="gmSave">Save gallery</button>' +
-        '<span class="msg" id="gmMsg" style="font-size:13px;color:var(--ink-faint);"></span>' +
+        '<span class="msg" id="gmMsg" style="font-size:13px;color:var(--ink-muted);"></span>' +
       '</div>' +
-      '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
+      '<p style="color:var(--ink-muted);font-size:12px;margin-top:12px;">' +
         'Shown on the public profile in this order. Uploading adds an image immediately; ' +
         '<b>Save gallery</b> is what stores the list, its order and its captions.</p>';
 
@@ -1806,7 +1806,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
                 '<button class="btn small primary app-approve">Approve</button>' +
                 '<button class="btn small danger app-reject">Reject</button>' +
               '</div>' +
-              '<p style="color:var(--ink-faint);font-size:12px;margin-top:10px;">' +
+              '<p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">' +
                 'Approving creates a <b>hidden</b> ' + esc((KIND_LABEL[a.kind] || a.kind).toLowerCase()) +
                 ' profile, prefilled from this submission, owned by the applicant\'s account and carrying ' +
                 'their account phone as its internal contact. Nothing appears on the site until you complete ' +
@@ -2121,7 +2121,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
               : '<option value="">No places yet</option>') +
           '</select></div>' +
       '</div>' +
-      '<p style="color:var(--ink-faint);font-size:12px;margin:10px 0 24px;">' +
+      '<p style="color:var(--ink-muted);font-size:12px;margin:10px 0 24px;">' +
         'A tour is held in one place. Only profiles of kind <b>place</b> appear here — ' +
         '<a href="#/hosts/new?kind=place">create one</a> if the venue is missing.</p>';
   }
@@ -2150,7 +2150,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     }).join('');
 
     return '<h3 style="font-size:14px;margin:0 0 10px;">برگزارکنندگان — People</h3>' +
-      (tourHosts.people.length ? rows : '<p style="color:var(--ink-faint);font-size:13px;">No people assigned.</p>') +
+      (tourHosts.people.length ? rows : '<p style="color:var(--ink-muted);font-size:13px;">No people assigned.</p>') +
       '<div class="th-add">' +
         '<div class="field" style="margin-bottom:0;"><label>افزودن برگزارکننده</label>' +
           '<select id="thPick">' +
@@ -2173,9 +2173,9 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       peopleSectionHtml() +
       '<div class="th-add" style="margin-top:18px;">' +
         '<button type="button" class="btn small primary" id="thSave">ذخیرهٔ همکاران</button>' +
-        '<span class="msg" id="thMsg" style="font-size:13px;color:var(--ink-faint);"></span>' +
+        '<span class="msg" id="thMsg" style="font-size:13px;color:var(--ink-muted);"></span>' +
       '</div>' +
-      '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
+      '<p style="color:var(--ink-muted);font-size:12px;margin-top:12px;">' +
         'The venue and the people are saved together, in one step. Order here is the order on the tour page; ' +
         'leads are always shown before co-hosts. Only <b>active</b> profiles appear publicly. ' +
         '<a href="#/hosts">Manage profiles →</a></p>';
