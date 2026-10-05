@@ -336,6 +336,8 @@ body { margin: 0; background: var(--paper); }
 
 .tp-related { margin-top: 80px; padding-top: 48px; border-top: 1px solid var(--line); }
 .tp-related__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+@media (min-width: 900px) { .tp-related__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.ck-section-head a { display: inline-flex; align-items: center; min-height: 44px; }
 
 .tp-sticky { display: none; }
 .tp-404 { padding-top: 64px; max-width: 640px; display: flex; flex-direction: column; gap: 24px; align-items: stretch; }
@@ -387,7 +389,10 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
   .tp-acc { display: block; }
   .tp-acc__item { border-top: 1px solid var(--line); padding: 14px 0; }
   .tp-acc__item:last-child { border-bottom: 1px solid var(--line); }
-  .tp-acc__item > summary { font-weight: 600; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; }
+  .tp-acc__item > summary { font-weight: 600; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; list-style: none; }
+  .tp-acc__item > summary::-webkit-details-marker { display: none; }
+  .tp-acc__item > summary::after { content: "‹"; margin-inline-start: auto; color: var(--ink-muted); transition: transform .15s ease; }
+  .tp-acc__item[open] > summary::after { transform: rotate(-90deg); }
   .tp-acc__day { color: var(--clay); font-family: var(--font-display); font-size: 22px; }
   .tp-acc__body { color: var(--ink-muted); font-size: 14px; margin: 8px 0 0; }
   .tp-acc__body p { margin: 0 0 8px; }
