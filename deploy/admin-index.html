@@ -1,230 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CHAACME — Admin</title>
+<title>CHAACME — ادمین</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#ffffff; --paper:#fafaf9; --ink:#0a0a0a; --ink-soft:#4a4a4a; --ink-faint:#8a8a86;
-    --line:#dcdcd8; --line-soft:#ececea; --danger:#a83232; --danger-bg:#fbeceb; --ok:#2f7a4f; --maxw:1040px;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; font-weight:400;
-    -webkit-font-smoothing:antialiased; min-height:100vh;
-  }
-  h1,h2,h3{ font-family:'Fraunces',serif; font-weight:500; letter-spacing:-0.01em; line-height:1.15; }
-  a{ color:inherit; }
-  input,select,textarea,button{ font-family:inherit; font-size:inherit; color:inherit; }
-  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 28px; }
-  [hidden]{ display:none !important; }
-
-  /* ---- shell ---- */
-  header.topbar{
-    border-bottom:1px solid var(--line-soft); position:sticky; top:0; background:rgba(255,255,255,0.92);
-    backdrop-filter:blur(8px); z-index:10;
-  }
-  .topbar-inner{ max-width:var(--maxw); margin:0 auto; padding:18px 28px; display:flex; align-items:center; justify-content:space-between; }
-  .logo{ font-family:'Fraunces',serif; font-size:18px; letter-spacing:0.01em; }
-  .logo b{ font-weight:600; }
-  .logo span{ color:var(--ink-faint); font-weight:400; font-size:14px; margin-left:8px; }
-  .topbar nav{ display:flex; align-items:center; gap:18px; font-size:13px; }
-  .topbar nav a{ color:var(--ink-soft); text-decoration:none; cursor:pointer; }
-  .topbar nav a:hover{ color:var(--ink); }
-  .who{ color:var(--ink-faint); }
-  main{ padding:44px 0 80px; }
-
-  /* ---- buttons / inputs ---- */
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    border:1px solid var(--ink); background:var(--bg); color:var(--ink); cursor:pointer;
-    padding:12px 22px; font-size:11.5px; letter-spacing:0.12em; text-transform:uppercase;
-    transition:background .2s ease, color .2s ease;
-  }
-  .btn:hover{ background:var(--ink); color:#fff; }
-  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
-  .btn.primary{ background:var(--ink); color:#fff; }
-  .btn.primary:hover{ opacity:0.85; background:var(--ink); }
-  .btn.danger{ border-color:var(--danger); color:var(--danger); }
-  .btn.danger:hover{ background:var(--danger); color:#fff; }
-  .btn.small{ padding:7px 14px; font-size:10.5px; }
-  .btn.ghost{ border-color:var(--line); color:var(--ink-soft); }
-  .btn.ghost:hover{ background:var(--paper); color:var(--ink); }
-
-  label{ display:block; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; }
-  input[type=text], input[type=number], input[type=date], input[type=password], input[type=username], textarea, select{
-    width:100%; background:var(--paper); border:1px solid var(--line); padding:11px 13px; font-size:14px; color:var(--ink);
-  }
-  input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--ink); }
-  textarea{ resize:vertical; min-height:70px; font-family:inherit; }
-  .field{ margin-bottom:18px; }
-  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
-  .checkline{ display:flex; align-items:center; gap:8px; }
-  .checkline label{ margin:0; text-transform:none; letter-spacing:0; font-size:13.5px; color:var(--ink); }
-  .checkline input{ width:auto; }
-
-  /* ---- login ---- */
-  .login-wrap{ max-width:340px; margin:16vh auto 0; padding:0 20px; }
-  .login-wrap h1{ font-size:24px; margin-bottom:6px; }
-  .login-wrap p.sub{ color:var(--ink-faint); font-size:13.5px; margin-bottom:28px; }
-  .error{ background:var(--danger-bg); color:var(--danger); font-size:13px; padding:10px 12px; margin-bottom:16px; border:1px solid #f0d3d1; }
-
-  /* ---- tour list ---- */
-  .list-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:26px; }
-  table.tours{ width:100%; border-collapse:collapse; }
-  table.tours th{ text-align:left; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); padding:0 12px 10px; border-bottom:1px solid var(--line); }
-  table.tours td{ padding:14px 12px; border-bottom:1px solid var(--line-soft); font-size:14px; vertical-align:middle; }
-  table.tours tr:hover td{ background:var(--paper); }
-  .badge{ display:inline-block; font-size:10px; letter-spacing:0.05em; text-transform:uppercase; padding:3px 9px; border-radius:20px; border:1px solid var(--line); color:var(--ink-soft); }
-  .badge.published{ border-color:#bfe0c9; background:#f1faf4; color:var(--ok); }
-  .badge.draft{ border-color:var(--line); color:var(--ink-faint); }
-  .badge.archived{ border-color:var(--line); color:var(--ink-faint); background:var(--paper); }
-  .badge.coming_soon{ border-color:#e0d6b8; background:#fbf7ea; color:#8a6d1f; }
-  .row-actions{ display:flex; gap:8px; justify-content:flex-end; }
-  .empty{ color:var(--ink-faint); padding:40px 0; text-align:center; }
-
-  /* ---- bookings list ---- */
-  .badge.paid{ border-color:#bfe0c9; background:#f1faf4; color:var(--ok); }
-  .badge.pending{ border-color:var(--line); color:var(--ink-faint); }
-  .badge.failed{ border-color:#f0d3d1; background:var(--danger-bg); color:var(--danger); }
-  .badge.canceled{ border-color:var(--line); color:var(--ink-faint); background:var(--paper); }
-  .badge.paid_no_capacity{ border-color:var(--danger); background:var(--danger); color:#fff; font-weight:600; }
-  tr.needs-attention td{ background:var(--danger-bg); }
-  tr.needs-attention:hover td{ background:#f6dedc; }
-  .filter-row{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
-  .filter-row label{ margin:0; }
-  .filter-row select{ width:auto; min-width:200px; }
-
-  /* ---- editor ---- */
-  .editor-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:20px; }
-  .editor-head h1{ font-size:24px; }
-  section.panel{ border:1px solid var(--line-soft); padding:26px; margin-bottom:22px; }
-  section.panel h2{ font-size:15px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--line-soft); }
-  .repeat-row{ display:grid; gap:10px; border:1px solid var(--line-soft); padding:14px; margin-bottom:10px; position:relative; background:var(--paper); }
-  .repeat-row .rm{ position:absolute; top:10px; right:10px; }
-  .save-bar{ position:sticky; bottom:0; background:rgba(255,255,255,0.94); backdrop-filter:blur(6px); border-top:1px solid var(--line); padding:16px 0; display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:10px; }
-  .save-bar .msg{ margin-right:auto; font-size:13px; color:var(--ink-faint); }
-
-  /* ---- gallery ---- */
-  .gallery-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; margin-bottom:18px; }
-  .gphoto{ border:1px solid var(--line-soft); position:relative; }
-  .gphoto img{ width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--paper); }
-  .gphoto .gcap{ font-size:11px; padding:7px 8px; color:var(--ink-soft); border-top:1px solid var(--line-soft); }
-  .gphoto .gctrl{ position:absolute; top:6px; right:6px; display:flex; gap:4px; }
-  .gphoto .gctrl button{ width:24px; height:24px; border:none; background:rgba(10,10,10,0.72); color:#fff; cursor:pointer; font-size:11px; line-height:1; }
-  .gphoto .gctrl button:hover{ background:#000; }
-  .upload-row{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
-  .upload-row .field{ flex:1; min-width:160px; margin-bottom:0; }
-
-  /* ---- editions (dates & capacity) ---- */
-  table.editions{ width:100%; border-collapse:collapse; margin-bottom:16px; }
-  table.editions th{ text-align:left; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); padding:0 8px 8px; border-bottom:1px solid var(--line); font-weight:500; }
-  table.editions td{ padding:8px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
-  table.editions td input[type=text], table.editions td input[type=number], table.editions td input[type=date]{ padding:8px 9px; font-size:13px; }
-  table.editions .fa{ font-size:11px; color:var(--ink-faint); margin-top:4px; min-height:14px; }
-  table.editions tr.is-past td{ background:var(--paper); }
-  table.editions tr.is-past input{ color:var(--ink-faint); }
-  .badge.upcoming{ border-color:#bfe0c9; background:#f1faf4; color:var(--ok); }
-  .badge.past{ border-color:var(--line); color:var(--ink-faint); background:var(--paper); }
-  .badge.undated{ border-color:#e0d6b8; background:#fbf7ea; color:#8a6d1f; }
-
-  /* ---- itinerary stage photos ---- */
-  .iphoto-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:8px; margin:4px 0 10px; grid-column:1/-1; }
-  .iphoto{ border:1px solid var(--line-soft); position:relative; }
-  .iphoto img{ width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--paper); }
-  .iphoto button{ position:absolute; top:3px; right:3px; width:20px; height:20px; border:none; background:rgba(10,10,10,0.72); color:#fff; cursor:pointer; font-size:10px; line-height:1; }
-  .iphoto button:hover{ background:#000; }
-  .istage-photos{ grid-column:1/-1; border-top:1px dashed var(--line-soft); padding-top:12px; margin-top:2px; }
-  .istage-photos > label{ margin-bottom:8px; }
-
-  .iphoto .ialt, .gphoto .ialt{ display:block; width:100%; border:none; border-top:1px solid var(--line-soft); padding:5px 6px; font-size:11px; }
-  .gphoto{ cursor:grab; }
-  .gphoto.dragging{ opacity:.4; }
-  .gphoto.dragover{ outline:2px solid var(--ink); }
-  .gphoto .cover-flag{ position:absolute; top:6px; left:6px; background:#000; color:#fff; font-size:10px; padding:2px 6px; }
-  .hl-image{ grid-column:1/-1; border-top:1px dashed var(--line-soft); padding-top:12px; display:grid; gap:8px; }
-  .hl-image img{ width:120px; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--paper); }
-
-  /* ---- hosts (organizers) ---- */
-  .host-photo-box{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
-  .host-photo{ width:120px; height:120px; border:1px solid var(--line-soft); background:var(--paper); display:flex; align-items:center; justify-content:center; flex:none; }
-  .host-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .host-photo .ph{ font-size:11px; color:var(--ink-faint); text-align:center; padding:6px; }
-  .host-photo-ctrl{ flex:1; min-width:200px; }
-
-  /* Assigned organizers inside the tour editor. */
-  .th-row{ display:flex; align-items:center; gap:10px; border:1px solid var(--line-soft); padding:10px 12px; margin-bottom:8px; background:var(--paper); }
-  .th-row .th-name{ flex:1; font-size:13.5px; }
-  .th-row .th-name small{ display:block; color:var(--ink-faint); font-size:11.5px; }
-  .th-row select{ width:auto; min-width:120px; }
-  .th-row .th-ord{ display:flex; gap:4px; }
-  .th-row .th-ord button{ width:26px; height:26px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:12px; line-height:1; }
-  .th-row .th-ord button:disabled{ opacity:.35; cursor:default; }
-  .th-add{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-top:12px; }
-  .th-add select{ min-width:220px; width:auto; }
-
-  .app-card{ border:1px solid var(--line-soft); padding:16px 18px; margin-bottom:12px; background:var(--paper); }
-  .app-card .app-top{ display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
-  .app-card .app-top b{ font-size:14.5px; }
-  .app-card .app-meta{ color:var(--ink-faint); font-size:12px; }
-  .app-card .app-desc{ font-size:13px; line-height:1.85; color:var(--ink-soft); white-space:pre-wrap; margin:10px 0 12px; }
-  .app-actions{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
-  .app-actions .field{ margin-bottom:0; }
-  .app-actions input{ width:220px; }
-
-  .badge.active{ background:#e7f2e9; color:#1e6b33; }
-  .badge.hidden{ background:#eee; color:#666; }
-  .badge.pending{ background:#fdf3e0; color:#8a5a12; }
-  .badge.approved{ background:#e7f2e9; color:#1e6b33; }
-  .badge.rejected{ background:#fbe9e7; color:#8d2b20; }
-  .badge.lead{ background:#ecebff; color:#3b348c; }
-  .badge.co_host{ background:#eee; color:#555; }
-  .badge.venue{ background:#e6f1f6; color:#1f5771; }
-  /* The two partner kinds, told apart at a glance in every list. */
-  .badge.person{ background:#f1eee8; color:#6b5a3e; }
-  .badge.place{ background:#e6f1f6; color:#1f5771; }
-
-  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
-  .chip{
-    display:inline-flex; align-items:center; gap:6px; font-size:13px;
-    border:1px solid var(--line); background:var(--paper); padding:5px 6px 5px 11px;
-  }
-  .chip-x{
-    border:none; background:none; cursor:pointer; font-size:15px; line-height:1;
-    color:var(--ink-faint); padding:0 2px;
-  }
-  .chip-x:hover{ color:var(--danger); }
-
-  .media-row .gm-thumb{ width:64px; height:48px; background:var(--paper); border:1px solid var(--line-soft); overflow:hidden; flex:none; }
-  .media-row .gm-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .media-row .gm-caption{ flex:1; padding:8px 10px; border:1px solid var(--line); font:inherit; font-size:13px; }
-
-  #toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 20px; font-size:13.5px; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
-  #toast.show{ opacity:1; }
-  #toast.err{ background:var(--danger); }
-
-  .rev-table td, .rev-table th{ vertical-align:top; }
-  .rev-k{ white-space:nowrap; color:var(--ink-faint); }
-  .rev-old{ background:#fdf7f6; }
-  .rev-new{ background:#f4faf4; }
-  .rev-thumbs{ display:flex; flex-wrap:wrap; gap:6px; }
-  .rev-thumb, .rev-thumbs .host-photo, .rev-thumbs .ph{ width:64px; height:48px; overflow:hidden; display:inline-block; background:#eee; }
-  .rev-thumb img, .rev-thumbs img{ width:100%; height:100%; object-fit:cover; display:block; }
-</style>
+<link rel="preload" href="/assets/fonts/vazirmatn-5.3.0-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/chaacme.css">
 </head>
-<body>
-
+<body class="ad-body">
+<div class="ck-root ad" dir="rtl">
 <div id="toast"></div>
 
 <div id="app"></div>
+</div>
 
-<script>
+<script type="module">
+import { header } from '/assets/js/shared/components/header.js';
+import { html, toHtmlString } from '/assets/js/shared/html.js';
 (function(){
   "use strict";
 
@@ -304,6 +97,7 @@
     if (hash === 'applications') { renderApplications(); return; }
     if (hash === 'revisions') { renderRevisions(); return; }
     if (hash === 'proposals') { renderProposals(); return; }
+    if (hash === 'settings') { renderSettings(); return; }
     const mh = /^hosts\/(\d+)\/edit$/.exec(hash);
     if (mh) { renderHostEditor(Number(mh[1])); return; }
     const m = /^tours\/([^/]+)\/edit$/.exec(hash);
@@ -323,32 +117,198 @@
   // ---------------------------------------------------------------------
   // Shell (topbar) — wraps every authenticated view
   // ---------------------------------------------------------------------
+  const SECTIONS = [
+    ['tours', 'تجربه‌ها', '#/tours'], ['hosts', 'همکاران', '#/hosts'], ['applications', 'درخواست‌ها', '#/applications'],
+    ['revisions', 'بازبینی تغییرات', '#/revisions'], ['proposals', 'پیشنهادها', '#/proposals'], ['bookings', 'رزروها', '#/bookings'],
+    ['settings', 'صفحهٔ اول', '#/settings']
+  ];
+  function activeSection(){
+    const h = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0];
+    return SECTIONS.some(function(x){ return x[0] === h; }) ? h : 'tours';
+  }
+
   function shell(contentHtml){
-    return (
-      '<header class="topbar"><div class="topbar-inner">' +
-        '<div class="logo"><b>CHAACME</b><span>admin</span></div>' +
-        '<nav>' +
-          '<a href="#/tours">Tours</a>' +
-          '<a href="#/hosts">Organizers</a>' +
-          '<a href="#/applications">Applications</a>' +
-          '<a href="#/revisions">بازبینی تغییرات</a>' +
-          '<a href="#/proposals">پیشنهادهای تجربه</a>' +
-          '<a href="#/bookings">رزروها و پرداخت‌ها</a>' +
-          '<span class="who">' + esc(state.admin ? state.admin.username : '') + '</span>' +
-          '<a id="logoutLink">Log out</a>' +
-        '</nav>' +
-      '</div></header>' +
-      '<main><div class="wrap">' + contentHtml + '</div></main>'
-    );
+    // the same header component as the site, in its admin variant
+    const links = SECTIONS.map(function(x){ return { key: x[0], label: x[1], href: x[2] }; });
+    const bar = toHtmlString(header({
+      variant: 'admin', label: 'ادمین', authSlot: false, wide: true, links: links, active: activeSection(),
+      extra: html`<span class="ck-site-label">${state.admin ? state.admin.username : ''}</span><a href="#/tours" data-logout>خروج</a>`
+    }));
+    return bar + '<main><div class="wrap">' + contentHtml + '</div></main>';
   }
 
   function bindLogout(){
-    const el = document.getElementById('logoutLink');
-    if (el) el.addEventListener('click', async function(){
-      try { await api('/admin/logout', { method:'POST' }); } catch(e){}
-      state.admin = null;
-      location.hash = '';
-      route();
+    document.querySelectorAll('[data-logout]').forEach(function(el){
+      el.addEventListener('click', async function(){
+        try { await api('/admin/logout', { method:'POST' }); } catch(e){}
+        state.admin = null;
+        location.hash = '';
+        route();
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Site settings: the home page, the become-host band, the footer, the info pages
+  // ---------------------------------------------------------------------
+  const MEDIA_LABEL = { image: 'تصویر', video: 'ویدیو' };
+
+  async function renderSettings(){
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
+    bindLogout();
+    let data;
+    try { data = await api('/admin/settings'); }
+    catch(e){
+      if (e.status === 401){ state.admin = null; renderLogin(); return; }
+      toast('بارگذاری تنظیمات ممکن نشد', true);
+      return;
+    }
+    const st = Object.assign({}, data.settings);          // working copy; written by "ذخیره"
+    const F = data.fields;
+    const maxMb = Math.round((data.maxVideoBytes || 0) / 1048576);
+    let links = [];
+    try { links = JSON.parse(st.footer_links || '[]'); } catch(e){ links = []; }
+    const where = function(t){ return '<span class="where">روی صفحه: ' + t + '</span>'; };
+
+    function txt(key, label, hint, area){
+      const v = st[key] == null ? '' : st[key];
+      const max = F[key] && F[key].max ? ' maxlength="' + F[key].max + '"' : '';
+      return '<div class="field"><label for="s_' + key + '">' + esc(label) + (F[key] && F[key].max ? ' <span class="muted">(حداکثر ' + F[key].max + ')</span>' : '') + '</label>' +
+        (area ? '<textarea id="s_' + key + '" data-key="' + key + '"' + max + ' rows="' + (area === true ? 3 : area) + '">' + esc(v) + '</textarea>'
+              : '<input type="text" id="s_' + key + '" data-key="' + key + '"' + max + ' value="' + esc(v) + '">') +
+        (hint ? '<p class="hint">' + esc(hint) + '</p>' : '') + '</div>';
+    }
+    function mediaBox(key, label, kind, hint){
+      return '<div class="field" data-media-field="' + key + '"><label>' + esc(label) + '</label><div class="st-media" data-media="' + key + '" data-kind="' + kind + '"></div>' +
+        (hint ? '<p class="hint">' + esc(hint) + '</p>' : '') + '</div>';
+    }
+    function card(n){
+      return '<div class="st-card"><b>کارت ' + n + '</b>' +
+        txt('explainer_' + n + '_title', 'عنوان', '') + txt('explainer_' + n + '_text', 'توضیح کوتاه', '') +
+        mediaBox('explainer_' + n + '_image', 'تصویر', 'image', '') + '</div>';
+    }
+
+    app.innerHTML = shell(
+      '<div class="list-head"><div><h1>صفحهٔ اول و تنظیمات</h1><p class="muted">هر بخشی که خالی بماند، روی سایت نمایش داده نمی‌شود.</p></div></div>' +
+
+      '<section class="panel"><h2>بالای صفحهٔ اول ' + where('تصویر یا ویدیوی بزرگ بالای /') + '</h2>' +
+        mediaBox('home_hero_video', 'ویدیو', 'video', 'فقط mp4، حداکثر ' + maxMb + ' مگابایت. بدون پردازش ذخیره می‌شود؛ پیش از بارگذاری آن را فشرده کنید.') +
+        '<div class="grid2">' + mediaBox('home_hero_poster', 'پوستر ویدیو', 'image', 'تا ویدیو بارگذاری می‌شود دیده می‌شود.') +
+        mediaBox('home_hero_image', 'تصویر جایگزین', 'image', 'اگر ویدیو نباشد، این تصویر نمایش داده می‌شود.') + '</div>' +
+        txt('home_hero_headline', 'تیتر', '') + txt('home_hero_subline', 'زیرتیتر', '', true) +
+        '<div class="grid2">' + txt('home_cta_primary', 'دکمهٔ اول (به فهرست تجربه‌ها)', '') + txt('home_cta_secondary', 'دکمهٔ دوم (به بخش «هر تجربه سه تکه دارد»)', 'بدون آن بخش نمایش داده نمی‌شود.') + '</div>' +
+      '</section>' +
+
+      '<section class="panel" id="st_how"><h2>بخش توضیح ' + where('«هر تجربه سه تکه دارد» در صفحهٔ اول') + '</h2>' +
+        txt('explainer_title', 'عنوان', '') + txt('explainer_text', 'متن', '', true) +
+        '<div class="st-cards">' + card(1) + card(2) + card(3) + '</div>' +
+      '</section>' +
+
+      '<section class="panel"><h2>دعوت به همکاری ' + where('نوار پایین صفحهٔ اول') + '</h2>' +
+        txt('become_host_title', 'عنوان', '') + txt('become_host_text', 'متن', '', true) + txt('become_host_cta', 'برچسب دکمه (به /become-host)', '') +
+      '</section>' +
+
+      '<section class="panel"><h2>پایین صفحه ' + where('فوتر همهٔ صفحه‌ها') + '</h2>' +
+        txt('instagram_handle', 'اینستاگرام', 'فقط نام کاربری، بدون @ و لینک. خالی = پیوند اینستاگرام نمایش داده نمی‌شود.') +
+        '<div class="field st-links"><label>پیوندهای بیشتر <span class="muted">(حداکثر ۸؛ مسیرهای داخلی فقط از صفحه‌های موجود یا آدرس https)</span></label><div id="stLinks"></div>' +
+        '<button type="button" class="btn small ghost" id="stAddLink">+ پیوند</button>' +
+        '<datalist id="stPaths">' + (data.footerPaths || []).map(function(x){ return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' +
+        '<p class="hint">پیوند به «درباره، قوانین، استرداد، حریم خصوصی» به‌صورت خودکار و فقط وقتی متن آن نوشته شده باشد در فوتر می‌آید.</p></div>' +
+      '</section>' +
+
+      '<section class="panel"><h2>صفحه‌های متنی ' + where('/about، /terms، /refund، /privacy') + '</h2>' +
+        '<p class="hint" style="margin-bottom:14px">متن ساده با پاراگراف (یک خط خالی بین پاراگراف‌ها). HTML پذیرفته نمی‌شود. صفحهٔ خالی منتشر نمی‌شود (۴۰۴) و لینک آن در فوتر نمی‌آید.</p>' +
+        txt('page_about', 'درباره چکمه (/about)', '', 8) + txt('page_terms', 'قوانین و مقررات (/terms)', '', 8) +
+        txt('page_refund', 'شرایط استرداد (/refund)', '', 8) + txt('page_privacy', 'حریم خصوصی (/privacy)', '', 8) +
+      '</section>' +
+
+      '<div class="save-bar"><span class="msg" id="stMsg"></span><button class="btn primary" id="stSave">ذخیره</button></div>'
+    );
+    bindLogout();
+
+    // ---- media fields
+    function paintMedia(key){
+      const box = app.querySelector('[data-media="' + key + '"]');
+      const kind = box.dataset.kind;
+      const v = st[key];
+      const preview = v
+        ? (kind === 'video' ? '<video src="' + esc(v) + '" muted controls preload="metadata"></video>' : '<img src="' + esc(v) + '" alt="">')
+        : '';
+      box.innerHTML = preview +
+        '<input type="file" accept="' + (kind === 'video' ? 'video/mp4' : 'image/png,image/jpeg,image/webp') + '" aria-label="' + esc(MEDIA_LABEL[kind]) + '">' +
+        '<button type="button" class="btn small primary" data-up>بارگذاری</button>' +
+        (v ? '<button type="button" class="btn small danger" data-rm>حذف</button>' : '');
+      box.querySelector('[data-up]').addEventListener('click', async function(){
+        const f = box.querySelector('input[type=file]').files[0];
+        if (!f){ toast('ابتدا یک فایل انتخاب کنید', true); return; }
+        const fd = new FormData();
+        fd.append('file', f);
+        this.disabled = true;
+        try {
+          if (kind === 'video') {
+            if (f.size > data.maxVideoBytes){ toast('حجم ویدیو بیش از ' + maxMb + ' مگابایت است', true); return; }
+            st[key] = (await api('/admin/upload-video', { method: 'POST', body: fd })).path;
+          } else {
+            fd.append('site', '1');
+            st[key] = (await api('/admin/upload', { method: 'POST', body: fd })).path;
+          }
+          paintMedia(key);
+          toast('بارگذاری شد؛ فراموش نکنید ذخیره کنید');
+        } catch(e){
+          toast(e.status === 413 ? 'فایل بزرگ‌تر از حد مجاز است' : (e.status === 422 ? 'این فایل پذیرفته نشد' : 'بارگذاری ممکن نشد'), true);
+          this.disabled = false;
+        }
+      });
+      const rm = box.querySelector('[data-rm]');
+      if (rm) rm.addEventListener('click', function(){ st[key] = null; paintMedia(key); });
+    }
+    app.querySelectorAll('[data-media]').forEach(function(b){ paintMedia(b.dataset.media); });
+
+    // ---- footer links
+    function paintLinks(){
+      const box = document.getElementById('stLinks');
+      box.innerHTML = links.map(function(l, i){
+        return '<div class="th-row" data-i="' + i + '">' +
+          '<input type="text" data-l="label" maxlength="30" aria-label="برچسب" placeholder="برچسب" value="' + esc(l.label) + '">' +
+          '<input type="text" data-l="href" list="stPaths" dir="ltr" aria-label="آدرس" placeholder="/experiences یا https://…" value="' + esc(l.href) + '">' +
+          '<button type="button" class="btn small danger" data-lrm>×</button></div>';
+      }).join('');
+      box.querySelectorAll('[data-l]').forEach(function(inp){
+        inp.addEventListener('input', function(){ links[Number(inp.closest('.th-row').dataset.i)][inp.dataset.l] = inp.value; });
+      });
+      box.querySelectorAll('[data-lrm]').forEach(function(b){
+        b.addEventListener('click', function(){ links.splice(Number(b.closest('.th-row').dataset.i), 1); paintLinks(); });
+      });
+    }
+    paintLinks();
+    document.getElementById('stAddLink').addEventListener('click', function(){
+      if (links.length >= 8){ toast('حداکثر ۸ پیوند', true); return; }
+      links.push({ label: '', href: '' });
+      paintLinks();
+    });
+
+    // ---- save: every key is sent; an empty value removes it
+    document.getElementById('stSave').addEventListener('click', async function(){
+      const btn = this; const msg = document.getElementById('stMsg');
+      msg.textContent = '';
+      const values = {};
+      Object.keys(F).forEach(function(key){
+        if (F[key].kind === 'links') { values[key] = links.filter(function(l){ return l.label.trim() || l.href.trim(); }); return; }
+        if (F[key].kind === 'image' || F[key].kind === 'video') { values[key] = st[key] || ''; return; }
+        const el = app.querySelector('[data-key="' + key + '"]');
+        values[key] = el ? el.value : '';
+      });
+      btn.disabled = true;
+      try {
+        const out = await api('/admin/settings', { method: 'PUT', body: { values: values } });
+        Object.assign(st, out.settings);
+        toast('ذخیره شد');
+        msg.textContent = 'ذخیره شد. صفحه‌های عمومی تا حدود یک دقیقه ممکن است نسخهٔ قبلی را نشان دهند.';
+      } catch(e){
+        if (e.status === 401){ state.admin = null; renderLogin(); return; }
+        const f = e.body && e.body.fields ? Object.keys(e.body.fields) : [];
+        msg.textContent = e.status === 422 ? 'این موارد پذیرفته نشد: ' + f.join('، ') : 'ذخیره ممکن نشد.';
+      } finally { btn.disabled = false; }
     });
   }
 
@@ -358,13 +318,13 @@
   function renderLogin(){
     app.innerHTML =
       '<div class="login-wrap">' +
-        '<h1>Admin sign in</h1>' +
-        '<p class="sub">CHAACME tour management</p>' +
+        '<h1>ورود ادمین</h1>' +
+        '<p class="sub">مدیریت چکمه</p>' +
         '<div id="loginError" class="error" hidden></div>' +
         '<form id="loginForm">' +
-          '<div class="field"><label>Username</label><input type="text" id="loginUsername" autocomplete="username" required></div>' +
-          '<div class="field"><label>Password</label><input type="password" id="loginPassword" autocomplete="current-password" required></div>' +
-          '<button class="btn primary" type="submit" style="width:100%" id="loginSubmit">Sign in</button>' +
+          '<div class="field"><label>نام کاربری</label><input type="text" id="loginUsername" autocomplete="username" required></div>' +
+          '<div class="field"><label>رمز عبور</label><input type="password" id="loginPassword" autocomplete="current-password" required></div>' +
+          '<button class="btn primary" type="submit" style="width:100%" id="loginSubmit">ورود</button>' +
         '</form>' +
       '</div>';
 
@@ -388,8 +348,8 @@
         route();
       } catch(err){
         errEl.textContent = err.status === 429
-          ? 'Too many attempts. Wait a few minutes and try again.'
-          : 'Incorrect username or password.';
+          ? 'تعداد تلاش‌ها زیاد است. چند دقیقه صبر کنید.'
+          : 'نام کاربری یا رمز عبور اشتباه است.';
         errEl.hidden = false;
       } finally {
         btn.disabled = false;
@@ -401,14 +361,14 @@
   // Tour list
   // ---------------------------------------------------------------------
   async function renderList(){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
     try {
       const data = await api('/admin/tours');
       state.tours = data.tours;
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      toast('Could not load tours', true);
+      toast('بارگذاری تجربه‌ها ممکن نشد', true);
       state.tours = [];
     }
 
@@ -421,17 +381,17 @@
           '<td>' + (t.featured ? '★' : '') + '</td>' +
           '<td>' + (t.price != null ? Number(t.price).toLocaleString('en-US') : '—') + '</td>' +
           '<td><div class="row-actions">' +
-            '<a class="btn small ghost" href="#/tours/' + encodeURIComponent(t.id) + '/edit">Edit</a>' +
+            '<a class="btn small ghost" href="#/tours/' + encodeURIComponent(t.id) + '/edit">ویرایش</a>' +
           '</div></td>' +
         '</tr>'
       );
     }).join('');
 
     app.innerHTML = shell(
-      '<div class="list-head"><h1>Tours</h1><a class="btn primary" href="#/tours/new">+ New tour</a></div>' +
+      '<div class="list-head"><h1>تجربه‌ها</h1><a class="btn primary" href="#/tours/new">+ تجربهٔ جدید</a></div>' +
       (state.tours.length
-        ? '<table class="tours"><thead><tr><th>Name</th><th>Status</th><th>Featured</th><th>Price</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
-        : '<div class="empty">No tours yet. Create the first one.</div>')
+        ? '<table class="tours"><thead><tr><th>نام</th><th>وضعیت</th><th>ویژه</th><th>قیمت</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="empty">هنوز تجربه‌ای نیست. اولی را بسازید.</div>')
     );
     bindLogout();
   }
@@ -440,7 +400,7 @@
   // Bookings + payments
   // ---------------------------------------------------------------------
   async function renderBookings(){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
     try {
       const qs = state.bookingsFilter ? ('?payment_status=' + encodeURIComponent(state.bookingsFilter)) : '';
@@ -520,7 +480,7 @@
 
   async function renderEditor(id){
     const isNew = !id;
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
 
     let tour;
@@ -555,100 +515,120 @@
   function paintEditor(ed){
     const t = ed.tour;
     const idField = ed.isNew
-      ? '<div class="field"><label>Tour ID (permanent, url-safe: lowercase letters, digits, hyphens)</label>' +
+      ? '<div class="field"><label>شناسهٔ تجربه (دائمی؛ حروف کوچک انگلیسی، عدد و خط تیره)</label>' +
         '<input type="text" id="f_id" value="' + esc(t.id) + '" placeholder="e.g. desert-parthian"></div>'
-      : '<div class="field"><label>Tour ID</label><input type="text" value="' + esc(t.id) + '" disabled></div>';
+      : '<div class="field"><label>شناسهٔ تجربه</label><input type="text" value="' + esc(t.id) + '" disabled></div>';
 
+    const hint = function(text){ return '<span class="where">روی صفحه: ' + text + '</span>'; };
+    const SECS = [
+      ['sec-1', '۱. عنوان و عکس‌ها'], ['sec-2', '۲. داستان و هایلایت‌ها'], ['sec-3', '۳. برنامهٔ سفر'],
+      ['sec-4', '۴. مکان و برگزارکنندگان'], ['sec-5', '۵. اجراها و قیمت'], ['sec-6', '۶. شرایط و سئو']
+    ];
     app.innerHTML = shell(
       '<div class="editor-head">' +
-        '<h1>' + (ed.isNew ? 'New tour' : esc(t.name || t.id)) + '</h1>' +
-        (ed.isNew ? '' : '<button class="btn danger small" id="deleteTourBtn">Delete tour</button>') +
+        '<div><p class="muted">تجربه‌ها / <span class="ck-latin">' + esc(t.id || 'new') + '</span></p>' +
+        '<h1>' + (ed.isNew ? 'تجربهٔ جدید' : esc(t.name || t.id)) + '</h1></div>' +
+        '<div class="row-actions">' +
+          (ed.isNew ? '' : '<a class="btn ghost" target="_blank" rel="noopener" href="/tour/' + encodeURIComponent(t.id) + '">مشاهده روی سایت ↗</a>') +
+          (ed.isNew ? '' : '<button class="btn danger small" id="deleteTourBtn">حذف تجربه</button>') +
+        '</div>' +
       '</div>' +
+      '<div class="editor-layout">' +
+      '<nav class="secnav" aria-label="بخش‌های صفحه"><span>بخش‌های صفحه</span>' +
+        SECS.map(function(x, i){ return '<button type="button" data-sec="' + x[0] + '"' + (i === 0 ? ' class="is-on"' : '') + '>' + x[1] + '</button>'; }).join('') +
+      '</nav>' +
+      '<div class="editor-main">' +
 
-      '<section class="panel"><h2>Basics</h2>' +
+      '<section class="panel" id="sec-1"><h2>۱. عنوان و عکس‌ها ' + hint('بالای صفحه و کارت تجربه') + '</h2>' +
         '<div class="grid2">' +
           idField +
-          field('Name', 'f_name', t.name) +
+          field('عنوان', 'f_name', t.name) +
         '</div>' +
         '<div class="grid3">' +
-          selectField('Status', 'f_status', STATUSES, t.status || 'draft') +
-          field('Duration', 'f_duration', t.duration, 'e.g. یک‌روزه') +
-          field('Price (Toman)', 'f_price', t.price, '', 'number') +
+          selectField('وضعیت', 'f_status', STATUSES, t.status || 'draft') +
+          field('مدت', 'f_duration', t.duration, 'مثلاً ۳ روز و ۲ شب') +
+          field('قیمت هر نفر (تومان)', 'f_price', t.price, '', 'number') +
         '</div>' +
         '<div class="grid2">' +
-          field('Tags', 'f_tags', t.tags, 'comma or · separated, shown as-is') +
-          field('Subtitle (EN)', 'f_subtitleEn', t.subtitleEn) +
+          field('برچسب‌ها', 'f_tags', t.tags, 'با کاما یا · جدا کنید') +
+          field('زیرعنوان (EN)', 'f_subtitleEn', t.subtitleEn) +
         '</div>' +
         '<div class="grid2">' +
-          field('Card day label', 'f_dayLabel', t.dayLabel, 'e.g. ۱ — required for Featured to show on homepage') +
-          field('Card month label', 'f_monthLabel', t.monthLabel, 'e.g. مهر') +
+          field('روز روی کارت', 'f_dayLabel', t.dayLabel, 'مثلاً ۱ — برای نمایش «ویژه» در صفحهٔ اول لازم است') +
+          field('ماه روی کارت', 'f_monthLabel', t.monthLabel, 'مثلاً مهر') +
         '</div>' +
-        '<div class="field"><label>Cover photo path</label>' +
+        '<div class="field"><label>عکس کاور (کارت تجربه)</label>' +
           uploadRow('cover', t.photoPath, t.id) +
         '</div>' +
         '<div class="field checkline"><input type="checkbox" id="f_featured"' + (t.featured ? ' checked' : '') + '>' +
-          '<label for="f_featured">Featured (shown on the homepage — also needs Card day/month label above, or it won’t appear there)</label></div>' +
-        '<div class="field"><label>Description</label><textarea id="f_description">' + esc(t.description) + '</textarea></div>' +
-      '</section>' +
-
-      // What the public experience page (/tour/<slug>) shows. Every block stays hidden until its field is filled.
-      '<section class="panel"><h2>Experience page</h2>' +
-        '<div class="grid3">' +
-          '<div class="field"><label>Region (stamp colour)</label><select id="f_region">' +
-            REGIONS.map(function(r){ return '<option value="' + r[0] + '"' + (r[0] === (t.region || '') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select></div>' +
-          limitedField('Experience type', 'f_experienceType', t.experienceType, 60) +
-          limitedField('Level', 'f_level', t.level, 60) +
-        '</div>' +
-        limitedField('Story', 'f_story', t.story, 1500, true) +
-        '<div class="grid2">' +
-          limitedField('What\'s included (separate items with ·)', 'f_included', t.included, 600, true) +
-          limitedField('What to bring', 'f_bringList', t.bringList, 600, true) +
-        '</div>' +
-        limitedField('SEO description (search + link previews; empty = story)', 'f_seoDescription', t.seoDescription, 160, true) +
-      '</section>' +
-
-      '<section class="panel"><h2>Highlights</h2>' +
-        '<div id="highlightsList"></div>' +
-        '<button class="btn small ghost" id="addHighlight">+ Add highlight</button>' +
-      '</section>' +
-
-      '<section class="panel"><h2>Itinerary</h2>' +
-        '<div id="itineraryList"></div>' +
-        '<button class="btn small ghost" id="addStep">+ Add step</button>' +
-      '</section>' +
-
-      '<section class="panel"><h2>Review categories</h2>' +
-        '<div id="categoriesList"></div>' +
-        '<button class="btn small ghost" id="addCategory">+ Add category</button>' +
-      '</section>' +
-
-      '<section class="panel" id="galleryPanel"><h2>Gallery</h2>' +
+          '<label for="f_featured">ویژه (در صفحهٔ اول؛ روز و ماه روی کارت هم لازم است)</label></div>' +
+        '<div class="field"><label>توضیح کوتاه</label><textarea id="f_description">' + esc(t.description) + '</textarea></div>' +
+        '<div class="field"><label>گالری <span class="muted">(اولی = عکس اصلی و کاور کارت؛ برای جابه‌جایی بکشید)</span></label><div id="galleryPanel">' +
         (ed.isNew
-          ? '<p style="color:var(--ink-faint);font-size:13px;margin-bottom:14px;">Save the tour first, then manage its gallery here.</p>'
+          ? '<p class="muted">ابتدا تجربه را ذخیره کنید، بعد گالری را اینجا مدیریت کنید.</p>'
           : renderGallerySection(t)) +
+        '</div></div>' +
       '</section>' +
 
-      // Saved per row through its own endpoints (POST/PUT /admin/tours/:id/dates,
-      // /admin/tour-dates/:id), like Partners, so it has its own buttons.
-      '<section class="panel" id="editionsPanel"><h2>Dates &amp; capacity</h2>' +
+      '<section class="panel" id="sec-2"><h2>۲. داستان و هایلایت‌ها ' + hint('«داستان این تجربه» و «در این تجربه»') + '</h2>' +
+        '<div class="grid3">' +
+          '<div class="field"><label>منطقه (رنگ مُهر کارت)</label><select id="f_region">' +
+            REGIONS.map(function(r){ return '<option value="' + r[0] + '"' + (r[0] === (t.region || '') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select></div>' +
+          limitedField('نوع تجربه', 'f_experienceType', t.experienceType, 60) +
+          limitedField('سطح', 'f_level', t.level, 60) +
+        '</div>' +
+        limitedField('داستان', 'f_story', t.story, 1500, true) +
+        '<h3 class="where" style="margin:8px 0 10px">هایلایت‌ها (هر کدام یک خط، با عکس اختیاری)</h3>' +
+        '<div id="highlightsList"></div>' +
+        '<button class="btn small ghost" id="addHighlight">+ هایلایت</button>' +
+      '</section>' +
+
+      '<section class="panel" id="sec-3"><h2>۳. برنامهٔ سفر ' + hint('«برنامهٔ سفر»، هر روز با عکس') + '</h2>' +
+        '<div id="itineraryList"></div>' +
+        '<button class="btn small ghost" id="addStep">+ روز</button>' +
+      '</section>' +
+
+      '<section class="panel" id="sec-4"><h2>۴. مکان و برگزارکنندگان ' + hint('«محل برگزاری» و «برگزارکنندگان»') + '</h2>' +
+        '<p class="muted" style="margin-bottom:14px">متن و عکس مکان و برگزارکننده از پروفایل خودشان می‌آید؛ برای تغییر، پروفایل را در «همکاران» ویرایش کنید.</p>' +
+        '<div id="tourHostsPanel">' +
         (ed.isNew
-          ? '<p style="color:var(--ink-faint);font-size:13px;">Save the tour first, then add its dates here.</p>'
-          : '<div class="empty">Loading…</div>') +
+          ? '<p class="muted">ابتدا تجربه را ذخیره کنید، بعد برگزارکنندگان را اینجا تعیین کنید.</p>'
+          : '<div class="empty">در حال بارگذاری…</div>') +
+        '</div>' +
       '</section>' +
 
-      // Saved through its own endpoint (PUT /admin/tours/:id/hosts), so it has
-      // its own save button rather than riding along with the tour fields.
-      '<section class="panel" id="tourHostsPanel"><h2>Partners</h2>' +
+      '<section class="panel" id="sec-5"><h2>۵. اجراها و قیمت ' + hint('کارت رزرو') + '</h2>' +
+        '<div id="editionsPanel">' +
         (ed.isNew
-          ? '<p style="color:var(--ink-faint);font-size:13px;">Save the tour first, then assign its organizers here.</p>'
-          : '<div class="empty">Loading…</div>') +
+          ? '<p class="muted">ابتدا تجربه را ذخیره کنید، بعد تاریخ‌ها را اینجا اضافه کنید.</p>'
+          : '<div class="empty">در حال بارگذاری…</div>') +
+        '</div>' +
       '</section>' +
 
+      '<section class="panel" id="sec-6"><h2>۶. شرایط و سئو ' + hint('«شرایط» و پیش‌نمایش لینک') + '</h2>' +
+        '<div class="grid2">' +
+          limitedField('چه چیزهایی در هزینه است (با · جدا کنید)', 'f_included', t.included, 600, true) +
+          limitedField('چه با خودم بیاورم', 'f_bringList', t.bringList, 600, true) +
+        '</div>' +
+        limitedField('توضیح سئو (جستجو و پیش‌نمایش لینک؛ خالی = داستان)', 'f_seoDescription', t.seoDescription, 160, true) +
+        '<h3 class="where" style="margin:8px 0 10px">دسته‌بندی نظرها</h3>' +
+        '<div id="categoriesList"></div>' +
+        '<button class="btn small ghost" id="addCategory">+ دسته</button>' +
+      '</section>' +
+
+      '</div></div>' +
       '<div class="save-bar"><span class="msg" id="editorMsg"></span>' +
-        '<a class="btn ghost" href="#/tours">Cancel</a>' +
-        '<button class="btn primary" id="saveBtn">' + (ed.isNew ? 'Create tour' : 'Save changes') + '</button>' +
+        '<a class="btn ghost" href="#/tours">انصراف</a>' +
+        '<button class="btn primary" id="saveBtn">' + (ed.isNew ? 'ایجاد تجربه' : 'ذخیره') + '</button>' +
       '</div>'
     );
+    document.querySelectorAll('.secnav [data-sec]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const target = document.getElementById(btn.dataset.sec);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelectorAll('.secnav button').forEach(function(b){ b.classList.toggle('is-on', b === btn); });
+      });
+    });
     bindLogout();
 
     if (!ed.isNew) { initTourHosts(ed.tour.id); initEditions(ed.tour.id); }
@@ -699,7 +679,7 @@
     return '<div class="upload-row">' +
       '<div class="field"><input type="text" id="' + prefix + 'Path" value="' + esc(currentPath || '') + '" placeholder="/images/…"></div>' +
       '<input type="file" id="' + prefix + 'File" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-      '<button type="button" class="btn small ghost" id="' + prefix + 'Upload" data-tourid="' + esc(tourId || '') + '">Upload</button>' +
+      '<button type="button" class="btn small ghost" id="' + prefix + 'Upload" data-tourid="' + esc(tourId || '') + '">بارگذاری</button>' +
     '</div>';
   }
 
@@ -731,7 +711,7 @@
   function renderRepeat(containerId, items, fields){
     const el = document.getElementById(containerId);
     if (!items.length){
-      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">None yet.</p>';
+      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</p>';
       return;
     }
     el.innerHTML = items.map(function(item, i){
@@ -766,12 +746,12 @@
   function renderHighlightList(ed){
     const el = document.getElementById('highlightsList');
     const items = ed.tour.highlights;
-    if (!items.length){ el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">None yet.</p>'; return; }
+    if (!items.length){ el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</p>'; return; }
     el.innerHTML = items.map(function(h, i){
       const img = h.image
         ? '<div class="hl-image"><img src="' + esc(h.image) + '" alt="" onerror="this.style.opacity=0.15">' +
-            '<div class="field" style="margin:0"><label>Alt text (max 160)</label><input type="text" maxlength="160" data-i="' + i + '" data-k="imageAlt" value="' + esc(h.imageAlt || '') + '"></div>' +
-            '<div class="field" style="margin:0"><label>Caption (max 120)</label><input type="text" maxlength="120" data-i="' + i + '" data-k="imageCaption" value="' + esc(h.imageCaption || '') + '"></div>' +
+            '<div class="field" style="margin:0"><label>متن جایگزین (alt، حداکثر ۱۶۰)</label><input type="text" maxlength="160" data-i="' + i + '" data-k="imageAlt" value="' + esc(h.imageAlt || '') + '"></div>' +
+            '<div class="field" style="margin:0"><label>زیرنویس (حداکثر ۱۲۰)</label><input type="text" maxlength="120" data-i="' + i + '" data-k="imageCaption" value="' + esc(h.imageCaption || '') + '"></div>' +
             '<div><button type="button" class="btn small ghost hlImgDel" data-i="' + i + '">Remove image</button></div></div>'
         : '<div class="hl-image upload-row"><input type="file" class="hlFile" data-i="' + i + '" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
             '<button type="button" class="btn small ghost hlImgAdd" data-i="' + i + '">Add image</button></div>';
@@ -827,7 +807,7 @@
     const el = document.getElementById('itineraryList');
     const items = ed.tour.itinerary;
     if (!items.length){
-      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">None yet.</p>';
+      el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</p>';
       return;
     }
     el.innerHTML = items.map(function(item, i){
@@ -843,8 +823,8 @@
         return '<div class="iphoto" data-si="' + i + '" data-pi="' + pi + '">' +
           '<img src="' + esc(img.path) + '" onerror="this.style.opacity=0.15" alt="">' +
           '<button type="button" class="iPhotoDel" title="Remove">✕</button>' +
-          '<input type="text" class="ialt" maxlength="160" placeholder="Alt text" data-si="' + i + '" data-pi="' + pi + '" data-ik="alt" value="' + esc(img.alt || '') + '">' +
-          '<input type="text" class="ialt" maxlength="120" placeholder="Caption" data-si="' + i + '" data-pi="' + pi + '" data-ik="caption" value="' + esc(img.caption || '') + '">' +
+          '<input type="text" class="ialt" maxlength="160" placeholder="متن جایگزین (alt)" data-si="' + i + '" data-pi="' + pi + '" data-ik="alt" value="' + esc(img.alt || '') + '">' +
+          '<input type="text" class="ialt" maxlength="120" placeholder="زیرنویس" data-si="' + i + '" data-pi="' + pi + '" data-ik="caption" value="' + esc(img.caption || '') + '">' +
         '</div>';
       }).join('');
       const photoBlock = '<div class="istage-photos">' +
@@ -908,7 +888,7 @@
   function renderGallerySection(t){
     const photos = (t.galleryMedia || []).map(function(m, i){
       return '<div class="gphoto" data-id="' + m.id + '" draggable="true">' +
-        (i === 0 ? '<span class="cover-flag">Cover</span>' : '') +
+        (i === 0 ? '<span class="cover-flag">اصلی</span>' : '') +
         '<img src="' + esc(m.photoPath || '') + '" onerror="this.style.opacity=0.15" alt="" draggable="false">' +
         '<div class="gctrl">' +
           (i > 0 ? '<button type="button" class="gUp" title="Move earlier">↑</button>' : '') +
@@ -916,17 +896,17 @@
           '<button type="button" class="gDel" title="Delete">✕</button>' +
         '</div>' +
         '<div class="gcap">' + esc(m.label || '(no label)') + '</div>' +
-        '<input type="text" class="ialt gAlt" maxlength="160" placeholder="Alt text" value="' + esc(m.alt || '') + '">' +
-        '<input type="text" class="ialt gCaption" maxlength="120" placeholder="Caption" value="' + esc(m.caption || '') + '">' +
+        '<input type="text" class="ialt gAlt" maxlength="160" placeholder="متن جایگزین (alt)" value="' + esc(m.alt || '') + '">' +
+        '<input type="text" class="ialt gCaption" maxlength="120" placeholder="زیرنویس" value="' + esc(m.caption || '') + '">' +
       '</div>';
     }).join('');
 
-    return '<p style="color:var(--ink-faint);font-size:12px;margin-bottom:10px;">Drag photos to reorder — the first one is the cover of the experience page. Alt text is saved when you leave the field.</p>' +
-      '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-faint);font-size:13px;">No photos yet.</p>') + '</div>' +
+    return '<p style="color:var(--ink-faint);font-size:12px;margin-bottom:10px;">با کشیدن عکس‌ها ترتیب را عوض کنید؛ اولی کاور صفحهٔ تجربه است. متن جایگزین و زیرنویس وقتی از فیلد بیرون می‌روید ذخیره می‌شود.</p>' +
+      '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-faint);font-size:13px;">هنوز عکسی نیست.</p>') + '</div>' +
       '<div class="upload-row">' +
-        '<div class="field"><label>New photo label</label><input type="text" id="newPhotoLabel" placeholder="e.g. Sunrise departure"></div>' +
+        '<div class="field"><label>برچسب عکس تازه</label><input type="text" id="newPhotoLabel" placeholder="e.g. Sunrise departure"></div>' +
         '<input type="file" id="newPhotoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-        '<button type="button" class="btn small primary" id="addPhotoBtn">Add photo</button>' +
+        '<button type="button" class="btn small primary" id="addPhotoBtn">افزودن عکس</button>' +
       '</div>';
   }
 
@@ -1034,7 +1014,7 @@
   async function refreshGalleryFull(ed){
     const data = await api('/admin/tours/' + encodeURIComponent(ed.tour.id));
     ed.tour = Object.assign(ed.tour, data.tour);
-    document.getElementById('galleryPanel').innerHTML = '<h2>Gallery</h2>' + renderGallerySection(ed.tour);
+    document.getElementById('galleryPanel').innerHTML = renderGallerySection(ed.tour);
     bindGallery(ed);
   }
 
@@ -1042,7 +1022,7 @@
   // ---------------------------------------------------------------------
   // Editions: dates + capacity (one row per bookable run of a tour)
   // ---------------------------------------------------------------------
-  const PHASE_LABEL = { upcoming: 'Upcoming', past: 'Finished', undated: 'No date set' };
+  const PHASE_LABEL = { upcoming: 'پیشِ رو', past: 'برگزار شد', undated: 'بدون تاریخ' };
   const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 
   // Shows the Jalali equivalent of the Gregorian date the <input type=date>
@@ -1075,12 +1055,11 @@
     if (!panel) return;
     const rows = dates.map(editionRow).join('') + editionRow({ id: null, label: '', startsOn: '', endsOn: '', capacity: '', closed: false });
     panel.innerHTML =
-      '<h2>Dates &amp; capacity</h2>' +
       '<p style="color:var(--ink-faint);font-size:13px;margin-bottom:14px;">' +
         'Dates are Gregorian (the Jalali date appears underneath). Once an edition\'s last day has passed it is shown as finished and can no longer be booked. ' +
         'Editions with no date set stay bookable until you set one. Leave <em>Ends</em> empty for a single-day edition.' +
       '</p>' +
-      '<table class="editions"><thead><tr><th>Label</th><th>Starts</th><th>Ends</th><th>Capacity</th><th>Booked</th><th>Closed</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+      '<table class="editions"><thead><tr><th>برچسب</th><th>شروع</th><th>پایان</th><th>ظرفیت</th><th>رزرو شده</th><th>بسته</th><th>وضعیت</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
 
     panel.querySelectorAll('input[type=date]').forEach(function(inp){
       inp.addEventListener('input', function(){
@@ -1102,7 +1081,7 @@
     try { await loadEditions(tourId); }
     catch(e){
       const panel = document.getElementById('editionsPanel');
-      if (panel) panel.innerHTML = '<h2>Dates &amp; capacity</h2><div class="empty">Could not load dates.</div>';
+      if (panel) panel.innerHTML = '<div class="empty">بارگذاری تاریخ‌ها ممکن نشد.</div>';
     }
   }
 
@@ -1236,7 +1215,7 @@
   }
 
   async function renderHosts(){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
     try {
       await loadHosts();
@@ -1269,7 +1248,7 @@
             ? esc(h.owner.firstName + ' ' + h.owner.lastName) + '<div style="color:var(--ink-faint);font-size:12px;" dir="ltr">' + esc(h.owner.phone) + '</div>'
             : '<span style="color:var(--ink-faint);">بدون حساب</span>') + '</td>' +
           '<td><div class="row-actions">' +
-            '<a class="btn small ghost" href="#/hosts/' + h.id + '/edit">Edit</a>' +
+            '<a class="btn small ghost" href="#/hosts/' + h.id + '/edit">ویرایش</a>' +
           '</div></td>' +
         '</tr>'
       );
@@ -1280,9 +1259,9 @@
     }).join('');
 
     app.innerHTML = shell(
-      '<div class="list-head"><h1>Partner profiles</h1>' +
-        '<span><a class="btn ghost" href="#/hosts/new?kind=place">+ New place</a> ' +
-        '<a class="btn primary" href="#/hosts/new">+ New person</a></span></div>' +
+      '<div class="list-head"><h1>همکاران</h1>' +
+        '<span><a class="btn ghost" href="#/hosts/new?kind=place">+ مکان جدید</a> ' +
+        '<a class="btn primary" href="#/hosts/new">+ شخص جدید</a></span></div>' +
       '<p style="color:var(--ink-faint);font-size:13px;margin:-8px 0 18px;">' +
         'A <b>person</b> runs a tour (lead or co-host); a <b>place</b> is where it is held (the venue). ' +
         'A profile appears on the site only when its status is <b>active</b> and it is linked to a tour ' +
@@ -1314,7 +1293,7 @@
   }
 
   async function renderHostEditor(id, newKind){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
 
     const isNew = id == null;
@@ -1339,7 +1318,7 @@
       host: host, isNew: isNew, isPlace: isPlace,
       photoPath: host.photoPath || '',
       amenities: (host.amenities || []).slice(),
-      media: (host.media || []).map(function(m){ return { photoPath: m.photoPath, caption: m.caption || '' }; })
+      media: (host.media || []).map(function(m){ return { photoPath: m.photoPath, caption: m.caption || '', alt: m.alt || '' }; })
     };
 
     const placeFields =
@@ -1348,22 +1327,25 @@
       '<div class="field"><label>Region</label>' +
         '<input type="text" id="h_region" value="' + esc(host.region || '') + '" placeholder="سه‌هزار، تنکابن، مازندران" maxlength="120">' +
         '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>' +
+      '<div class="field"><label>Region stamp (colour on the profile)</label><select id="h_regionKey">' +
+        REGIONS.map(function(r){ return '<option value="' + r[0] + '"' + (r[0] === (host.regionKey || '') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select>' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Shown as the coloured pill at the top of the public place page. Empty = no pill.</p></div>' +
       '<div class="field"><label>Capacity (guests)</label>' +
         '<input type="number" id="h_capacity" min="1" max="500" value="' + esc(host.capacityGuests == null ? '' : host.capacityGuests) + '" dir="ltr">' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">1–500. Not shown publicly yet.</p></div>' +
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">1–500. Shown on the public place page («ظرفیت گروه»).</p></div>' +
       '<div class="field"><label>House rules</label><textarea id="h_rules" rows="4" maxlength="1000">' + esc(host.houseRules || '') + '</textarea>' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Max 1000 characters. Not shown publicly yet.</p></div>';
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Max 1000 characters. Shown on the public place page.</p></div>';
 
     const personFields =
       '<div class="field"><label>Expertise</label>' +
         '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>' +
       '<div class="field"><label>Credentials</label><textarea id="h_credentials" rows="4" maxlength="600">' + esc(host.credentials || '') + '</textarea>' +
-        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters. Not shown publicly.</p></div>';
+        '<p style="color:var(--ink-faint);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters. <b>Shown on the public profile.</b></p></div>';
 
     // Matching inputs: stored, edited by the owner in the partner panel too,
     // and NEVER part of a public response. They will drive pairing later.
     const matchingPanel =
-      '<section class="panel"><h2>فقط برای چکمه — Matching (never public)</h2>' +
+      '<section class="panel"><h2>فقط برای چکمه <span class="where">هرگز منتشر نمی‌شود</span></h2>' +
         (isPlace
           ? '<div class="field"><label>Accepts experience types</label>' +
               '<textarea id="h_accepts" rows="3" placeholder="ریتریت حرکتی، کارگاه هنری، اقامت گروهی">' + esc((host.acceptsExperienceTypes || []).join('، ')) + '</textarea></div>'
@@ -1374,10 +1356,10 @@
       '</section>';
 
     app.innerHTML = shell(
-      '<div class="editor-head"><h1>' + (isNew ? ('New ' + (isPlace ? 'place' : 'person')) : esc(host.displayName)) + '</h1>' +
-        '<a class="btn small ghost" href="#/hosts">← All profiles</a></div>' +
+      '<div class="editor-head"><h1>' + (isNew ? (isPlace ? 'مکان جدید' : 'شخص جدید') : esc(host.displayName)) + '</h1>' +
+        '<a class="btn small ghost" href="#/hosts">همهٔ پروفایل‌ها ←</a></div>' +
 
-      '<section class="panel"><h2>Profile</h2>' +
+      '<section class="panel"><h2>پروفایل <span class="where">روی صفحه: بالای /host/' + esc(host.slug || '…') + '</span></h2>' +
         '<div class="field"><label>Kind</label>' +
           (isNew
             ? '<select id="h_kind">' + HOST_KINDS.map(function(k){
@@ -1418,14 +1400,14 @@
       (isPlace ? amenitiesPanelHtml() + locationPanelHtml(host) : '') +
       matchingPanel +
 
-      '<section class="panel"><h2>' + (isPlace ? 'Cover photo' : 'Photo') + '</h2>' +
+      '<section class="panel"><h2>' + (isPlace ? 'عکس اصلی' : 'عکس') + ' <span class="where">روی صفحه: ' + (isPlace ? 'بالای صفحهٔ مکان' : 'دایرهٔ بالای صفحه') + '</span></h2>' +
         '<div class="host-photo-box">' +
           '<div class="host-photo" id="h_photoBox">' + hostPhotoHtml(ed.photoPath) + '</div>' +
           '<div class="host-photo-ctrl">' +
             '<div class="upload-row">' +
               '<input type="file" id="h_photoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-              '<button type="button" class="btn small primary" id="h_photoBtn">Upload</button>' +
-              (ed.photoPath ? '<button type="button" class="btn small danger" id="h_photoClear">Remove</button>' : '') +
+              '<button type="button" class="btn small primary" id="h_photoBtn">بارگذاری</button>' +
+              (ed.photoPath ? '<button type="button" class="btn small danger" id="h_photoClear">حذف</button>' : '') +
             '</div>' +
             '<p style="color:var(--ink-faint);font-size:12px;margin-top:10px;">' +
               (isNew ? 'Save the profile first — the photo is stored under its slug.' : 'Square images work best. Uploaded to /images/host-' + esc(host.slug) + '/.') +
@@ -1434,9 +1416,9 @@
         '</div>' +
       '</section>' +
 
-      (isNew ? '' : '<section class="panel" id="hostMediaPanel"><h2>Gallery</h2><div class="empty">Loading…</div></section>') +
+      (isNew ? '' : '<section class="panel" id="hostMediaPanel"><h2>گالری</h2><div class="empty">در حال بارگذاری…</div></section>') +
 
-      '<section class="panel"><h2>Visibility</h2>' +
+      '<section class="panel"><h2>انتشار</h2>' +
         '<div class="field"><label>Status</label><select id="h_status">' +
           HOST_STATUSES.map(function(v){
             return '<option value="' + v + '"' + ((host.status || 'hidden') === v ? ' selected' : '') + '>' + v + '</option>';
@@ -1451,7 +1433,7 @@
 
       '<div class="save-bar"><span class="msg" id="hostMsg"></span>' +
         '<a class="btn ghost" href="#/hosts">Cancel</a>' +
-        '<button class="btn primary" id="hostSaveBtn">' + (isNew ? 'Create profile' : 'Save changes') + '</button>' +
+        '<button class="btn primary" id="hostSaveBtn">' + (isNew ? 'ایجاد پروفایل' : 'ذخیره') + '</button>' +
       '</div>'
     );
     bindLogout();
@@ -1505,7 +1487,7 @@
   // A flat list of short labels, edited as chips: the server stores at most
   // 20 of them, each at most 40 characters.
   function amenitiesPanelHtml(){
-    return '<section class="panel" id="amenitiesPanel"><h2>Amenities</h2>' +
+    return '<section class="panel" id="amenitiesPanel"><h2>امکانات <span class="where">روی صفحه: «امکانات»</span></h2>' +
       '<div class="chips" id="h_amenityChips"></div>' +
       '<div class="th-add" style="margin-top:12px;">' +
         '<div class="field" style="margin-bottom:0;"><label>Add an amenity</label>' +
@@ -1518,7 +1500,7 @@
   }
 
   function locationPanelHtml(host){
-    return '<section class="panel"><h2>Location</h2>' +
+    return '<section class="panel"><h2>موقعیت <span class="where">روی صفحه: «کجاست» (محدودهٔ تقریبی)</span></h2>' +
       '<div class="field" style="display:inline-block;width:48%;margin-inline-end:2%;"><label>Latitude</label>' +
         '<input type="text" id="h_lat" dir="ltr" value="' + esc(host.latitude == null ? '' : host.latitude) + '" placeholder="36.812"></div>' +
       '<div class="field" style="display:inline-block;width:48%;"><label>Longitude</label>' +
@@ -1537,7 +1519,7 @@
       ? ed.amenities.map(function(a, i){
           return '<span class="chip">' + esc(a) + '<button type="button" class="chip-x" data-i="' + i + '" title="Remove">×</button></span>';
         }).join('')
-      : '<span style="color:var(--ink-faint);font-size:13px;">None yet.</span>';
+      : '<span style="color:var(--ink-faint);font-size:13px;">هنوز موردی نیست.</span>';
     box.querySelectorAll('.chip-x').forEach(function(btn){
       btn.addEventListener('click', function(){
         ed.amenities.splice(Number(btn.dataset.i), 1);
@@ -1577,13 +1559,14 @@
           '<button type="button" class="gm-down"' + (i === ed.media.length - 1 ? ' disabled' : '') + ' title="Move down">↓</button>' +
         '</div>' +
         '<div class="gm-thumb"><img src="' + esc(m.photoPath) + '" alt=""></div>' +
-        '<input type="text" class="gm-caption" maxlength="120" placeholder="Caption (optional)" value="' + esc(m.caption || '') + '">' +
-        '<button type="button" class="btn small danger gm-rm">Remove</button>' +
+        '<input type="text" class="gm-caption" maxlength="120" aria-label="زیرنویس" placeholder="زیرنویس (اختیاری)" value="' + esc(m.caption || '') + '">' +
+        '<input type="text" class="gm-alt" maxlength="160" aria-label="متن جایگزین" placeholder="متن جایگزین (alt)" value="' + esc(m.alt || '') + '">' +
+        '<button type="button" class="btn small danger gm-rm">حذف</button>' +
       '</div>';
     }).join('');
 
     panel.innerHTML =
-      '<h2>Gallery</h2>' +
+      '<h2>گالری <span class="where">روی صفحه: «فضا و حال‌وهوا» با زیرنویس و متن جایگزین</span></h2>' +
       (ed.media.length ? rows : '<p style="color:var(--ink-faint);font-size:13px;">No images yet.</p>') +
       '<div class="th-add">' +
         '<input type="file" id="gmFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
@@ -1615,6 +1598,11 @@
         drawHostMedia(ed);
       });
     });
+    panel.querySelectorAll('.gm-alt').forEach(function(input){
+      input.addEventListener('input', function(){
+        ed.media[Number(input.closest('.media-row').dataset.i)].alt = input.value;
+      });
+    });
     panel.querySelectorAll('.gm-caption').forEach(function(input){
       input.addEventListener('input', function(){
         ed.media[Number(input.closest('.media-row').dataset.i)].caption = input.value;
@@ -1627,7 +1615,7 @@
       this.disabled = true;
       try {
         const data = await uploadHostImage(ed, f.files[0]);
-        ed.media.push({ photoPath: data.path, caption: '' });
+        ed.media.push({ photoPath: data.path, caption: '', alt: '' });
         drawHostMedia(ed);
         toast('Uploaded — remember to save the gallery');
       } catch(e){
@@ -1667,6 +1655,7 @@
     };
     if (ed.isPlace){
       patch.region = (document.getElementById('h_region').value || '').trim();
+      patch.regionKey = document.getElementById('h_regionKey').value;
       patch.lodgingType = (document.getElementById('h_lodging').value || '').trim();
       patch.amenities = ed.amenities;
       // Sent as-is (empty string included): the server treats "" as absent,
@@ -1767,7 +1756,7 @@
   }
 
   async function renderApplications(){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
     try {
       const qs = state.applicationsFilter ? ('?status=' + encodeURIComponent(state.applicationsFilter)) : '';
@@ -1828,7 +1817,7 @@
     }).join('');
 
     app.innerHTML = shell(
-      '<div class="list-head"><h1>Applications</h1></div>' +
+      '<div class="list-head"><h1>درخواست‌ها</h1></div>' +
       '<div class="filter-row"><label>Status</label><select id="appFilter">' + filterOptions + '</select></div>' +
       (state.applications.length ? cards : '<div class="empty">No applications.</div>')
     );
@@ -1922,7 +1911,7 @@
   }
 
   async function renderRevisions(){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
     let list = [];
     try {
@@ -2007,7 +1996,7 @@
   // ---------------------------------------------------------------------
   const PROPOSAL_STATUSES = ['new', 'in_discussion', 'accepted', 'declined'];
   async function renderProposals(){
-    app.innerHTML = shell('<div class="empty">Loading…</div>');
+    app.innerHTML = shell('<div class="empty">در حال بارگذاری…</div>');
     bindLogout();
     let list = [];
     try {
@@ -2093,7 +2082,7 @@
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
       const panel = document.getElementById('tourHostsPanel');
-      if (panel) panel.innerHTML = '<h2>Partners</h2><div class="empty">Could not load partner profiles.</div>';
+      if (panel) panel.innerHTML = '<div class="empty">بارگذاری پروفایل‌ها ممکن نشد.</div>';
       return;
     }
     drawTourHosts();
@@ -2112,17 +2101,17 @@
   function venueSectionHtml(){
     const places = state.hosts.filter(function(h){ return h.kind === 'place'; });
     const current = tourHosts.venueId ? hostById(tourHosts.venueId) : null;
-    return '<h3 style="font-size:14px;margin:0 0 10px;">محل برگزاری — Venue</h3>' +
+    return '<h3 style="font-size:14px;margin:0 0 10px;">محل برگزاری</h3>' +
       (current
         ? '<div class="th-row">' +
             '<div class="th-name">' + esc(current.displayName) +
               '<small>/host/' + esc(current.slug) +
                 (current.region ? ' · ' + esc(current.region) : '') + hiddenWarning(current.status) + '</small></div>' +
-            '<button type="button" class="btn small danger" id="tvClear">Remove</button>' +
+            '<button type="button" class="btn small danger" id="tvClear">حذف</button>' +
           '</div>'
         : '') +
       '<div class="th-add">' +
-        '<div class="field" style="margin-bottom:0;"><label>' + (current ? 'Replace the venue' : 'Choose the venue') + '</label>' +
+        '<div class="field" style="margin-bottom:0;"><label>' + (current ? 'تغییر محل' : 'انتخاب محل') + '</label>' +
           '<select id="tvPick">' +
             (places.length
               ? '<option value="">None</option>' + places.map(function(h){
@@ -2153,17 +2142,17 @@
             '<small>/host/' + esc(a.slug) + hiddenWarning(a.status) + '</small></div>' +
           '<select class="th-role">' +
             HOST_PERSON_ROLES.map(function(r){
-              return '<option value="' + r + '"' + (a.role === r ? ' selected' : '') + '>' + (r === 'lead' ? 'Lead' : 'Co-host') + '</option>';
+              return '<option value="' + r + '"' + (a.role === r ? ' selected' : '') + '>' + (r === 'lead' ? 'برگزارکنندهٔ اصلی' : 'همراه') + '</option>';
             }).join('') +
           '</select>' +
-          '<button type="button" class="btn small danger th-rm">Remove</button>' +
+          '<button type="button" class="btn small danger th-rm">حذف</button>' +
         '</div>';
     }).join('');
 
     return '<h3 style="font-size:14px;margin:0 0 10px;">برگزارکنندگان — People</h3>' +
       (tourHosts.people.length ? rows : '<p style="color:var(--ink-faint);font-size:13px;">No people assigned.</p>') +
       '<div class="th-add">' +
-        '<div class="field" style="margin-bottom:0;"><label>Add a person</label>' +
+        '<div class="field" style="margin-bottom:0;"><label>افزودن برگزارکننده</label>' +
           '<select id="thPick">' +
             (available.length
               ? '<option value="">Choose…</option>' + available.map(function(h){
@@ -2180,11 +2169,10 @@
     if (!panel) return;
 
     panel.innerHTML =
-      '<h2>Partners</h2>' +
       venueSectionHtml() +
       peopleSectionHtml() +
       '<div class="th-add" style="margin-top:18px;">' +
-        '<button type="button" class="btn small primary" id="thSave">Save partners</button>' +
+        '<button type="button" class="btn small primary" id="thSave">ذخیرهٔ همکاران</button>' +
         '<span class="msg" id="thMsg" style="font-size:13px;color:var(--ink-faint);"></span>' +
       '</div>' +
       '<p style="color:var(--ink-faint);font-size:12px;margin-top:12px;">' +
