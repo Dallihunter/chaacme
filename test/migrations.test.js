@@ -13,6 +13,8 @@ const oldSchema = (db) => db.exec(`
   INSERT INTO tour_dates (tour_id, label, capacity, seats_taken) VALUES ('t', '۱۲ مهر', 12, 9);
   CREATE TABLE hosts (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT, user_id INTEGER);
   CREATE TABLE host_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER);
+  CREATE TABLE host_media (id INTEGER PRIMARY KEY AUTOINCREMENT, host_id INTEGER, path TEXT NOT NULL, caption TEXT, sort_order INTEGER NOT NULL DEFAULT 0);
+  INSERT INTO host_media (host_id, path, caption) VALUES (1, '/images/host-keep-me/a.jpg', 'خانه');
   INSERT INTO hosts (slug) VALUES ('keep-me');
   CREATE TABLE tours (id TEXT PRIMARY KEY, name TEXT NOT NULL);
   CREATE TABLE tour_media (id INTEGER PRIMARY KEY AUTOINCREMENT, tour_id TEXT, ordinal INTEGER, label TEXT, image_path TEXT);
@@ -27,7 +29,7 @@ const oldSchema = (db) => db.exec(`
 test('upgrades an old tour_dates table without losing rows, then is a no-op', () => {
   const db = new DatabaseSync(':memory:');
   oldSchema(db);
-  assert.deepEqual(runMigrations(db, migrations), [1, 2, 3]);
+  assert.deepEqual(runMigrations(db, migrations), [1, 2, 3, 4]);
   assert.ok(hasColumn(db, 'tour_dates', 'starts_on'));
   assert.ok(hasColumn(db, 'tour_dates', 'ends_on'));
   const row = db.prepare('SELECT * FROM tour_dates').get();
@@ -35,7 +37,7 @@ test('upgrades an old tour_dates table without losing rows, then is a no-op', ()
   assert.equal(row.seats_taken, 9);
   assert.equal(row.starts_on, null); // no guessed years
   assert.deepEqual(runMigrations(db, migrations), []);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 3);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 4);
   // partner panel: new columns/tables exist, existing rows untouched
   for (const c of ['credentials', 'seeking_place_types', 'capacity_guests', 'house_rules', 'accepts_experience_types']) {
     assert.ok(hasColumn(db, 'hosts', c), c);
@@ -75,4 +77,17 @@ test('rejects non-increasing migration ids', () => {
   const db = new DatabaseSync(':memory:');
   const up = () => {};
   assert.throws(() => runMigrations(db, [{ id: 2, name: 'a', up }, { id: 1, name: 'b', up }]), /strictly increasing/);
+});
+
+test('site content migration is additive: new table and columns, old rows untouched', () => {
+  const db = new DatabaseSync(':memory:');
+  oldSchema(db);
+  runMigrations(db, migrations);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name = 'site_settings'").get().n, 1);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM site_settings').get().n, 0, 'nothing is seeded: empty means hidden');
+  assert.ok(hasColumn(db, 'host_media', 'alt'));
+  assert.ok(hasColumn(db, 'hosts', 'region_key'));
+  const m = db.prepare('SELECT * FROM host_media').get();
+  assert.deepEqual([m.path, m.caption, m.alt], ['/images/host-keep-me/a.jpg', 'خانه', null]);
+  assert.equal(db.prepare('SELECT region_key FROM hosts').get().region_key, null);
 });

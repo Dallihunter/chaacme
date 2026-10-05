@@ -1176,6 +1176,7 @@ function adminHostFields(h) {
     userId: h.user_id,
     owner: h.user_id ? ownerSummary(h.user_id) : null,
     region: h.region,
+    regionKey: h.region_key,
     lodgingType: h.lodging_type,
     amenities: parseAmenities(h.amenities),
     latitude: h.latitude,
@@ -1215,7 +1216,7 @@ function ownerSummary(userId) {
 
 export function hostMedia(hostId) {
   return db.prepare(
-    'SELECT id, path AS photoPath, caption, sort_order AS sortOrder FROM host_media WHERE host_id = ? ORDER BY sort_order, id'
+    'SELECT id, path AS photoPath, caption, alt, sort_order AS sortOrder FROM host_media WHERE host_id = ? ORDER BY sort_order, id'
   ).all(hostId);
 }
 
@@ -1231,9 +1232,9 @@ export function hostMedia(hostId) {
 /** Writes the gallery rows; the caller owns the transaction. Returns the paths that were replaced. */
 function writeHostMedia(hostId, items) {
   const before = db.prepare('SELECT path FROM host_media WHERE host_id = ?').all(hostId).map((r) => r.path);
-  const ins = db.prepare('INSERT INTO host_media (host_id, path, caption, sort_order) VALUES (?, ?, ?, ?)');
+  const ins = db.prepare('INSERT INTO host_media (host_id, path, caption, alt, sort_order) VALUES (?, ?, ?, ?, ?)');
   db.prepare('DELETE FROM host_media WHERE host_id = ?').run(hostId);
-  items.forEach((it, i) => ins.run(hostId, it.photoPath, it.caption || null, i));
+  items.forEach((it, i) => ins.run(hostId, it.photoPath, it.caption || null, it.alt || null, i));
   return before;
 }
 
@@ -1376,14 +1377,14 @@ export function createHost(v) {
   const info = db.prepare(
     `INSERT INTO hosts (slug, kind, display_name, photo_path, bio, expertise, instagram_handle, contact_phone,
                         user_id, region, lodging_type, amenities, latitude, longitude, status, verified_at,
-                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                        credentials, seeking_place_types, capacity_guests, house_rules, accepts_experience_types, region_key)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(v.slug, v.kind || 'person', v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle,
     v.contactPhone, v.userId ?? null, v.region ?? null, v.lodgingType ?? null,
     v.amenities ? JSON.stringify(v.amenities) : null, v.latitude ?? null, v.longitude ?? null,
     v.status || 'hidden', v.verified ? new Date().toISOString() : null,
     v.credentials ?? null, jsonList(v.seekingPlaceTypes), v.capacityGuests ?? null, v.houseRules ?? null,
-    jsonList(v.acceptsExperienceTypes));
+    jsonList(v.acceptsExperienceTypes), v.regionKey ?? null);
   return getHostAdmin(Number(info.lastInsertRowid));
 }
 
@@ -1403,7 +1404,7 @@ export function updateHost(id, v) {
     `UPDATE hosts SET display_name = ?, photo_path = ?, bio = ?, expertise = ?, instagram_handle = ?,
        contact_phone = ?, region = ?, lodging_type = ?, amenities = ?, latitude = ?, longitude = ?,
        status = ?, verified_at = ?, credentials = ?, seeking_place_types = ?, capacity_guests = ?,
-       house_rules = ?, accepts_experience_types = ?, updated_at = datetime('now')
+       house_rules = ?, accepts_experience_types = ?, region_key = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(v.displayName, v.photoPath, v.bio, v.expertise, v.instagramHandle, v.contactPhone,
     v.region ?? null, v.lodgingType ?? null, v.amenities ? JSON.stringify(v.amenities) : null,
@@ -1414,6 +1415,7 @@ export function updateHost(id, v) {
     keep(v.capacityGuests, existing.capacity_guests),
     keep(v.houseRules, existing.house_rules),
     v.acceptsExperienceTypes === undefined ? existing.accepts_experience_types : jsonList(v.acceptsExperienceTypes),
+    keep(v.regionKey, existing.region_key),
     id);
   return getHostAdmin(id);
 }
@@ -1633,7 +1635,7 @@ export function revisionSnapshot(h) {
       acceptsExperienceTypes: parseAmenities(h.accepts_experience_types).length ? parseAmenities(h.accepts_experience_types) : null,
       latitude: h.latitude,
       longitude: h.longitude,
-      media: hostMedia(h.id).map((m) => ({ photoPath: m.photoPath, caption: m.caption }))
+      media: hostMedia(h.id).map((m) => ({ photoPath: m.photoPath, caption: m.caption, alt: m.alt }))
     };
   }
   return {
@@ -1773,7 +1775,7 @@ export function approveRevision(id, ops) {
     return moved.get(p);
   };
   const photoPath = live(payload.photoPath) || null;
-  const media = payload.media ? payload.media.map((m) => ({ photoPath: live(m.photoPath), caption: m.caption })) : null;
+  const media = payload.media ? payload.media.map((m) => ({ photoPath: live(m.photoPath), caption: m.caption, alt: m.alt })) : null;
 
   const oldPhoto = host.photo_path;
   let before = [];

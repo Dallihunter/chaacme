@@ -2,9 +2,10 @@ import * as db from './db.js';
 import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
+import * as settings from './settings.js';
 import { buildTourPage } from './pagemodels.js';
 import { PAGE_CACHE_CONTROL } from './render.js';
-import { handleUpload, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
+import { handleUpload, handleVideoUpload, MAX_VIDEO_BYTES, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
 import {
   json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie, legacyAdminCookieClear,
   normalisePhone, validateProfile, validateReview, validatePassword,
@@ -901,6 +902,30 @@ export async function handleApi(req, res, url) {
         entries.push({ hostId, role, sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : entries.length });
       }
       return json(res, 200, { hosts: db.setTourHosts(tourId, entries) });
+    }
+
+    // --- admin: site settings («صفحهٔ اول و تنظیمات») ----------------------------
+    if (path === '/api/admin/settings' && method === 'GET') {
+      return json(res, 200, {
+        settings: settings.getSettings(),
+        fields: Object.fromEntries(Object.entries(settings.SETTINGS).map(([k, d]) => [k, { kind: d.kind, max: d.max || null }])),
+        footerPaths: settings.FOOTER_PATHS,
+        maxVideoBytes: MAX_VIDEO_BYTES
+      });
+    }
+    if (path === '/api/admin/settings' && method === 'PUT') {
+      const body = await readJson(req, 128 * 1024);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      const check = settings.validateSettings(body.value.values);
+      if (!check.ok) return json(res, 422, { error: 'validation_failed', fields: check.errors });
+      const { settings: saved, orphaned } = settings.writeSettings(check.value);
+      for (const p of orphaned) deleteUploadedFile(p); // replaced hero / explainer files nothing else uses
+      return json(res, 200, { settings: saved });
+    }
+    if (path === '/api/admin/upload-video' && method === 'POST') {
+      const result = await handleVideoUpload(req);
+      if (!result.ok) return json(res, result.status, { error: result.error });
+      return json(res, result.status, { ok: true, path: result.path });
     }
 
     if (path === '/api/admin/upload' && method === 'POST') {

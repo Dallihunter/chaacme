@@ -318,8 +318,8 @@ export function legacyAdminCookieClear() {
 // and so is not covered by, or in need of, this check.
 
 export const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-// The only two routes that take multipart/form-data (image uploads).
-const MULTIPART_ROUTES = [/^\/api\/admin\/upload$/, /^\/api\/partner\/profiles\/[a-z0-9-]+\/upload$/];
+// The only routes that take multipart/form-data (image uploads, the home-page video).
+const MULTIPART_ROUTES = [/^\/api\/admin\/upload$/, /^\/api\/admin\/upload-video$/, /^\/api\/partner\/profiles\/[a-z0-9-]+\/upload$/];
 
 /**
  * Origins allowed to send state-changing requests: FRONTEND_ORIGIN and its
@@ -604,6 +604,12 @@ export function validateHostProfile(input) {
 
   if (input.status !== undefined && !['active', 'hidden'].includes(input.status)) errors.status = 'value';
 
+  let regionKey;
+  if (input.regionKey !== undefined) {
+    if (input.regionKey === null || input.regionKey === '') regionKey = null;
+    else if (typeof input.regionKey === 'string' && Object.hasOwn(REGIONS, input.regionKey)) regionKey = input.regionKey;
+    else errors.regionKey = 'value';
+  }
   const credentials = optText(input.credentials, 600, errors, 'credentials');
   const seekingPlaceTypes = validateTagList(input.seekingPlaceTypes, errors, 'seekingPlaceTypes');
   const capacityGuests = validateCapacity(input.capacityGuests, errors);
@@ -626,6 +632,8 @@ export function validateHostProfile(input) {
       instagramHandle: instagram || null,
       contactPhone,
       region: isPlace ? (region || null) : null,
+      // undefined (key absent) keeps what is stored; only places have a stamp
+      regionKey: isPlace ? regionKey : null,
       lodgingType: isPlace ? (lodgingType || null) : null,
       amenities: isPlace ? amenities : null,
       latitude: isPlace ? latitude : null,
@@ -651,9 +659,11 @@ export function validateHostMedia(input) {
   input.forEach((raw, i) => {
     const photoPath = str(raw && raw.photoPath);
     const caption = str(raw && raw.caption);
+    const alt = str(raw && raw.alt);
     if (!HOST_PHOTO_PATH_RE.test(photoPath)) errors[`media.${i}.photoPath`] = 'format';
     if (caption.length > 120) errors[`media.${i}.caption`] = 'length';
-    value.push({ photoPath, caption: caption || null });
+    if (alt.length > IMAGE_ALT_MAX) errors[`media.${i}.alt`] = 'length';
+    value.push({ photoPath, caption: caption || null, alt: alt || null });
   });
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value };
@@ -779,9 +789,11 @@ export function validateRevision(input, ctx) {
         input.media.forEach((raw, i) => {
           const p = str(raw && raw.photoPath);
           const caption = str(raw && raw.caption);
+          const alt = str(raw && raw.alt);
           if (!okPath(p)) errors[`media.${i}.photoPath`] = 'format';
           if (caption.length > 120) errors[`media.${i}.caption`] = 'length';
-          value.media.push({ photoPath: p, caption: caption || null });
+          if (alt.length > IMAGE_ALT_MAX) errors[`media.${i}.alt`] = 'length';
+          value.media.push({ photoPath: p, caption: caption || null, alt: alt || null });
         });
       }
     }

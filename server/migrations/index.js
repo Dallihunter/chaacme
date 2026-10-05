@@ -6,6 +6,7 @@
 import m001 from './001_edition_dates.js';
 import m002 from './002_partner_panel.js';
 import m003 from './003_tour_page_content.js';
+import m004 from './004_site_content.js';
 
 // Append only; ids strictly increasing.
-export default [m001, m002, m003];
+export default [m001, m002, m003, m004];
