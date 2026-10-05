@@ -3,20 +3,16 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const dir = mkdtempSync(join(tmpdir(), 'chaacme-'));
 const PORT = 3400 + Math.floor(Math.random() * 400);
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),
-  FRONTEND_INDEX_FILE: fileURLToPath(new URL('../deploy/index.html', import.meta.url)),
   SITE_ORIGIN: 'https://example.test/', PORT: String(PORT), HOST: '127.0.0.1'
 });
 
-const { injectTourMeta, TOUR_PATH_RE } = await import('../server/pages.js');
+const { TOUR_PATH_RE } = await import('../server/pages.js');
 const { server } = await import('../server/index.js');
-const { readFileSync } = await import('node:fs');
-const shell = readFileSync(process.env.FRONTEND_INDEX_FILE, 'utf8');
 const base = `http://127.0.0.1:${PORT}`;
 
 before(async () => { if (!server.listening) await new Promise((r) => server.once('listening', r)); });
@@ -27,18 +23,6 @@ test('slug regex accepts tour ids and rejects junk', () => {
   for (const bad of ['/tour/', '/tour/Bad', '/tour/a--b', '/tour/-a', '/tour/a/b', '/tour/a_b', '/tours/a']) {
     assert.equal(TOUR_PATH_RE.test(bad), false, bad);
   }
-});
-
-test('injectTourMeta escapes tour text and never interprets $ patterns', () => {
-  const html = injectTourMeta(shell, {
-    id: 'evil', name: 'A"><script>alert(1)</script> $& $1', description: '"><img src=x onerror=1>',
-    photoPath: '//evil.example/x.png'
-  }, 'https://example.test');
-  assert.ok(!html.includes('<script>alert(1)'));
-  assert.ok(!html.includes('<img src=x'));
-  assert.ok(html.includes('$&amp; $1'));
-  assert.ok(html.includes('og:image" content="https://example.test/images/cover-app-chaacme.png"'));
-  assert.ok(html.includes('<link rel="canonical" href="https://example.test/tour/evil">'));
 });
 
 test('serves the server-rendered page for a real tour, the new 404 page for unknown or malformed slugs', async () => {

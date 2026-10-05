@@ -15,7 +15,6 @@ Object.assign(process.env, {
   FRONTEND_STATIC_DIR: IMAGES, SITE_ORIGIN: 'https://example.test/', PORT: String(PORT), HOST: '127.0.0.1',
   FRONTEND_ORIGIN: 'https://example.test'
 });
-delete process.env.FRONTEND_INDEX_FILE;
 
 const { server } = await import('../server/index.js');
 const db = await import('../server/db.js');
@@ -228,7 +227,7 @@ test('XSS: payloads in every text field, alt and caption render as text in the p
   assert.equal(status, 200);
   assert.ok(!text.includes('<img src=x'), 'raw <img> from a payload');
   assert.ok(!text.includes('<script>alert'), 'raw <script> from a payload');
-  assert.equal((text.match(/<script\b/g) || []).length, 2, 'only the import map and the island script');
+  assert.equal((text.match(/<script\b/g) || []).length, 3, 'only the import map, the shell script and the island script');
   for (const tag of text.match(/<[a-zA-Z][^>]*>/g) || []) assert.ok(!/\sonerror\s*=/i.test(tag.replace(/"[^"]*"/g, '""')), `a tag carrying onerror: ${tag.slice(0, 120)}`);
   const esc = '&quot;&gt;&lt;img src=x onerror=alert(1)&gt;&lt;/script&gt;&lt;script&gt;alert(2)&lt;/script&gt;';
   for (const marker of ['N', 'D', 'S', 'X', 'Lv', 'B', 'HN', 'HD', 'IL', 'ID', 'H', 'V', 'R', 'L', 'A', 'RN', 'RB']) {

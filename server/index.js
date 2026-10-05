@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { seed } from './db.js';
 import { handleApi } from './api.js';
-import { handleTourPage } from './pages.js';
+import { handlePage } from './pages.js';
 import { handleStatic } from './static.js';
 import { assertRuntimeConfig, describeRuntimeConfig, json, guardStateChange } from './util.js';
 
@@ -55,7 +55,7 @@ const server = createServer(async (req, res) => {
       return await handleApi(req, res, url);
     }
     if (handleStatic(req, res, url)) return;
-    if (handleTourPage(req, res, url)) return;
+    if (handlePage(req, res, url)) return;
     return json(res, 404, { error: 'not_found', message: 'This service serves /api/*, /tour/<slug> and /assets/*.' });
   } catch (err) {
     console.error('[chaacme-platform]', err);

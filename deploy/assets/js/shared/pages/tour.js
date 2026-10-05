@@ -5,9 +5,8 @@
 //  * every block is hidden when its data is empty; there is no placeholder text;
 //  * every value goes through html`` (escaped); URLs through safeUrl();
 //  * the page reads fine without JavaScript — tour-island.js only enhances.
-import { html, jsonForScript, toHtmlString } from '../html.js';
-import { header } from '../components/header.js';
-import { footer } from '../components/footer.js';
+import { html, toHtmlString } from '../html.js';
+import { documentHtml, pageFrame } from '../layout.js';
 import { photo } from '../components/photo.js';
 import { regionStamp } from '../components/regionStamp.js';
 import { statusBadge } from '../components/statusBadge.js';
@@ -205,45 +204,12 @@ export function metaDescription(page) {
   return text.length > 160 ? `${text.slice(0, 157)}…` : text;
 }
 
-/** Everything the layout needs besides the page itself. */
-export function documentHtml({ title, description = '', canonical = null, ogImage = null, ogType = 'article', robots = null, assets, body, bodyClass = '' }) {
-  return html`<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-${description ? html`<meta name="description" content="${description}">` : ''}
-${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${canonical ? html`<link rel="canonical" href="${canonical}">` : ''}
-<meta property="og:site_name" content="CHAACME">
-<meta property="og:locale" content="fa_IR">
-<meta property="og:type" content="${ogType}">
-<meta property="og:title" content="${title}">
-${description ? html`<meta property="og:description" content="${description}">` : ''}
-${canonical ? html`<meta property="og:url" content="${canonical}">` : ''}
-${ogImage ? html`<meta property="og:image" content="${ogImage}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${ogImage}">` : html`<meta name="twitter:card" content="summary">`}
-<meta name="twitter:title" content="${title}">
-${description ? html`<meta name="twitter:description" content="${description}">` : ''}
-<link rel="preload" href="${assets.font}" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="${assets.css}">
-${assets.script ? html`<script type="importmap">${jsonForScript({ imports: assets.imports })}</script><script type="module" src="${assets.script}"></script>` : ''}
-</head>
-<body class="${bodyClass}">
-${body}
-</body>
-</html>`;
-}
-
-/** Full experience page. `assets` = { css, font, script, imports }. */
-export function renderTourPage(page, { assets, canonical, ogImage, description }) {
+/** Full experience page. `assets` = { css, font, scripts, imports }; `site` = { footerLinks }. */
+export function renderTourPage(page, { assets, site = {}, canonical, ogImage, description }) {
   const sticky = stickyBar(page);
-  const body = html`<div class="ck-root ${sticky ? 'has-sticky' : ''}" dir="rtl">
-  <a class="ck-skip" href="#main">پرش به محتوا</a>
-  ${header({ active: 'experiences', next: `/tour/${page.slug}` })}
-  <main class="tp-main" id="main">
-    <p class="tp-crumbs"><a href="/">تجربه‌ها</a> / ${page.name}</p>
-    ${hero(page)}
+  const heroBlock = hero(page);
+  const main = html`<p class="tp-crumbs"><a href="/">تجربه‌ها</a> / ${page.name}</p>
+    ${heroBlock}
     <div class="tp-body">
       <article class="tp-article">
         ${titleBlock(page)}
@@ -257,25 +223,10 @@ export function renderTourPage(page, { assets, canonical, ogImage, description }
       </article>
       <aside class="tp-aside" aria-label="رزرو">${bookingCard(page)}</aside>
     </div>
-    ${related(page)}
-  </main>
-  ${footer()}
-  ${sticky}
-</div>`;
-  return toHtmlString(documentHtml({
-    title: `${page.name} — CHAACME`, description, canonical, ogImage, assets, body
-  }));
-}
-
-/** The 404 page in the new design. */
-export function renderNotFoundPage({ assets }) {
-  const body = html`<div class="ck-root" dir="rtl">
-  ${header({})}
-  <main class="tp-main tp-404" id="main">
-    ${emptyState({ title: 'این تجربه پیدا نشد', text: 'ممکن است نشانی اشتباه باشد یا این تجربه دیگر منتشر نشده باشد.' })}
-    <a class="ck-btn ck-btn--primary ck-btn--block" href="/">دیدن همهٔ تجربه‌ها</a>
-  </main>
-  ${footer()}
-</div>`;
-  return toHtmlString(documentHtml({ title: 'تجربه پیدا نشد — CHAACME', robots: 'noindex', ogType: 'website', assets, body }));
+    ${related(page)}`;
+  const body = pageFrame({
+    main, mainClass: 'tp-main', site, after: sticky, rootClass: sticky ? 'has-sticky' : '',
+    headerOptions: { variant: heroBlock ? 'overlay-mobile' : 'site', active: 'experiences', next: `/tour/${page.slug}` }
+  });
+  return toHtmlString(documentHtml({ title: `${page.name} — CHAACME`, description, canonical, ogImage, ogType: 'article', assets, body }));
 }

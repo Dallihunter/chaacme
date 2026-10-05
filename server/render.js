@@ -1,42 +1,51 @@
-// Server-side rendering of the public pages (currently: the experience page).
+// Server-side rendering of the public pages.
 //
-//   GET /tour/<slug>  ->  full HTML built from the view model (pagemodels.js)
-//                         by the shared templates (deploy/assets/js/shared/pages/)
+//   view model (pagemodels.js)  ->  shared template (deploy/assets/js/shared/pages/)  ->  full HTML document
 //
-// Caching: the HTML is public and identical for every visitor, so it carries
+// Caching: the HTML is public and identical for every visitor (who is signed in is only known to
+// shell.js in the browser), so it carries
 //   Cache-Control: public, max-age=60, stale-while-revalidate=300
 // An admin edit therefore shows within about a minute even behind a CDN.
 // Versioned assets and image variants are immutable (see static.js).
 import { createHash } from 'node:crypto';
 import { buildTourPage } from './pagemodels.js';
-import { assetVersion, sharedModuleUrls } from './static.js';
-import { renderTourPage, renderNotFoundPage, ogImageUrl, metaDescription } from '../deploy/assets/js/shared/pages/tour.js';
+import { assetVersion, importMapFor, versioned } from './static.js';
+import { siteContext } from './settings.js';
+import { renderTourPage, ogImageUrl, metaDescription } from '../deploy/assets/js/shared/pages/tour.js';
+import { renderNotFoundPage, renderErrorPage } from '../deploy/assets/js/shared/pages/errors.js';
 
 export const PAGE_CACHE_CONTROL = 'public, max-age=60, stale-while-revalidate=300';
-// Shared modules tour-island.js imports; only these go in the page's import map.
-const ISLAND_MODULES = ['/assets/js/shared/format.js'];
 const DEFAULT_OG_IMAGE = '/images/cover-app-chaacme.png';
 
-const siteOrigin = () => (process.env.SITE_ORIGIN || 'https://chaacme.ir').trim().replace(/\/+$/, '');
+export const siteOrigin = () => (process.env.SITE_ORIGIN || 'https://chaacme.ir').trim().replace(/\/+$/, '');
+export const absolute = (path) => `${siteOrigin()}${path}`;
 
-function assets() {
-  const v = assetVersion();
+/** Asset URLs for a page. `scripts` are '/assets/js/…' entry modules (shell.js is always first). */
+export function pageAssets(scripts = []) {
+  const entries = ['/assets/js/shell.js', ...scripts];
   return {
-    css: `/assets/chaacme.css?v=${v}`,
+    css: `/assets/chaacme.css?v=${assetVersion()}`,
     font: '/assets/fonts/vazirmatn-5.3.0-arabic.woff2',
-    script: `/assets/js/tour-island.js?v=${v}`,
-    imports: Object.fromEntries(Object.entries(sharedModuleUrls()).filter(([url]) => ISLAND_MODULES.includes(url)))
+    scripts: entries.map(versioned),
+    imports: importMapFor(entries)
   };
 }
 
-const absolute = (path) => `${siteOrigin()}${path}`;
+export function renderNotFound(opts = {}, scripts = []) {
+  return { status: 404, body: renderNotFoundPage({ assets: pageAssets(scripts), site: siteContext(), ...opts }) };
+}
+
+export function renderServerError() {
+  return { status: 500, cache: 'no-store', body: renderErrorPage({ assets: pageAssets(), site: siteContext() }) };
+}
 
 /** { status, body } for /tour/<slug>; slug is null when the URL was malformed. */
 export function renderTourDocument(slug) {
   const page = slug ? buildTourPage(slug) : null;
-  if (!page) return { status: 404, body: renderNotFoundPage({ assets: assets() }) };
+  if (!page) return renderNotFound({ what: 'این تجربه', linkLabel: 'دیدن همهٔ تجربه‌ها', href: '/' });
   const body = renderTourPage(page, {
-    assets: assets(),
+    assets: pageAssets(['/assets/js/tour-island.js']),
+    site: siteContext(),
     canonical: absolute(`/tour/${encodeURIComponent(page.slug)}`),
     ogImage: absolute(ogImageUrl(page) || DEFAULT_OG_IMAGE),
     description: metaDescription(page)
@@ -45,9 +54,9 @@ export function renderTourDocument(slug) {
 }
 
 /** Writes the response for a rendered document (HEAD-aware, with a weak ETag so revalidation is cheap). */
-export function sendDocument(req, res, { status, body }) {
+export function sendDocument(req, res, { status, body, cache = PAGE_CACHE_CONTROL }) {
   const etag = `W/"${createHash('sha1').update(body).digest('hex').slice(0, 16)}"`;
-  const headers = { 'content-type': 'text/html; charset=utf-8', 'cache-control': PAGE_CACHE_CONTROL, etag };
+  const headers = { 'content-type': 'text/html; charset=utf-8', 'cache-control': cache, etag };
   if (status === 200 && req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
   res.writeHead(status, headers);
   return res.end(req.method === 'HEAD' ? undefined : body);
