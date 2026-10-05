@@ -11,6 +11,7 @@
     "reseed": "node -e \"import('./server/db.js').then(m=>console.log(m.seed({force:true})))\"",
     "smoke": "node scripts/smoke.js",
     "admin:set-password": "node scripts/admin-set-password.mjs",
-    "test": "node --test \"test/*.test.js\""
+    "test": "node --test \"test/*.test.js\"",
+    "backfill:images": "node scripts/backfill-image-variants.mjs"
   }
 }
