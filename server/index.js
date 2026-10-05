@@ -2,17 +2,16 @@ import { createServer } from 'node:http';
 import { seed } from './db.js';
 import { handleApi } from './api.js';
 import { handleTourPage } from './pages.js';
+import { handleStatic } from './static.js';
 import { assertRuntimeConfig, describeRuntimeConfig, json, guardStateChange } from './util.js';
 
 const PORT = Number(process.env.PORT) || 3100;
 const HOST = process.env.HOST || '127.0.0.1';
 
-// This service is JSON-API-only: the production frontend for these designs
-// hasn't been built yet (the design-canvas source lives in
-// "Chaacme design system refinement/" and is not a deployable app), so there
-// is no public/ directory to serve statically. Once a real frontend exists it
-// can call this API directly (same-origin) or cross-origin via
-// FRONTEND_ORIGIN below.
+// Mostly a JSON API. It also renders the public experience page (/tour/<slug>,
+// see render.js) and serves the release's own /assets/. The rest of the site is
+// still the static SPA served by nginx, which calls this API same-origin or
+// cross-origin via FRONTEND_ORIGIN below.
 const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || '').trim();
 
 const SECURITY_HEADERS = {
@@ -55,8 +54,9 @@ const server = createServer(async (req, res) => {
       }
       return await handleApi(req, res, url);
     }
+    if (handleStatic(req, res, url)) return;
     if (handleTourPage(req, res, url)) return;
-    return json(res, 404, { error: 'not_found', message: 'This service only serves /api/* (and /tour/<slug> when FRONTEND_INDEX_FILE is set).' });
+    return json(res, 404, { error: 'not_found', message: 'This service serves /api/*, /tour/<slug> and /assets/*.' });
   } catch (err) {
     console.error('[chaacme-platform]', err);
     if (!res.headersSent) json(res, 500, { error: 'internal_error' });

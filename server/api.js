@@ -2,12 +2,14 @@ import * as db from './db.js';
 import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
+import { buildTourPage } from './pagemodels.js';
+import { PAGE_CACHE_CONTROL } from './render.js';
 import { handleUpload, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
 import {
   json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie, legacyAdminCookieClear,
   normalisePhone, validateProfile, validateReview, validatePassword,
   validateHostProfile, validateHostApplication, validateHostMedia, validateUserName,
-  isValidHostSlug, validateEditionDates, validateRevision, validateProposal, isPendingPathFor
+  isValidHostSlug, validateEditionDates, validateRevision, validateProposal, isPendingPathFor, validateTourEditorial
 } from './util.js';
 
 function bearerOrCookieToken(req) {
@@ -76,6 +78,14 @@ export async function handleApi(req, res, url) {
   // --- catalog ----------------------------------------------------------
   if (path === '/api/tours' && method === 'GET') {
     return json(res, 200, { tours: db.listTours() });
+  }
+
+  // One view-model endpoint per page type: everything the experience page
+  // needs, public projection only. The HTML renderer calls the same function.
+  if ((m = new RegExp(`^/api/pages/tour/${SLUG}$`).exec(path)) && method === 'GET') {
+    const page = buildTourPage(m[1]);
+    if (!page) return json(res, 404, { error: 'not_found' });
+    return json(res, 200, { page }, { 'cache-control': PAGE_CACHE_CONTROL });
   }
 
   if ((m = new RegExp(`^/api/tours/${ID}$`).exec(path)) && method === 'GET') {
@@ -565,7 +575,9 @@ export async function handleApi(req, res, url) {
       }
       if (!body.value.name) return json(res, 422, { error: 'validation_failed', fields: { name: 'required' } });
       if (db.tourExists(id)) return json(res, 409, { error: 'id_taken' });
-      return json(res, 201, { tour: db.createTour({ ...body.value, id }) });
+      const editorial = validateTourEditorial(body.value);
+      if (!editorial.ok) return json(res, 422, { error: 'validation_failed', fields: editorial.errors });
+      return json(res, 201, { tour: db.createTour({ ...body.value, ...editorial.value, id }) });
     }
     if ((m = new RegExp(`^/api/admin/tours/${ID}$`).exec(path)) && method === 'GET') {
       const tour = db.getTourDetailAdmin(m[1]);
@@ -576,7 +588,9 @@ export async function handleApi(req, res, url) {
       if (!db.tourExists(m[1])) return json(res, 404, { error: 'not_found' });
       const body = await readJson(req, 64 * 1024);
       if (!body.ok) return json(res, 400, { error: body.error });
-      return json(res, 200, { tour: db.updateTour(m[1], body.value) });
+      const editorial = validateTourEditorial(body.value);
+      if (!editorial.ok) return json(res, 422, { error: 'validation_failed', fields: editorial.errors });
+      return json(res, 200, { tour: db.updateTour(m[1], { ...body.value, ...editorial.value }) });
     }
     if ((m = new RegExp(`^/api/admin/tours/${ID}$`).exec(path)) && method === 'DELETE') {
       if (!db.tourExists(m[1])) return json(res, 404, { error: 'not_found' });
@@ -593,6 +607,19 @@ export async function handleApi(req, res, url) {
       if (imagePath === undefined) return json(res, 404, { error: 'not_found' });
       if (imagePath) deleteUploadedFile(imagePath);
       return json(res, 200, { ok: true });
+    }
+    // Alt text / caption of one gallery image.
+    if ((m = new RegExp(`^/api/admin/tours/${ID}/gallery/${NUM}$`).exec(path)) && method === 'PUT') {
+      const body = await readJson(req);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      const check = validateTourEditorial({ galleryAlt: [body.value.alt ?? null], galleryCaption: [body.value.caption ?? null] });
+      if (!check.ok) return json(res, 422, { error: 'validation_failed', fields: check.errors });
+      const patch = {};
+      if ('alt' in body.value) patch.alt = check.value.galleryAlt[0];
+      if ('caption' in body.value) patch.caption = check.value.galleryCaption[0];
+      const row = db.updateTourMediaMeta(m[1], Number(m[2]), patch);
+      if (!row) return json(res, 404, { error: 'not_found' });
+      return json(res, 200, { media: row });
     }
     if ((m = new RegExp(`^/api/admin/tours/${ID}/gallery/reorder$`).exec(path)) && method === 'PUT') {
       if (!db.tourExists(m[1])) return json(res, 404, { error: 'not_found' });
@@ -879,7 +906,7 @@ export async function handleApi(req, res, url) {
     if (path === '/api/admin/upload' && method === 'POST') {
       const result = await handleUpload(req);
       if (!result.ok) return json(res, result.status, { error: result.error });
-      return json(res, result.status, { ok: true, path: result.path });
+      return json(res, result.status, { ok: true, path: result.path, width: result.width ?? null, height: result.height ?? null });
     }
   }
 

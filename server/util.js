@@ -1,6 +1,7 @@
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { db } from './db.js';
 import { isSandbox, looksLikeMerchantId } from './zarinpal.js';
+import { REGIONS } from '../deploy/assets/js/shared/regions.js';
 
 export function json(res, status, payload, headers = {}) {
   const body = JSON.stringify(payload);
@@ -840,6 +841,111 @@ export function validateEditionDates(input, existing = {}) {
   const endsOn = 'endsOn' in value ? value.endsOn : existing.endsOn ?? null;
   if (endsOn && !startsOn) errors.endsOn = 'needs_startsOn';
   else if (startsOn && endsOn && endsOn < startsOn) errors.endsOn = 'before_startsOn';
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value };
+}
+
+// --- tour page content (admin) --------------------------------------------
+
+export const TOUR_TEXT_LIMITS = {
+  story: 1500, experienceType: 60, level: 60, included: 600, bringList: 600, seoDescription: 160
+};
+export const IMAGE_ALT_MAX = 160;
+export const IMAGE_CAPTION_MAX = 120;
+export const MAX_ITINERARY_IMAGES = 6;
+
+/** A public image path as produced by the upload endpoint. Pending (not yet approved) files never qualify. */
+export function isPublicImagePath(value) {
+  return typeof value === 'string' && HOST_PHOTO_PATH_RE.test(value) && !/\/pending\//.test(value);
+}
+
+const trimOrNull = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+
+/**
+ * Validates and normalises the page-content fields of an admin tour save. Only
+ * keys present in `input` are looked at and returned (so a partial PUT keeps
+ * what it does not mention). Text is trimmed, empty becomes null. Alt text and
+ * captions are plain text: they are escaped when rendered, never trusted.
+ */
+export function validateTourEditorial(input) {
+  const errors = {};
+  const value = {};
+  const text = (key, max) => {
+    if (!(key in input)) return;
+    const v = input[key];
+    if (v !== null && typeof v !== 'string') { errors[key] = 'type'; return; }
+    const t = trimOrNull(v);
+    if (t && t.length > max) { errors[key] = 'length'; return; }
+    value[key] = t;
+  };
+  for (const [key, max] of Object.entries(TOUR_TEXT_LIMITS)) text(key, max);
+
+  if ('region' in input) {
+    const r = input.region;
+    if (r === null || r === '') value.region = null;
+    else if (typeof r === 'string' && Object.hasOwn(REGIONS, r)) value.region = r;
+    else errors.region = 'value';
+  }
+  const path = (v, field) => {
+    if (v === null || v === undefined || v === '') return null;
+    if (!isPublicImagePath(v)) { errors[field] = 'format'; return null; }
+    return v;
+  };
+  const altCaption = (obj, altKey, capKey, field) => {
+    const alt = trimOrNull(obj[altKey]);
+    const caption = trimOrNull(obj[capKey]);
+    if ((obj[altKey] != null && typeof obj[altKey] !== 'string') || (alt && alt.length > IMAGE_ALT_MAX)) errors[`${field}.alt`] = 'length';
+    if ((obj[capKey] != null && typeof obj[capKey] !== 'string') || (caption && caption.length > IMAGE_CAPTION_MAX)) errors[`${field}.caption`] = 'length';
+    return { alt, caption };
+  };
+
+  if ('photoPath' in input) value.photoPath = path(input.photoPath, 'photoPath');
+
+  if ('galleryPhotos' in input) {
+    if (!Array.isArray(input.galleryPhotos)) errors.galleryPhotos = 'type';
+    else value.galleryPhotos = input.galleryPhotos.map((p, i) => path(p, `galleryPhotos.${i}`));
+  }
+  for (const [key, max] of [['galleryAlt', IMAGE_ALT_MAX], ['galleryCaption', IMAGE_CAPTION_MAX]]) {
+    if (!(key in input)) continue;
+    if (!Array.isArray(input[key])) { errors[key] = 'type'; continue; }
+    value[key] = input[key].map((v, i) => {
+      if (v != null && typeof v !== 'string') { errors[`${key}.${i}`] = 'type'; return null; }
+      const t = trimOrNull(v);
+      if (t && t.length > max) errors[`${key}.${i}`] = 'length';
+      return t;
+    });
+  }
+
+  if ('highlights' in input) {
+    if (!Array.isArray(input.highlights)) errors.highlights = 'type';
+    else {
+      value.highlights = input.highlights.map((h, i) => {
+        const f = `highlights.${i}`;
+        if (!h || typeof h !== 'object') { errors[f] = 'type'; return h; }
+        const { alt, caption } = altCaption(h, 'imageAlt', 'imageCaption', f);
+        return { ...h, image: path(h.image, `${f}.image`), imageAlt: alt, imageCaption: caption };
+      });
+    }
+  }
+  if ('itinerary' in input) {
+    if (!Array.isArray(input.itinerary)) errors.itinerary = 'type';
+    else {
+      value.itinerary = input.itinerary.map((it, i) => {
+        const f = `itinerary.${i}`;
+        if (!it || typeof it !== 'object') { errors[f] = 'type'; return it; }
+        const images = it.images === undefined || it.images === null ? [] : it.images;
+        if (!Array.isArray(images)) { errors[`${f}.images`] = 'type'; return it; }
+        if (images.length > MAX_ITINERARY_IMAGES) { errors[`${f}.images`] = 'too_many'; return it; }
+        const clean = images.map((img, j) => {
+          const g = `${f}.images.${j}`;
+          if (!img || typeof img !== 'object') { errors[g] = 'type'; return null; }
+          const { alt, caption } = altCaption(img, 'alt', 'caption', g);
+          return { path: path(img.path, `${g}.path`), alt, caption };
+        }).filter((img) => img && img.path);
+        return { ...it, images: clean };
+      });
+    }
+  }
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value };
 }
