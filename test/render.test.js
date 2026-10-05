@@ -312,6 +312,26 @@ test('/assets and /images serve only allow-listed files, never outside their roo
   assert.equal((await rawGet('/images/x.jpg')).status, 404); // SERVE_STATIC is not set: nginx owns /images in production
 });
 
+test('/images (dev/test static mode) is allow-listed and traversal-safe; off by default', async () => {
+  const { writeFileSync, mkdirSync } = await import('node:fs');
+  mkdirSync(join(IMAGES, 'tour-x'), { recursive: true });
+  writeFileSync(join(IMAGES, 'tour-x', 'a.w480.webp'), 'webp-bytes');
+  writeFileSync(join(IMAGES, 'tour-x', 'a.meta.json'), '{}');
+  writeFileSync(join(dir, 'outside.jpg'), 'outside');
+  assert.equal((await rawGet('/images/tour-x/a.w480.webp')).status, 404, 'off unless SERVE_STATIC=1');
+  process.env.SERVE_STATIC = '1';
+  try {
+    const ok = await rawGet('/images/tour-x/a.w480.webp');
+    assert.equal(ok.status, 200); assert.equal(ok.headers['content-type'], 'image/webp');
+    assert.equal(ok.headers['cache-control'], 'public, max-age=31536000, immutable');
+    for (const bad of ['/images/tour-x/a.meta.json', '/images/../outside.jpg', '/images/%2e%2e/outside.jpg', '/images/tour-x/%2e%2e/%2e%2e/outside.jpg',
+      '/images/tour-x/..%2f..%2foutside.jpg', '/images/tour-x/a.w480.webp%00.jpg', '/images/', '/images//etc/passwd', '/images/tour-x/.a.w480.webp.partial']) {
+      const r = await rawGet(bad);
+      assert.notEqual(r.status, 200, bad); assert.ok(!r.text.includes('outside') && !r.text.includes('root:'), bad);
+    }
+  } finally { delete process.env.SERVE_STATIC; }
+});
+
 test('admin save validates the new tour fields and keeps alt/caption across a gallery replace', async () => {
   const admin = adminAuth.adminLogin((adminAuth.upsertAdminUser('root', 'pw-pw-pw-pw'), 'root'), 'pw-pw-pw-pw');
   const call = async (method, path, body) => {

@@ -13,7 +13,7 @@
 //
 // Needs ImageMagick (see deploy/imagemagick-policy.xml). Exit codes: 0 ok, 1 some
 // images failed, 2 ImageMagick not available.
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 import { FRONTEND_STATIC_DIR } from '../server/paths.js';
 import { processPublicImage, publicPathToFile, isGeneratedFile, imageToolAvailable, describeImage } from '../server/images.js';
@@ -27,7 +27,8 @@ const EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 function* walk(dir) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
-    const st = statSync(p);
+    const st = lstatSync(p); // symlinks are skipped: never follow a link out of the images tree (or into a loop)
+    if (st.isSymbolicLink()) continue;
     if (st.isDirectory()) { if (name !== 'pending') yield* walk(p); } else yield p;
   }
 }

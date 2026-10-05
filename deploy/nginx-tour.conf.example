@@ -18,6 +18,11 @@ location /assets/ {
     proxy_set_header Host $host;
 }
 
+# NEEDS A CHECK ON THE SERVER: the two regex locations below use `try_files $uri` against the server's root. If
+# /images/ is currently served by a `location /images/ { alias ...; }` block, copy that alias/root and any add_header
+# lines (security headers) into these locations; a regex location takes precedence over a prefix location and
+# add_header lines are not inherited into a location that has its own add_header.
+#
 # Image variants sit next to the originals under /images/ (already served from the
 # web root). Their names are unique per upload, so they can be cached for good:
 location ~* ^/images/.+\.(?:w\d+\.webp|og\.jpg)$ {

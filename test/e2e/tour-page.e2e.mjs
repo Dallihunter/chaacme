@@ -169,9 +169,18 @@ assert.equal(signup.status, 201);
 await page.goto(`${O}/login?next=%2Ftour%2Ffixture-retreat`); // the SPA sees the session and returns to the server-rendered page
 await page.waitForURL((u) => u.pathname === '/tour/fixture-retreat', { timeout: 15000 });
 assert.ok(await page.locator('h1.tp-title').isVisible(), 'back on the server-rendered tour page');
-await page.goto(`${O}/login?next=https%3A%2F%2Fevil.example%2F`); // an off-site next is ignored
-await page.waitForSelector('#page-account.active, #page-login.active');
-assert.equal(new URL(page.url()).hostname, '127.0.0.1');
+// open redirect: nothing but /tour/<slug> is ever followed, whatever the encoding (logged in, so a bad next WOULD be followed)
+const attacked = [];
+page.on('request', (r) => { if (r.isNavigationRequest()) attacked.push(r.url()); });
+for (const evil of ['https://evil.example/', '//evil.example/x', '/\\evil.example', '/%2F%2Fevil.example', 'javascript:alert(1)', '/tour/../admin', '/tour/x%0a', '/admin', 'data:text/html,x']) {
+  attacked.length = 0;
+  await page.goto(`${O}/login?next=${encodeURIComponent(evil)}`);
+  await page.waitForSelector('#page-account.active, #page-login.active');
+  await page.waitForTimeout(300);
+  assert.equal(new URL(page.url()).origin, O, `stays on the site for next=${evil}`);
+  assert.ok(attacked.every((u) => u.startsWith(O + '/login')), `no navigation for next=${evil}: ${attacked.join(' ')}`);
+}
+page.removeAllListeners('request');
 console.log('  ok  not logged in: redirected to sign-in and returned; off-site next ignored');
 
 // logged in: choose the second edition, two travellers

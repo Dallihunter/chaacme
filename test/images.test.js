@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, readdirSync, chmodSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, readdirSync, chmodSync, mkdirSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { Readable } from 'node:stream';
@@ -198,4 +198,64 @@ test('backfill script: dry run changes nothing, a real run generates, a second r
   assert.ok(existsSync(join(root, 'tour-old', 'legacy.w480.webp')) && existsSync(join(root, 'tour-old', 'legacy.og.jpg')));
   const second = go();
   assert.match(second, /0 generated, 1 already up to date/);
+});
+
+test('the policy really is applied to the child processes: staged privately, svg/mvg denied, jpeg fine', needsMagick, async () => {
+  delete process.env.MAGICK_CONFIGURE_PATH; images.resetImageTool();
+  const info = await images.imageToolInfo();
+  assert.ok(info && info.env.MAGICK_CONFIGURE_PATH);
+  const staged = join(info.env.MAGICK_CONFIGURE_PATH, 'policy.xml');
+  assert.equal(readFileSync(staged, 'utf8'), readFileSync(new URL('../deploy/imagemagick-policy.xml', import.meta.url), 'utf8'));
+  assert.notEqual(info.env.MAGICK_CONFIGURE_PATH, join(tmpdir(), `chaacme-magick-${process.getuid()}`), 'not a predictable shared-tmp name');
+  assert.ok(!('IP_HASH_SALT' in info.env) && !('OTP_PEPPER' in info.env), 'children get a minimal environment');
+  const svg = join(dir, 'p.svg'); writeFileSync(svg, '<svg xmlns="http://www.w3.org/2000/svg" width="5" height="5"><rect width="5" height="5"/></svg>');
+  const mvg = join(dir, 'p.mvg'); writeFileSync(mvg, 'push graphic-context\nviewbox 0 0 5 5\nrectangle 0,0 4,4\npop graphic-context\n');
+  const out = join(dir, 'p-out.png');
+  for (const [name, src] of [['svg', svg], ['mvg', mvg]]) {
+    assert.throws(() => execFileSync(info.bin, [`${name}:${src}`, `png:${out}`], { env: info.env, stdio: 'pipe' }), `${name} must be refused by the policy`);
+  }
+  const ok = join(dir, 'p-ok.jpg'); run(['-size', '10x10', 'xc:red', `jpeg:${ok}`]);
+  execFileSync(info.bin, [`jpeg:${ok}`, `png:${out}`], { env: info.env });
+  // a configured directory WITHOUT a policy.xml must not silently disable the policy
+  const empty = mkdtempSync(join(tmpdir(), 'chaacme-nopolicy-'));
+  process.env.MAGICK_CONFIGURE_PATH = empty; images.resetImageTool();
+  const warned = []; const w = console.warn; console.warn = (m) => warned.push(String(m));
+  try {
+    const i2 = await images.imageToolInfo();
+    assert.notEqual(i2.env.MAGICK_CONFIGURE_PATH, empty);
+    assert.ok(warned.some((m) => /has no policy\.xml/.test(m)));
+    // and a directory that has one is honoured
+    const good = mkdtempSync(join(tmpdir(), 'chaacme-policy-')); writeFileSync(join(good, 'policy.xml'), readFileSync(staged));
+    process.env.MAGICK_CONFIGURE_PATH = good; images.resetImageTool();
+    assert.equal((await images.imageToolInfo()).env.MAGICK_CONFIGURE_PATH, good);
+  } finally { console.warn = w; delete process.env.MAGICK_CONFIGURE_PATH; images.resetImageTool(); }
+});
+
+test('a tampered meta file cannot put anything but generated names into URLs', needsMagick, async () => {
+  const r = await upload.handleUpload(req(jpegWithGps(2000, 1400), { fields: { tourId: 'demo' } }));
+  const metaFile = abs(r.path).replace(/\.jpg$/, '.meta.json');
+  const good = JSON.parse(readFileSync(metaFile, 'utf8'));
+  for (const bad of [
+    { ...good, variants: [{ width: 480, height: 320, file: '../../../etc/passwd' }] },
+    { ...good, variants: [{ width: 480, height: 320, file: 'x.w480.webp/../../y' }] },
+    { ...good, og: { width: 1200, height: 630, file: '"><script>.og.jpg' } },
+    { ...good, width: 'x' }
+  ]) {
+    writeFileSync(metaFile, JSON.stringify(bad));
+    const d = images.describeImage(r.path);
+    assert.deepEqual(d.variants, []); assert.equal(d.og, null);
+    await new Promise((res) => setTimeout(res, 15)); // distinct mtime so the cache re-reads
+  }
+});
+
+test('backfill never follows symlinks out of the images tree', needsMagick, () => {
+  const root = mkdtempSync(join(tmpdir(), 'chaacme-bf-link-'));
+  const outside = mkdtempSync(join(tmpdir(), 'chaacme-outside-'));
+  writeFileSync(join(outside, 'secret.jpg'), jpegWithGps(900, 600));
+  symlinkSync(outside, join(root, 'link'));
+  symlinkSync(join(outside, 'secret.jpg'), join(root, 'file.jpg'));
+  const script = fileURLToPath(new URL('../scripts/backfill-image-variants.mjs', import.meta.url));
+  const out = execFileSync(process.execPath, [script], { env: { ...process.env, FRONTEND_STATIC_DIR: root }, encoding: 'utf8' });
+  assert.match(out, /scanned 0:/);
+  assert.deepEqual(readdirSync(outside), ['secret.jpg']);
 });

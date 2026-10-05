@@ -9,7 +9,7 @@
 // Nothing here may fail an upload because ImageMagick is missing: the original
 // is kept, the absence is logged once, and pages fall back to the original file.
 import { execFile } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import { FRONTEND_STATIC_DIR, REPO_ROOT } from './paths.js';
@@ -30,12 +30,17 @@ const IMAGE_URL = /^\/images((?:\/[A-Za-z0-9_-][A-Za-z0-9_.-]*)+)$/;
 let tool; // { bin, env } | null, resolved once
 let warned = false;
 
+/**
+ * Directory ImageMagick reads policy.xml from. An operator-provided MAGICK_CONFIGURE_PATH is used only if it really
+ * contains a policy.xml (a directory without one would silently run ImageMagick with its default, permissive policy);
+ * otherwise our shipped policy is staged in a fresh private directory. mkdtemp (not a predictable name in the shared
+ * temp dir) so nobody else can pre-create the directory or swap the file.
+ */
 function stagedPolicyDir() {
-  if (process.env.MAGICK_CONFIGURE_PATH) return process.env.MAGICK_CONFIGURE_PATH;
-  // ImageMagick only reads a file called policy.xml, so stage our shipped
-  // policy under that name in a private directory.
-  const dir = join(tmpdir(), `chaacme-magick-${process.getuid ? process.getuid() : 'u'}`);
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const configured = process.env.MAGICK_CONFIGURE_PATH;
+  if (configured && existsSync(join(configured, 'policy.xml'))) return configured;
+  if (configured) console.warn(`[chaacme-platform] MAGICK_CONFIGURE_PATH=${configured} has no policy.xml: using the shipped policy instead.`);
+  const dir = mkdtempSync(join(tmpdir(), 'chaacme-magick-'));
   copyFileSync(join(REPO_ROOT, 'deploy', 'imagemagick-policy.xml'), join(dir, 'policy.xml'));
   return dir;
 }
@@ -73,6 +78,9 @@ async function locateTool() {
 export function resetImageTool() { tool = undefined; warned = false; }
 
 export const imageToolAvailable = async () => !!(await locateTool());
+
+/** The binary and the environment ImageMagick children run with (null when it is missing). For diagnostics and tests. */
+export const imageToolInfo = async () => { const t = await locateTool(); return t ? { bin: t.bin, env: { ...t.env } } : null; };
 
 // Plain FIFO limiter so a burst of uploads cannot run many decoders at once.
 let active = 0;
@@ -268,6 +276,14 @@ export function deleteVariants(publicPath) {
 
 // --- reading what exists -----------------------------------------------------
 
+const posInt = (n) => Number.isInteger(n) && n > 0 && n <= 100000;
+/** A meta file is trusted only if every file name in it is a plain generated name: it ends up in URLs. */
+function validMeta(m) {
+  return !!m && m.v === 1 && posInt(m.width) && posInt(m.height) && Array.isArray(m.variants)
+    && m.variants.every((v) => v && posInt(v.width) && posInt(v.height) && /^[A-Za-z0-9_-][A-Za-z0-9_.-]*\.w\d+\.webp$/.test(v.file))
+    && (m.og === null || (m.og && /^[A-Za-z0-9_-][A-Za-z0-9_.-]*\.og\.jpg$/.test(m.og.file) && posInt(m.og.width) && posInt(m.og.height)));
+}
+
 const metaCache = new Map(); // file -> { mtimeMs, meta }
 
 function readMeta(file) {
@@ -279,7 +295,7 @@ function readMeta(file) {
   let meta = null;
   try {
     const parsed = JSON.parse(readFileSync(metaFile, 'utf8'));
-    if (parsed && parsed.v === 1 && Array.isArray(parsed.variants)) meta = parsed;
+    if (validMeta(parsed)) meta = parsed;
   } catch { /* corrupt: treated as missing */ }
   metaCache.set(file, { mtimeMs: st.mtimeMs, meta });
   return meta;
