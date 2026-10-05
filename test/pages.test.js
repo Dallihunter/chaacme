@@ -41,7 +41,7 @@ test('injectTourMeta escapes tour text and never interprets $ patterns', () => {
   assert.ok(html.includes('<link rel="canonical" href="https://example.test/tour/evil">'));
 });
 
-test('serves per-tour meta for a real tour, 404 shell for unknown or malformed slugs', async () => {
+test('serves the server-rendered page for a real tour, the new 404 page for unknown or malformed slugs', async () => {
   const db = await import('../server/db.js');
   db.seed();
   const t = db.listTours().find((x) => !x.comingSoon);
@@ -49,25 +49,25 @@ test('serves per-tour meta for a real tour, 404 shell for unknown or malformed s
   const ok = await fetch(`${base}/tour/${t.id}`);
   assert.equal(ok.status, 200);
   assert.match(ok.headers.get('content-type'), /text\/html/);
+  assert.equal(ok.headers.get('cache-control'), 'public, max-age=60, stale-while-revalidate=300');
   const body = await ok.text();
   assert.ok(body.includes(`<link rel="canonical" href="https://example.test/tour/${t.id}">`));
   assert.ok(body.includes('<title>' + t.name));
-  assert.ok(body.includes('id="page-tour"')); // still the full SPA shell
+  assert.ok(body.includes('class="tp-title"')); // the real content is in the HTML, not injected by a script
+  assert.ok(!body.includes('id="page-tour"')); // no longer the SPA shell
 
   const head = await fetch(`${base}/tour/${t.id}`, { method: 'HEAD' });
   assert.equal(head.status, 200);
   assert.equal((await head.text()), '');
 
-  const missing = await fetch(`${base}/tour/no-such-tour`);
-  assert.equal(missing.status, 404);
-  const mb = await missing.text();
-  assert.ok(mb.includes('id="page-tour"'));
-  assert.ok(!mb.includes('rel="canonical"')); // generic shell, no tour tags
-
-  const bad = await fetch(`${base}/tour/Bad_Slug`);
-  assert.equal(bad.status, 404);
-  assert.match(bad.headers.get('content-type'), /text\/html/);
-  assert.ok((await bad.text()).includes('id="page-tour"'));
+  for (const slug of ['no-such-tour', 'Bad_Slug']) {
+    const res = await fetch(`${base}/tour/${slug}`);
+    assert.equal(res.status, 404);
+    assert.match(res.headers.get('content-type'), /text\/html/);
+    const text = await res.text();
+    assert.ok(text.includes('این تجربه پیدا نشد'));
+    assert.ok(!text.includes('rel="canonical"'));
+  }
 
   const post = await fetch(`${base}/tour/${t.id}`, { method: 'POST' });
   assert.equal(post.status, 404);

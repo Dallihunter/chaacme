@@ -10,3 +10,7 @@ Chaacme design system refinement
 # mechanics and the incident record. Server copy only.
 docs/DEPLOY.md
 docs/RESTORE.md
+
+# Screenshots of the built tour page (generated gradient fixtures, reviewed 2026-10-05: no people, no real photos).
+# The publish scan refuses every image, so they stay on the server copy; they were already public on PR #1's branch.
+docs/screenshots/fe1-tour

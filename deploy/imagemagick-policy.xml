@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ImageMagick policy for chaacme-platform's upload pipeline (server/images.js).
+
+  Allow-list: only JPEG, PNG and WEBP can be read or written (plus the NULL and
+  INFO pseudo-coders the pipeline itself uses). Everything else — SVG, MVG, MSL,
+  TXT, PDF/PS, EPHEMERAL:, URL/HTTP fetchers, @file lists — is denied, so a
+  crafted file that slips past the magic-byte check still cannot make ImageMagick
+  read another file or fetch a URL. Resource limits cap what a decompression bomb
+  can cost.
+
+  ImageMagick only reads a file NAMED policy.xml from the directory in
+  MAGICK_CONFIGURE_PATH. server/images.js stages this file as <dir>/policy.xml
+  automatically; on a server you may instead install it yourself, e.g.
+    install -D -m 0644 deploy/imagemagick-policy.xml /etc/chaacme-platform/imagemagick/policy.xml
+  and set MAGICK_CONFIGURE_PATH=/etc/chaacme-platform/imagemagick in the
+  service environment.
+-->
+<!DOCTYPE policymap [
+<!ELEMENT policymap (policy)*>
+<!ATTLIST policymap xmlns CDATA #FIXED "">
+<!ELEMENT policy EMPTY>
+<!ATTLIST policy xmlns CDATA #FIXED "">
+<!ATTLIST policy domain NMTOKEN #REQUIRED>
+<!ATTLIST policy name NMTOKEN #IMPLIED>
+<!ATTLIST policy pattern CDATA #IMPLIED>
+<!ATTLIST policy rights NMTOKEN #IMPLIED>
+<!ATTLIST policy stealth NMTOKEN #IMPLIED>
+<!ATTLIST policy value CDATA #IMPLIED>
+]>
+<policymap>
+  <policy domain="resource" name="memory" value="256MiB"/>
+  <policy domain="resource" name="map" value="512MiB"/>
+  <policy domain="resource" name="disk" value="1GiB"/>
+  <policy domain="resource" name="area" value="100MP"/>
+  <policy domain="resource" name="width" value="16KP"/>
+  <policy domain="resource" name="height" value="16KP"/>
+  <policy domain="resource" name="time" value="60"/>
+  <policy domain="resource" name="thread" value="2"/>
+  <policy domain="resource" name="list-length" value="16"/>
+
+  <policy domain="coder" rights="none" pattern="*"/>
+  <policy domain="coder" rights="read|write" pattern="{JPEG,JPG,PNG,WEBP,NULL,INFO}"/>
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <policy domain="filter" rights="none" pattern="*"/>
+  <policy domain="path" rights="none" pattern="@*"/>
+</policymap>

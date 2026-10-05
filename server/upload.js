@@ -3,13 +3,12 @@ import { mkdirSync, writeFileSync, unlinkSync, renameSync, copyFileSync, existsS
 import { dirname, join, relative, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOST_SLUG_RE } from './util.js';
+import { FRONTEND_STATIC_DIR } from './paths.js';
+import { processImageFile, queueVariants, deleteVariants, probeDimensions, dimensionsTooLarge } from './images.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-// Default matches this project's local dev layout (server/ -> project root ->
-// sibling images/ dir, the same tree animal-flow/dasbagh already live under).
-// In production set FRONTEND_STATIC_DIR to wherever the frontend's static
-// tree actually is, e.g. /srv/chaacme-platform/frontend/images.
-export const FRONTEND_STATIC_DIR = (process.env.FRONTEND_STATIC_DIR || join(here, '..', '..', 'images')).trim();
+// FRONTEND_STATIC_DIR (where the public images tree lives) is resolved in paths.js.
+export { FRONTEND_STATIC_DIR };
 
 // Pending partner uploads are NOT public: nginx serves everything under the web
 // root straight off disk, so a file waiting for admin review must live outside
@@ -135,6 +134,8 @@ async function readImageUpload(req) {
 
   const detected = detectImageType(file.data);
   if (!detected) return { ok: false, status: 422, error: 'unsupported_file_type' };
+  // Refuse decompression bombs from the header alone, before anything decodes the file.
+  if (dimensionsTooLarge(probeDimensions(file.data))) return { ok: false, status: 422, error: 'image_dimensions_too_large' };
   return { ok: true, file, detected, fields: parsed.fields };
 }
 
@@ -188,7 +189,10 @@ export function movePendingUpload(imagePath) {
     copyFileSync(from, to);
     unlinkSync(from);
   }
-  return `/images/host-${m[1]}/${m[2]}`;
+  const publicPath = `/images/host-${m[1]}/${m[2]}`;
+  // Variants are made only now that the file is public; pages use the original until they exist.
+  queueVariants(publicPath);
+  return publicPath;
 }
 
 /**
@@ -248,9 +252,20 @@ export async function handleUpload(req) {
   mkdirSync(dir, { recursive: true });
 
   const filename = `${Date.now()}-${randomBytes(6).toString('hex')}.${detected.ext}`;
-  writeFileSync(join(dir, filename), file.data);
+  const target = join(dir, filename);
+  writeFileSync(target, file.data);
 
-  return { ok: true, status: 201, path: `/images/${subdir}/${filename}` };
+  // Responsive variants (WebP widths + the 1200x630 link-preview crop) and EXIF removal.
+  // A missing ImageMagick never fails the upload; a file ImageMagick cannot read does.
+  const processed = await processImageFile(target, detected.ext, { stripOriginal: true });
+  if (processed.status === 'rejected') {
+    try { unlinkSync(target); } catch { /* already gone */ }
+    return { ok: false, status: 422, error: processed.reason === 'dimensions' ? 'image_dimensions_too_large' : 'invalid_image' };
+  }
+
+  const out = { ok: true, status: 201, path: `/images/${subdir}/${filename}` };
+  if (processed.meta) { out.width = processed.meta.width; out.height = processed.meta.height; }
+  return out;
 }
 
 // Only ever matches paths this module itself generated (see the `path` this
@@ -276,4 +291,5 @@ export function deleteUploadedFile(imagePath) {
   } catch {
     // Already missing (e.g. deleted twice, or the file predates uploads) — not an error for this endpoint.
   }
+  deleteVariants(imagePath);
 }

@@ -2106,7 +2106,10 @@
   async function openTour(id, opts){
     const updateUrl = !(opts && opts.updateUrl === false);
     if(!TOUR_SLUG_RE.test(String(id || ''))){ goTo('not-found'); return; }
-    if(updateUrl && window.location.pathname !== tourPath(id)) history.pushState(null, '', tourPath(id));
+    // The public tour page is rendered by the server; a click goes there with a
+    // full page load. This client-rendered page remains the fallback for a direct
+    // load when that route is not available (see applyRoute, updateUrl === false).
+    if(updateUrl){ window.location.assign(tourPath(id)); return; }
     goTo('tour');
     try {
       const data = await apiGet('/tours/' + encodeURIComponent(id));
@@ -2355,6 +2358,11 @@
   // unexpected.
   let pendingAfterAuth = null;
 
+  // /login?next=/tour/<slug>: the server-rendered tour page sends visitors here
+  // to sign in and gets them back with a full page load (it is not an SPA route).
+  let hardNext = null;
+  const HARD_NEXT_RE = /^\/tour\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
   let sessionChecked = false;
   function setCurrentUser(user){
     currentUser = user;
@@ -2363,6 +2371,12 @@
     updateNavAuth();
     applyUpdateGate();
     refreshPartnerNav();
+    if(user && hardNext){
+      const back = hardNext;
+      hardNext = null;
+      window.location.assign(back);
+      return;
+    }
     if(document.getElementById('page-partner').classList.contains('active') && !(user && pendingAfterAuth)) renderPartner(window.location.pathname);
     if(user && pendingAfterAuth){
       const target = pendingAfterAuth;
@@ -3916,6 +3930,14 @@
     // the handler and drop the payment result.
     if(path === '/booking/result') return;
 
+    if(path === '/login'){
+      const next = new URLSearchParams(window.location.search).get('next');
+      hardNext = next && HARD_NEXT_RE.test(next) ? next : null;
+      if(currentUser && hardNext){ window.location.replace(hardNext); return; }
+      goTo(currentUser ? 'account' : 'login');
+      return;
+    }
+
     const hostMatch = HOST_PATH_RE.exec(path);
     if(hostMatch){ openHost(decodeURIComponent(hostMatch[1])); return; }
     const tourMatch = TOUR_PATH_RE.exec(path);
@@ -3950,7 +3972,7 @@
     if(!a || a.target || a.hasAttribute('download')) return;
     const href = a.getAttribute('href');
     if(!href || !href.startsWith('/')) return;
-    if(!HOST_PATH_RE.test(href) && !TOUR_PATH_RE.test(href) && !PARTNER_PATH_RE.test(href) && href !== '/become-host') return;
+    if(!HOST_PATH_RE.test(href) && !PARTNER_PATH_RE.test(href) && href !== '/become-host') return;
     ev.preventDefault();
     navigate(href);
   });
