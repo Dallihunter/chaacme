@@ -73,9 +73,14 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // enforces this too — these lists just stop the UI offering a 422.
   const HOST_PERSON_ROLES = ['lead', 'co_host'];
   const HOST_KINDS = ['person', 'place'];
-  const KIND_LABEL = { person: 'Person', place: 'Place' };
+  const KIND_LABEL = { person: 'شخص', place: 'مکان' };
   const TOUR_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'canceled', 'paid_no_capacity'];
+  // what the admin reads for every status value (the values themselves are what the API stores)
+  const STATUS_FA = { draft: 'پیش‌نویس', published: 'منتشرشده', coming_soon: 'به‌زودی', archived: 'بایگانی', hidden: 'پنهان', active: 'فعال',
+    pending: 'در انتظار', approved: 'پذیرفته‌شده', rejected: 'ردشده', paid: 'پرداخت‌شده', failed: 'ناموفق', canceled: 'لغوشده',
+    paid_no_capacity: 'پرداخت‌شده بدون ظرفیت', new: 'جدید', in_discussion: 'در حال گفتگو', accepted: 'پذیرفته‌شد', declined: 'ممکن نشد' };
+  const fa = function(v){ return Object.prototype.hasOwnProperty.call(STATUS_FA, v) ? STATUS_FA[v] : String(v).replace(/_/g, ' '); };
 
   // ---------------------------------------------------------------------
   // App state + tiny hash router
@@ -383,7 +388,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       return (
         '<tr>' +
           '<td>' + esc(t.name) + '<div style="color:var(--ink-muted);font-size:12px;">' + esc(t.id) + '</div></td>' +
-          '<td><span class="badge ' + esc(status) + '">' + esc(status.replace('_',' ')) + '</span></td>' +
+          '<td><span class="badge ' + esc(status) + '">' + esc(fa(status)) + '</span></td>' +
           '<td>' + (t.featured ? '★' : '') + '</td>' +
           '<td>' + (t.price != null ? Number(t.price).toLocaleString('en-US') : '—') + '</td>' +
           '<td><div class="row-actions">' +
@@ -414,16 +419,16 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       state.bookings = data.bookings;
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      toast('Could not load bookings', true);
+      toast('بارگذاری رزروها ممکن نشد', true);
       state.bookings = [];
     }
     paintBookings();
   }
 
   function paintBookings(){
-    const filterOptions = ['<option value="">All payment statuses</option>'].concat(
+    const filterOptions = ['<option value="">همهٔ وضعیت‌های پرداخت</option>'].concat(
       PAYMENT_STATUSES.map(function(s){
-        return '<option value="' + esc(s) + '"' + (s === state.bookingsFilter ? ' selected' : '') + '>' + esc(s.replace(/_/g, ' ')) + '</option>';
+        return '<option value="' + esc(s) + '"' + (s === state.bookingsFilter ? ' selected' : '') + '>' + esc(fa(s)) + '</option>';
       })
     ).join('');
 
@@ -437,7 +442,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
           '<td>' + esc(b.tourTitle) + '<div style="color:var(--ink-muted);font-size:12px;">' + esc(b.dateLabel) + (b.startsOn ? ' · ' + esc(b.startsOn) : '') + '</div></td>' +
           '<td>' + esc(b.guests) + '</td>' +
           '<td>' + esc(customer) + '<div style="color:var(--ink-muted);font-size:12px;">' + esc(b.phone) + '</div></td>' +
-          '<td><span class="badge ' + esc(status) + '">' + (flagged ? '⚠ ' : '') + esc(status.replace(/_/g, ' ')) + '</span></td>' +
+          '<td><span class="badge ' + esc(status) + '">' + (flagged ? '⚠ ' : '') + esc(fa(status)) + '</span></td>' +
           '<td>' + Number(b.total || 0).toLocaleString('en-US') + '</td>' +
           '<td style="font-size:12px;color:var(--ink-muted);">' + esc(b.zarinpalRefId || '—') + '</td>' +
           '<td style="font-size:12px;color:var(--ink-muted);">' + esc(b.createdAt) + '</td>' +
@@ -447,10 +452,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
     app.innerHTML = shell(
       '<div class="list-head"><h1>رزروها و پرداخت‌ها</h1></div>' +
-      '<div class="filter-row"><label>Payment status</label><select id="bookingsFilter">' + filterOptions + '</select></div>' +
+      '<div class="filter-row"><label>وضعیت پرداخت</label><select id="bookingsFilter">' + filterOptions + '</select></div>' +
       (state.bookings.length
-        ? '<table class="tours"><thead><tr><th>Ref</th><th>Tour / Date</th><th>Guests</th><th>Customer</th><th>Payment</th><th>Amount (Toman)</th><th>ZarinPal ref</th><th>Created</th></tr></thead><tbody>' + rows + '</tbody></table>'
-        : '<div class="empty">No bookings match this filter.</div>')
+        ? '<table class="tours"><thead><tr><th>کد رزرو</th><th>تجربه / تاریخ</th><th>نفرات</th><th>مشتری</th><th>پرداخت</th><th>مبلغ (تومان)</th><th>کد زرین‌پال</th><th>ثبت</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="empty">رزروی با این فیلتر نیست.</div>')
     );
     bindLogout();
 
@@ -464,10 +469,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // Editor — shared for create + edit
   // ---------------------------------------------------------------------
   const MAX_ITIN_IMAGES = 6;
-  const REGIONS = [['', '— none —'], ['desert', 'Desert (کویر)'], ['forest', 'Forest (جنگل شمال)'], ['sea', 'Island / sea (جزیره)']];
+  const REGIONS = [['', '— بدون —'], ['desert', 'کویر'], ['forest', 'جنگل شمال'], ['sea', 'جزیره']];
   function limitedField(label, id, value, max, area){
     const v = value == null ? '' : value;
-    return '<div class="field"><label>' + esc(label) + ' <span style="color:var(--ink-muted)">(max ' + max + ')</span></label>' +
+    return '<div class="field"><label>' + esc(label) + ' <span style="color:var(--ink-muted)">(حداکثر ' + max + ')</span></label>' +
       (area ? '<textarea id="' + id + '" maxlength="' + max + '">' + esc(v) + '</textarea>'
             : '<input type="text" id="' + id + '" maxlength="' + max + '" value="' + esc(v) + '">') + '</div>';
   }
@@ -508,7 +513,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         });
       } catch(e){
         if (e.status === 401){ state.admin = null; renderLogin(); return; }
-        toast('Could not load tour', true);
+        toast('بارگذاری تجربه ممکن نشد', true);
         location.hash = '#/tours';
         return;
       }
@@ -522,7 +527,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const t = ed.tour;
     const idField = ed.isNew
       ? '<div class="field"><label>شناسهٔ تجربه (دائمی؛ حروف کوچک انگلیسی، عدد و خط تیره)</label>' +
-        '<input type="text" id="f_id" value="' + esc(t.id) + '" placeholder="e.g. desert-parthian"></div>'
+        '<input type="text" id="f_id" value="' + esc(t.id) + '" placeholder="مثلاً desert-parthian"></div>'
       : '<div class="field"><label>شناسهٔ تجربه</label><input type="text" value="' + esc(t.id) + '" disabled></div>';
 
     const hint = function(text){ return '<span class="where">روی صفحه: ' + text + '</span>'; };
@@ -642,7 +647,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     renderHighlightList(ed);
     renderItineraryList(ed);
     renderRepeat('categoriesList', ed.tour.reviewCategories, [
-      { key:'label', label:'Label' }, { key:'score', label:'Score (0-5)', number:true }
+      { key:'label', label:'برچسب' }, { key:'score', label:'امتیاز (۰ تا ۵)', number:true }
     ]);
 
     document.getElementById('addHighlight').addEventListener('click', function(){
@@ -656,7 +661,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     document.getElementById('addCategory').addEventListener('click', function(){
       ed.tour.reviewCategories.push({ label:'', score:'' });
       renderRepeat('categoriesList', ed.tour.reviewCategories, [
-        { key:'label', label:'Label' }, { key:'score', label:'Score (0-5)', number:true }
+        { key:'label', label:'برچسب' }, { key:'score', label:'امتیاز (۰ تا ۵)', number:true }
       ]);
     });
 
@@ -677,7 +682,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   function selectField(label, id, options, current){
     return '<div class="field"><label>' + esc(label) + '</label><select id="' + id + '">' +
       options.map(function(o){
-        return '<option value="' + esc(o) + '"' + (o === current ? ' selected' : '') + '>' + esc(o.replace('_',' ')) + '</option>';
+        return '<option value="' + esc(o) + '"' + (o === current ? ' selected' : '') + '>' + esc(fa(o)) + '</option>';
       }).join('') + '</select></div>';
   }
 
@@ -693,14 +698,14 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const btn = document.getElementById('coverUpload');
     btn.addEventListener('click', async function(){
       const fileInput = document.getElementById('coverFile');
-      if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+      if (!fileInput.files[0]){ toast('ابتدا یک فایل انتخاب کنید', true); return; }
       btn.disabled = true;
       try {
         const path = await uploadFile(fileInput.files[0], document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id);
         document.getElementById('coverPath').value = path;
-        toast('Cover photo uploaded');
+        toast('عکس کاور بارگذاری شد');
       } catch(e){
-        toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
+        toast('بارگذاری ممکن نشد: ' + (e.body && e.body.error || e.message), true);
       } finally { btn.disabled = false; }
     });
   }
@@ -758,12 +763,12 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         ? '<div class="hl-image"><img src="' + esc(h.image) + '" alt="" onerror="this.style.opacity=0.15">' +
             '<div class="field" style="margin:0"><label>متن جایگزین (alt، حداکثر ۱۶۰)</label><input type="text" maxlength="160" data-i="' + i + '" data-k="imageAlt" value="' + esc(h.imageAlt || '') + '"></div>' +
             '<div class="field" style="margin:0"><label>زیرنویس (حداکثر ۱۲۰)</label><input type="text" maxlength="120" data-i="' + i + '" data-k="imageCaption" value="' + esc(h.imageCaption || '') + '"></div>' +
-            '<div><button type="button" class="btn small ghost hlImgDel" data-i="' + i + '">Remove image</button></div></div>'
+            '<div><button type="button" class="btn small ghost hlImgDel" data-i="' + i + '">حذف عکس</button></div></div>'
         : '<div class="hl-image upload-row"><input type="file" class="hlFile" data-i="' + i + '" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-            '<button type="button" class="btn small ghost hlImgAdd" data-i="' + i + '">Add image</button></div>';
+            '<button type="button" class="btn small ghost hlImgAdd" data-i="' + i + '">افزودن عکس</button></div>';
       return '<div class="repeat-row" style="grid-template-columns:repeat(2,1fr);">' +
-        '<div class="field" style="margin-bottom:0;"><label>Name</label><input type="text" data-i="' + i + '" data-k="name" value="' + esc(h.name || '') + '"></div>' +
-        '<div class="field" style="margin-bottom:0;"><label>Description</label><textarea data-i="' + i + '" data-k="description" style="min-height:50px;">' + esc(h.description || '') + '</textarea></div>' +
+        '<div class="field" style="margin-bottom:0;"><label>عنوان</label><input type="text" data-i="' + i + '" data-k="name" value="' + esc(h.name || '') + '"></div>' +
+        '<div class="field" style="margin-bottom:0;"><label>توضیح</label><textarea data-i="' + i + '" data-k="description" style="min-height:50px;">' + esc(h.description || '') + '</textarea></div>' +
         img + '<button type="button" class="btn small ghost rm" data-i="' + i + '">✕</button></div>';
     }).join('');
     el.querySelectorAll('input[data-k], textarea[data-k]').forEach(function(inp){
@@ -783,15 +788,15 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       btn.addEventListener('click', async function(){
         const i = Number(btn.dataset.i);
         const fileInput = el.querySelector('.hlFile[data-i="' + i + '"]');
-        if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+        if (!fileInput.files[0]){ toast('ابتدا یک فایل انتخاب کنید', true); return; }
         btn.disabled = true;
         try {
           const tourId = document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id;
           items[i].image = await uploadFile(fileInput.files[0], tourId);
           renderHighlightList(ed);
-          toast('Image uploaded — add alt text, then click Save changes');
+          toast('عکس بارگذاری شد؛ متن جایگزین را بنویسید و «ذخیره» را بزنید');
         } catch(e){
-          toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
+          toast('بارگذاری ممکن نشد: ' + (e.body && e.body.error || e.message), true);
         } finally { btn.disabled = false; }
       });
     });
@@ -804,9 +809,9 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // Save, same as its other fields, so photo removal only needs to edit
   // local state and let Save persist it. ----
   const ITINERARY_FIELDS = [
-    { key:'time', label:'Time label' }, { key:'title', label:'Title' },
-    { key:'description', label:'Description', area:true },
-    { key:'photoLabel', label:'Photo label' }
+    { key:'time', label:'برچسب روز (مثلاً روز ۱)' }, { key:'title', label:'عنوان' },
+    { key:'description', label:'توضیح', area:true },
+    { key:'photoLabel', label:'برچسب عکس' }
   ];
 
   function renderItineraryList(ed){
@@ -828,18 +833,18 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       const photos = images.map(function(img, pi){
         return '<div class="iphoto" data-si="' + i + '" data-pi="' + pi + '">' +
           '<img src="' + esc(img.path) + '" onerror="this.style.opacity=0.15" alt="">' +
-          '<button type="button" class="iPhotoDel" title="Remove">✕</button>' +
+          '<button type="button" class="iPhotoDel" title="حذف">✕</button>' +
           '<input type="text" class="ialt" maxlength="160" placeholder="متن جایگزین (alt)" data-si="' + i + '" data-pi="' + pi + '" data-ik="alt" value="' + esc(img.alt || '') + '">' +
           '<input type="text" class="ialt" maxlength="120" placeholder="زیرنویس" data-si="' + i + '" data-pi="' + pi + '" data-ik="caption" value="' + esc(img.caption || '') + '">' +
         '</div>';
       }).join('');
       const photoBlock = '<div class="istage-photos">' +
-        '<label>Images (' + images.length + ' of ' + MAX_ITIN_IMAGES + ')</label>' +
+        '<label>عکس‌ها (' + images.length + ' از ' + MAX_ITIN_IMAGES + ')</label>' +
         '<div class="iphoto-grid">' + photos + '</div>' +
         (images.length >= MAX_ITIN_IMAGES ? '' :
         '<div class="upload-row">' +
           '<input type="file" class="iPhotoFile" data-i="' + i + '" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-          '<button type="button" class="btn small ghost iPhotoAdd" data-i="' + i + '">Add image</button>' +
+          '<button type="button" class="btn small ghost iPhotoAdd" data-i="' + i + '">افزودن عکس</button>' +
         '</div>') +
       '</div>';
       return '<div class="repeat-row" style="grid-template-columns:repeat(' + Math.min(ITINERARY_FIELDS.length,3) + ',1fr);">' +
@@ -875,16 +880,16 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       btn.addEventListener('click', async function(){
         const i = Number(btn.dataset.i);
         const fileInput = el.querySelector('.iPhotoFile[data-i="' + i + '"]');
-        if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+        if (!fileInput.files[0]){ toast('ابتدا یک فایل انتخاب کنید', true); return; }
         btn.disabled = true;
         try {
           const tourId = document.getElementById('f_id') ? document.getElementById('f_id').value.trim() : ed.tour.id;
           const path = await uploadFile(fileInput.files[0], tourId);
           items[i].images.push({ path: path, alt: '', caption: '' });
           renderItineraryList(ed);
-          toast('Image uploaded — add alt text, then click Save changes');
+          toast('عکس بارگذاری شد؛ متن جایگزین را بنویسید و «ذخیره» را بزنید');
         } catch(e){
-          toast('Upload failed: ' + (e.body && e.body.error || e.message), true);
+          toast('بارگذاری ممکن نشد: ' + (e.body && e.body.error || e.message), true);
         } finally { btn.disabled = false; }
       });
     });
@@ -897,9 +902,9 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         (i === 0 ? '<span class="cover-flag">اصلی</span>' : '') +
         '<img src="' + esc(m.photoPath || '') + '" onerror="this.style.opacity=0.15" alt="" draggable="false">' +
         '<div class="gctrl">' +
-          (i > 0 ? '<button type="button" class="gUp" title="Move earlier">↑</button>' : '') +
-          (i < t.galleryMedia.length - 1 ? '<button type="button" class="gDown" title="Move later">↓</button>' : '') +
-          '<button type="button" class="gDel" title="Delete">✕</button>' +
+          (i > 0 ? '<button type="button" class="gUp" title="جلوتر">↑</button>' : '') +
+          (i < t.galleryMedia.length - 1 ? '<button type="button" class="gDown" title="عقب‌تر">↓</button>' : '') +
+          '<button type="button" class="gDel" title="حذف">✕</button>' +
         '</div>' +
         '<div class="gcap">' + esc(m.label || '(no label)') + '</div>' +
         '<input type="text" class="ialt gAlt" maxlength="160" placeholder="متن جایگزین (alt)" value="' + esc(m.alt || '') + '">' +
@@ -910,7 +915,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     return '<p style="color:var(--ink-muted);font-size:12px;margin-bottom:10px;">با کشیدن عکس‌ها ترتیب را عوض کنید؛ اولی کاور صفحهٔ تجربه است. متن جایگزین و زیرنویس وقتی از فیلد بیرون می‌روید ذخیره می‌شود.</p>' +
       '<div class="gallery-grid" id="galleryGrid">' + (photos || '<p style="color:var(--ink-muted);font-size:13px;">هنوز عکسی نیست.</p>') + '</div>' +
       '<div class="upload-row">' +
-        '<div class="field"><label>برچسب عکس تازه</label><input type="text" id="newPhotoLabel" placeholder="e.g. Sunrise departure"></div>' +
+        '<div class="field"><label>برچسب عکس تازه</label><input type="text" id="newPhotoLabel" placeholder="مثلاً حرکت هنگام طلوع"></div>' +
         '<input type="file" id="newPhotoFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
         '<button type="button" class="btn small primary" id="addPhotoBtn">افزودن عکس</button>' +
       '</div>';
@@ -946,8 +951,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
           try {
             await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/' + id, { method:'PUT',
               body:{ alt: cell.querySelector('.gAlt').value, caption: cell.querySelector('.gCaption').value } });
-            toast('Saved');
-          } catch(e){ toast('Could not save alt text / caption', true); }
+            toast('ذخیره شد');
+          } catch(e){ toast('ذخیرهٔ متن جایگزین / زیرنویس ممکن نشد', true); }
         });
       });
     });
@@ -970,18 +975,18 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         try {
           await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/reorder', { method:'PUT', body:{ order: ids } });
           await refreshGalleryFull(ed);
-        } catch(e){ toast('Reorder failed', true); }
+        } catch(e){ toast('جابه‌جایی ممکن نشد', true); }
       });
     });
   }
 
   async function deleteGalleryPhoto(ed, mediaId){
-    if (!confirm('Delete this photo? This cannot be undone.')) return;
+    if (!confirm('این عکس حذف شود؟ بازگشت ندارد.')) return;
     try {
       await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/' + mediaId, { method:'DELETE' });
-      toast('Photo deleted');
+      toast('عکس حذف شد');
       await refreshGalleryFull(ed);
-    } catch(e){ toast('Delete failed', true); }
+    } catch(e){ toast('حذف ممکن نشد', true); }
   }
 
   async function moveGalleryPhoto(ed, mediaId, dir){
@@ -993,13 +998,13 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     try {
       await api('/admin/tours/' + encodeURIComponent(ed.tour.id) + '/gallery/reorder', { method:'PUT', body:{ order: ids } });
       await refreshGalleryFull(ed);
-    } catch(e){ toast('Reorder failed', true); }
+    } catch(e){ toast('جابه‌جایی ممکن نشد', true); }
   }
 
   async function addGalleryPhoto(ed){
     const fileInput = document.getElementById('newPhotoFile');
     const label = document.getElementById('newPhotoLabel').value.trim();
-    if (!fileInput.files[0]){ toast('Choose a file first', true); return; }
+    if (!fileInput.files[0]){ toast('ابتدا یک فایل انتخاب کنید', true); return; }
     const btn = document.getElementById('addPhotoBtn');
     btn.disabled = true;
     try {
@@ -1009,10 +1014,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       await api('/admin/tours/' + encodeURIComponent(ed.tour.id), {
         method:'PUT', body:{ galleryImages: galleryImages, galleryPhotos: galleryPhotos }
       });
-      toast('Photo added');
+      toast('عکس اضافه شد');
       await refreshGalleryFull(ed);
     } catch(e){
-      toast('Upload/save failed', true);
+      toast('بارگذاری یا ذخیره ممکن نشد', true);
     } finally { btn.disabled = false; }
   }
 
@@ -1052,7 +1057,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       '<td>' + (isNew ? '—' : esc(d.seatsTaken)) + '</td>' +
       '<td><div class="checkline"><input type="checkbox" class="e_closed"' + (d.closed ? ' checked' : '') + '></div></td>' +
       '<td>' + (isNew ? '' : '<span class="badge ' + phase + '">' + PHASE_LABEL[phase] + '</span>') + '</td>' +
-      '<td style="white-space:nowrap"><button type="button" class="btn small primary e_save">' + (isNew ? 'Add' : 'Save') + '</button></td>' +
+      '<td style="white-space:nowrap"><button type="button" class="btn small primary e_save">' + (isNew ? 'افزودن' : 'ذخیره') + '</button></td>' +
     '</tr>';
   }
 
@@ -1062,8 +1067,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const rows = dates.map(editionRow).join('') + editionRow({ id: null, label: '', startsOn: '', endsOn: '', capacity: '', closed: false });
     panel.innerHTML =
       '<p style="color:var(--ink-muted);font-size:13px;margin-bottom:14px;">' +
-        'Dates are Gregorian (the Jalali date appears underneath). Once an edition\'s last day has passed it is shown as finished and can no longer be booked. ' +
-        'Editions with no date set stay bookable until you set one. Leave <em>Ends</em> empty for a single-day edition.' +
+        'تاریخ‌ها میلادی‌اند (تاریخ شمسی زیر آن‌ها دیده می‌شود). وقتی آخرین روز یک اجرا بگذرد «برگزار شد» نشان داده می‌شود و دیگر رزرو نمی‌شود. ' +
+        'اجرای بدون تاریخ تا وقتی تاریخ نگذاشته‌اید قابل رزرو می‌ماند. برای اجرای یک‌روزه «پایان» را خالی بگذارید.' +
       '</p>' +
       '<table class="editions"><thead><tr><th>برچسب</th><th>شروع</th><th>پایان</th><th>ظرفیت</th><th>رزرو شده</th><th>بسته</th><th>وضعیت</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
 
@@ -1100,10 +1105,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const startsOn = q('.e_start').value || null;
     const endsOn = q('.e_end').value || null;
 
-    if (!label) { toast('Label is required', true); return; }
-    if (!Number.isInteger(capacity) || capacity < 0) { toast('Capacity must be a whole number, 0 or more', true); return; }
-    if (endsOn && !startsOn) { toast('Set a start date before an end date', true); return; }
-    if (startsOn && endsOn && endsOn < startsOn) { toast('End date is before the start date', true); return; }
+    if (!label) { toast('برچسب لازم است', true); return; }
+    if (!Number.isInteger(capacity) || capacity < 0) { toast('ظرفیت باید عدد صحیح ۰ یا بیشتر باشد', true); return; }
+    if (endsOn && !startsOn) { toast('ابتدا تاریخ شروع را بگذارید', true); return; }
+    if (startsOn && endsOn && endsOn < startsOn) { toast('تاریخ پایان قبل از شروع است', true); return; }
 
     btn.disabled = true;
     try {
@@ -1116,11 +1121,11 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         if (endsOn) body.endsOn = endsOn;
         await api('/admin/tours/' + encodeURIComponent(tourId) + '/dates', { method: 'POST', body: body });
       }
-      toast(id ? 'Date saved' : 'Date added');
+      toast(id ? 'تاریخ ذخیره شد' : 'تاریخ اضافه شد');
       await loadEditions(tourId);
     } catch(e){
       const f = e.body && e.body.fields;
-      toast(f ? 'Invalid date: ' + Object.keys(f).join(', ') : 'Could not save date (' + e.message + ')', true);
+      toast(f ? 'تاریخ نامعتبر: ' + Object.keys(f).join('، ') : 'ذخیرهٔ تاریخ ممکن نشد (' + e.message + ')', true);
       btn.disabled = false;
     }
   }
@@ -1159,17 +1164,17 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     if (ed.isNew){
       const id = val('f_id');
       if (!TOUR_ID_RE.test(id)){
-        msg.textContent = 'Tour ID must be lowercase letters/digits/hyphens only (e.g. desert-parthian).';
+        msg.textContent = 'شناسهٔ تجربه فقط حروف کوچک انگلیسی، عدد و خط تیره باشد (مثلاً desert-parthian).';
         return;
       }
       ed.tour.id = id;
     }
     const patch = readEditorFields(ed);
-    if (!patch.name){ msg.textContent = 'Name is required.'; return; }
+    if (!patch.name){ msg.textContent = 'عنوان لازم است.'; return; }
 
     const featuredWithoutDate = patch.featured && (!patch.dayLabel || !patch.monthLabel);
     const savedMsg = featuredWithoutDate
-      ? 'Saved — but Featured tours need both Card day and month label to actually show on the homepage.'
+      ? 'ذخیره شد — اما تجربهٔ «ویژه» برای نمایش در صفحهٔ اول، هم روز و هم ماه روی کارت را لازم دارد.'
       : null;
 
     btn.disabled = true;
@@ -1177,33 +1182,33 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       if (ed.isNew){
         patch.id = ed.tour.id;
         await api('/admin/tours', { method:'POST', body: patch });
-        toast(savedMsg || 'Tour created', featuredWithoutDate);
+        toast(savedMsg || 'تجربه ساخته شد', featuredWithoutDate);
         location.hash = '#/tours/' + encodeURIComponent(ed.tour.id) + '/edit';
         route();
       } else {
         await api('/admin/tours/' + encodeURIComponent(ed.tour.id), { method:'PUT', body: patch });
-        toast(savedMsg || 'Saved', featuredWithoutDate);
+        toast(savedMsg || 'ذخیره شد', featuredWithoutDate);
         renderEditor(ed.tour.id);
       }
     } catch(e){
-      if (e.status === 409) msg.textContent = 'That tour ID is already taken.';
-      else if (e.status === 422) msg.textContent = 'Please check these fields: ' + Object.keys((e.body && e.body.fields) || {}).join(', ');
-      else msg.textContent = 'Save failed. Try again.';
+      if (e.status === 409) msg.textContent = 'این شناسه قبلاً استفاده شده است.';
+      else if (e.status === 422) msg.textContent = 'این فیلدها را بررسی کنید: ' + Object.keys((e.body && e.body.fields) || {}).join(', ');
+      else msg.textContent = 'ذخیره نشد. دوباره تلاش کنید.';
     } finally {
       btn.disabled = false;
     }
   }
 
   async function deleteTour(ed){
-    if (!confirm('Delete "' + ed.tour.name + '"? This cannot be undone.')) return;
+    if (!confirm('«' + ed.tour.name + '» حذف شود؟ بازگشت ندارد.')) return;
     try {
       await api('/admin/tours/' + encodeURIComponent(ed.tour.id), { method:'DELETE' });
-      toast('Tour deleted');
+      toast('تجربه حذف شد');
       location.hash = '#/tours';
       route();
     } catch(e){
-      if (e.status === 409) toast('Cannot delete: this tour has real bookings. Archive it instead.', true);
-      else toast('Delete failed', true);
+      if (e.status === 409) toast('حذف ممکن نیست: این تجربه رزرو واقعی دارد. به‌جای حذف، آن را بایگانی کنید.', true);
+      else toast('حذف ممکن نشد', true);
     }
   }
 
@@ -1227,7 +1232,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       await loadHosts();
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      toast('Could not load organizers', true);
+      toast('بارگذاری همکاران ممکن نشد', true);
       state.hosts = [];
     }
 
@@ -1247,7 +1252,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
           '<td>' + esc(h.displayName) +
             '<div style="color:var(--ink-muted);font-size:12px;">/host/' + esc(h.slug) + '</div></td>' +
           '<td><span class="badge ' + esc(h.kind) + '">' + esc(KIND_LABEL[h.kind] || h.kind) + '</span></td>' +
-          '<td><span class="badge ' + esc(status) + '">' + esc(status) + '</span></td>' +
+          '<td><span class="badge ' + esc(status) + '">' + esc(fa(status)) + '</span></td>' +
           '<td>' + (h.verified ? '✓' : '') + '</td>' +
           '<td>' + esc(about || '—') + '</td>' +
           '<td>' + (h.owner
@@ -1261,7 +1266,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     }).join('');
 
     const filterOptions = ['', 'person', 'place'].map(function(v){
-      return '<option value="' + v + '"' + (state.hostsFilter === v ? ' selected' : '') + '>' + (v ? KIND_LABEL[v] : 'All kinds') + '</option>';
+      return '<option value="' + v + '"' + (state.hostsFilter === v ? ' selected' : '') + '>' + (v ? KIND_LABEL[v] : 'همهٔ انواع') + '</option>';
     }).join('');
 
     app.innerHTML = shell(
@@ -1269,13 +1274,13 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<span><a class="btn ghost" href="#/hosts/new?kind=place">+ مکان جدید</a> ' +
         '<a class="btn primary" href="#/hosts/new">+ شخص جدید</a></span></div>' +
       '<p style="color:var(--ink-muted);font-size:13px;margin:-8px 0 18px;">' +
-        'A <b>person</b> runs a tour (lead or co-host); a <b>place</b> is where it is held (the venue). ' +
-        'A profile appears on the site only when its status is <b>active</b> and it is linked to a tour ' +
-        '(Tours → edit a tour → Partners). Profiles are never deleted — set them back to hidden instead.</p>' +
-      '<div class="filter-row"><label>Kind</label><select id="hostKindFilter">' + filterOptions + '</select></div>' +
+        '«شخص» تجربه را برگزار می‌کند (برگزارکنندهٔ اصلی یا همراه)؛ «مکان» جایی است که تجربه در آن برگزار می‌شود. ' +
+        'پروفایل فقط وقتی روی سایت دیده می‌شود که وضعیتش <b>فعال</b> باشد و به یک تجربه وصل شده باشد ' +
+        '(تجربه‌ها ← ویرایش تجربه ← بخش ۴). پروفایل هرگز حذف نمی‌شود؛ آن را «پنهان» کنید.</p>' +
+      '<div class="filter-row"><label>نوع</label><select id="hostKindFilter">' + filterOptions + '</select></div>' +
       (shown.length
-        ? '<table class="tours"><thead><tr><th>Name</th><th>Kind</th><th>Status</th><th>Verified</th><th>About</th><th>Owner account</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
-        : '<div class="empty">' + (state.hosts.length ? 'No profiles of this kind.' : 'No profiles yet. Create one, or approve an application.') + '</div>')
+        ? '<table class="tours"><thead><tr><th>نام</th><th>نوع</th><th>وضعیت</th><th>تأیید</th><th>درباره</th><th>حساب مالک</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="empty">' + (state.hosts.length ? 'پروفایلی از این نوع نیست.' : 'هنوز پروفایلی نیست. یکی بسازید یا یک درخواست را بپذیرید.') + '</div>')
     );
     bindLogout();
     document.getElementById('hostKindFilter').addEventListener('change', function(){
@@ -1295,7 +1300,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   function hostPhotoHtml(photoPath){
     return photoPath
       ? '<img src="' + esc(imgSrc(photoPath)) + '" alt="">'
-      : '<div class="ph">No photo</div>';
+      : '<div class="ph">بدون عکس</div>';
   }
 
   async function renderHostEditor(id, newKind){
@@ -1315,7 +1320,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         host = (await api('/admin/hosts/' + id)).host;
       } catch(e){
         if (e.status === 401){ state.admin = null; renderLogin(); return; }
-        toast('Profile not found', true);
+        toast('پروفایل پیدا نشد', true);
         location.hash = '#/hosts'; return;
       }
     }
@@ -1328,25 +1333,25 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     };
 
     const placeFields =
-      '<div class="field"><label>Lodging type</label>' +
+      '<div class="field"><label>نوع اقامت</label>' +
         '<input type="text" id="h_lodging" value="' + esc(host.lodgingType || '') + '" placeholder="اقامتگاه بوم‌گردی" maxlength="60"></div>' +
-      '<div class="field"><label>Region</label>' +
+      '<div class="field"><label>منطقه</label>' +
         '<input type="text" id="h_region" value="' + esc(host.region || '') + '" placeholder="سه‌هزار، تنکابن، مازندران" maxlength="120">' +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shown publicly. Keep it to an area — never a street address.</p></div>' +
-      '<div class="field"><label>Region stamp (colour on the profile)</label><select id="h_regionKey">' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">روی سایت نمایش داده می‌شود. فقط منطقه؛ هرگز نشانی دقیق.</p></div>' +
+      '<div class="field"><label>مُهر منطقه (رنگ روی پروفایل)</label><select id="h_regionKey">' +
         REGIONS.map(function(r){ return '<option value="' + r[0] + '"' + (r[0] === (host.regionKey || '') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select>' +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shown as the coloured pill at the top of the public place page. Empty = no pill.</p></div>' +
-      '<div class="field"><label>Capacity (guests)</label>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">به‌صورت برچسب رنگی بالای صفحهٔ عمومی مکان نمایش داده می‌شود. خالی = بدون برچسب.</p></div>' +
+      '<div class="field"><label>ظرفیت (نفر)</label>' +
         '<input type="number" id="h_capacity" min="1" max="500" value="' + esc(host.capacityGuests == null ? '' : host.capacityGuests) + '" dir="ltr">' +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">1–500. Shown on the public place page («ظرفیت گروه»).</p></div>' +
-      '<div class="field"><label>House rules</label><textarea id="h_rules" rows="4" maxlength="1000">' + esc(host.houseRules || '') + '</textarea>' +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Max 1000 characters. Shown on the public place page.</p></div>';
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">۱ تا ۵۰۰. روی صفحهٔ عمومی مکان («ظرفیت گروه») نمایش داده می‌شود.</p></div>' +
+      '<div class="field"><label>قوانین مکان</label><textarea id="h_rules" rows="4" maxlength="1000">' + esc(host.houseRules || '') + '</textarea>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">حداکثر ۱۰۰۰ نویسه. روی صفحهٔ عمومی مکان نمایش داده می‌شود.</p></div>';
 
     const personFields =
-      '<div class="field"><label>Expertise</label>' +
+      '<div class="field"><label>زمینهٔ تخصص</label>' +
         '<input type="text" id="h_expertise" value="' + esc(host.expertise || '') + '" placeholder="کوهنوردی" maxlength="120"></div>' +
-      '<div class="field"><label>Credentials</label><textarea id="h_credentials" rows="4" maxlength="600">' + esc(host.credentials || '') + '</textarea>' +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Certifications / background, max 600 characters.</p></div>' +
+      '<div class="field"><label>سوابق و گواهینامه‌ها</label><textarea id="h_credentials" rows="4" maxlength="600">' + esc(host.credentials || '') + '</textarea>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">حداکثر ۶۰۰ نویسه. فقط با گزینهٔ زیر روی سایت دیده می‌شود.</p></div>' +
       '<div class="field checkline"><input type="checkbox" id="h_credentialsPublic"' + (host.credentialsPublic ? ' checked' : '') + '>' +
         '<label for="h_credentialsPublic">نمایش عمومی سوابق و گواهینامه‌ها</label></div>' +
       '<p class="hint" style="margin:-10px 0 18px">پیش‌فرض خاموش است: مالکان پروفایل در فرم خود می‌دانند این بخش فقط برای چکمه است. فقط وقتی روشن می‌شود که مالک خودش (از پنل همکار، با بازبینی) یا شما با اطلاع او آن را روشن کرده باشید.</p>';
@@ -1356,12 +1361,12 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const matchingPanel =
       '<section class="panel"><h2>فقط برای چکمه <span class="where">هرگز منتشر نمی‌شود</span></h2>' +
         (isPlace
-          ? '<div class="field"><label>Accepts experience types</label>' +
+          ? '<div class="field"><label>تجربه‌هایی که می‌پذیرد</label>' +
               '<textarea id="h_accepts" rows="3" placeholder="ریتریت حرکتی، کارگاه هنری، اقامت گروهی">' + esc((host.acceptsExperienceTypes || []).join('، ')) + '</textarea></div>'
-          : '<div class="field"><label>Seeking place types</label>' +
+          : '<div class="field"><label>نوع مکانی که می‌خواهد</label>' +
               '<textarea id="h_seeking" rows="3" placeholder="اقامتگاه جنگلی، باغ">' + esc((host.seekingPlaceTypes || []).join('، ')) + '</textarea></div>') +
-        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Separate items with a comma or «،». At most 10 items of 40 characters. ' +
-        'These are internal matching inputs — they are not returned by any public endpoint.</p>' +
+        '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">موارد را با کاما یا «،» جدا کنید؛ حداکثر ۱۰ مورد و هر کدام ۴۰ نویسه. ' +
+        'این‌ها ورودی داخلی برای جور کردن برنامه‌ها هستند و هیچ‌جا منتشر نمی‌شوند.</p>' +
       '</section>';
 
     app.innerHTML = shell(
@@ -1369,41 +1374,41 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<a class="btn small ghost" href="#/hosts">همهٔ پروفایل‌ها ←</a></div>' +
 
       '<section class="panel"><h2>پروفایل <span class="where">روی صفحه: بالای /host/' + esc(host.slug || '…') + '</span></h2>' +
-        '<div class="field"><label>Kind</label>' +
+        '<div class="field"><label>نوع</label>' +
           (isNew
             ? '<select id="h_kind">' + HOST_KINDS.map(function(k){
                 return '<option value="' + k + '"' + (host.kind === k ? ' selected' : '') + '>' + KIND_LABEL[k] + '</option>';
               }).join('') + '</select>' +
               '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
-                'A <b>person</b> runs tours; a <b>place</b> hosts them. Like the slug, this <b>cannot be changed later</b> — ' +
-                'the two kinds do not use the same fields.</p>'
+                '«شخص» تجربه برگزار می‌کند؛ «مکان» میزبان آن است. مثل نشانی صفحه، این مورد <b>بعداً قابل تغییر نیست</b> — ' +
+                'دو نوع فیلدهای یکسان ندارند.</p>'
             : '<input type="text" value="' + esc(KIND_LABEL[host.kind] || host.kind) + '" disabled>' +
-              '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Fixed once created.</p>') +
+              '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">پس از ساخت تغییر نمی‌کند.</p>') +
         '</div>' +
 
         (isNew
-          ? '<div class="field"><label>Public slug</label>' +
+          ? '<div class="field"><label>نشانی عمومی (slug)</label>' +
             '<input type="text" id="h_slug" placeholder="' + (isPlace ? 'dood-lodge' : 'arash-niko') + '" autocomplete="off">' +
             '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
-              'Lowercase letters, digits and hyphens. This becomes the public address ' +
-              '<b>/host/&lt;slug&gt;</b> and <b>cannot be changed later</b>.</p></div>'
-          : '<div class="field"><label>Public address</label>' +
+              'حروف کوچک انگلیسی، عدد و خط تیره. این همان نشانی عمومی ' +
+              '<b>/host/&lt;slug&gt;</b> می‌شود و <b>بعداً قابل تغییر نیست</b>.</p></div>'
+          : '<div class="field"><label>نشانی عمومی</label>' +
             '<input type="text" value="/host/' + esc(host.slug) + '" disabled>' +
-            '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">The slug is fixed once created.</p></div>') +
+            '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">نشانی پس از ساخت تغییر نمی‌کند.</p></div>') +
 
-        '<div class="field"><label>' + (isPlace ? 'Place name' : 'Display name') + '</label>' +
+        '<div class="field"><label>' + (isPlace ? 'نام مکان' : 'نام نمایشی') + '</label>' +
           '<input type="text" id="h_name" value="' + esc(host.displayName || '') + '"></div>' +
         (isPlace ? placeFields : personFields) +
-        '<div class="field"><label>' + (isPlace ? 'Description' : 'Bio') + '</label><textarea id="h_bio" rows="6">' + esc(host.bio || '') + '</textarea>' +
-          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shown on the public profile. Max 1500 characters.</p></div>' +
-        '<div class="field"><label>Instagram handle</label><input type="text" id="h_instagram" value="' + esc(host.instagramHandle || '') + '" placeholder="arash.niko" dir="ltr">' +
-          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Username only — no @, no link. Shown publicly.</p></div>' +
-        '<div class="field"><label>Contact phone</label><input type="text" id="h_phone" value="' + esc(host.contactPhone || '') + '" placeholder="09xxxxxxxxx" dir="ltr">' +
-          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;"><b>Internal only</b> — never shown on the site.</p></div>' +
-        '<div class="field"><label>Owner account</label>' +
-          '<input type="text" value="' + esc(host.owner ? (host.owner.firstName + ' ' + host.owner.lastName + ' — ' + host.owner.phone) : 'بدون حساب — admin-created') + '" disabled>' +
+        '<div class="field"><label>' + (isPlace ? 'معرفی' : 'دربارهٔ شخص') + '</label><textarea id="h_bio" rows="6">' + esc(host.bio || '') + '</textarea>' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">روی صفحهٔ عمومی نمایش داده می‌شود. حداکثر ۱۵۰۰ نویسه.</p></div>' +
+        '<div class="field"><label>اینستاگرام</label><input type="text" id="h_instagram" value="' + esc(host.instagramHandle || '') + '" placeholder="arash.niko" dir="ltr">' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">فقط نام کاربری، بدون @ و لینک. روی سایت نمایش داده می‌شود.</p></div>' +
+        '<div class="field"><label>تلفن تماس</label><input type="text" id="h_phone" value="' + esc(host.contactPhone || '') + '" placeholder="09xxxxxxxxx" dir="ltr">' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;"><b>فقط داخلی</b> — هرگز روی سایت نمایش داده نمی‌شود.</p></div>' +
+        '<div class="field"><label>حساب مالک</label>' +
+          '<input type="text" value="' + esc(host.owner ? (host.owner.firstName + ' ' + host.owner.lastName + ' — ' + host.owner.phone) : 'بدون حساب — ساختهٔ ادمین') + '" disabled>' +
           '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
-            'Set when an application is approved. The owner sees this profile on their account page.</p></div>' +
+            'وقتی درخواست پذیرفته می‌شود تعیین می‌شود. مالک این پروفایل را در صفحهٔ حساب خود می‌بیند.</p></div>' +
       '</section>' +
 
       (isPlace ? amenitiesPanelHtml() + locationPanelHtml(host) : '') +
@@ -1419,7 +1424,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
               (ed.photoPath ? '<button type="button" class="btn small danger" id="h_photoClear">حذف</button>' : '') +
             '</div>' +
             '<p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">' +
-              (isNew ? 'Save the profile first — the photo is stored under its slug.' : 'Square images work best. Uploaded to /images/host-' + esc(host.slug) + '/.') +
+              (isNew ? 'ابتدا پروفایل را ذخیره کنید؛ عکس زیر نشانی پروفایل ذخیره می‌شود.' : 'عکس مربع بهتر است. در /images/host-' + esc(host.slug) + '/.') +
             '</p>' +
           '</div>' +
         '</div>' +
@@ -1428,20 +1433,20 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       (isNew ? '' : '<section class="panel" id="hostMediaPanel"><h2>گالری</h2><div class="empty">در حال بارگذاری…</div></section>') +
 
       '<section class="panel"><h2>انتشار</h2>' +
-        '<div class="field"><label>Status</label><select id="h_status">' +
+        '<div class="field"><label>وضعیت</label><select id="h_status">' +
           HOST_STATUSES.map(function(v){
-            return '<option value="' + v + '"' + ((host.status || 'hidden') === v ? ' selected' : '') + '>' + v + '</option>';
+            return '<option value="' + v + '"' + ((host.status || 'hidden') === v ? ' selected' : '') + '>' + fa(v) + '</option>';
           }).join('') +
         '</select>' +
         '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">' +
-          '<b>hidden</b> keeps the profile off the site entirely (/host/&lt;slug&gt; returns not-found, and it vanishes from any tour it is on). ' +
-          '<b>active</b> publishes it.</p></div>' +
-        '<div class="field"><label><input type="checkbox" id="h_verified"' + (host.verified ? ' checked' : '') + '> Verified by chaacme</label>' +
-          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">Shows a “تأییدشده توسط چکمه” badge. This is a claim about a real check you have done — only tick it if you have.</p></div>' +
+          '<b>پنهان</b> یعنی پروفایل اصلاً روی سایت نیست (/host/&lt;slug&gt; «پیدا نشد» می‌دهد و از تجربه‌هایی که به آن‌ها وصل است هم حذف می‌شود). ' +
+          '<b>فعال</b> آن را منتشر می‌کند.</p></div>' +
+        '<div class="field"><label><input type="checkbox" id="h_verified"' + (host.verified ? ' checked' : '') + '> تأییدشده توسط چکمه</label>' +
+          '<p style="color:var(--ink-muted);font-size:12px;margin-top:6px;">نشان «تأییدشده توسط چکمه» را نمایش می‌دهد. این ادعا دربارهٔ بررسی واقعی است؛ فقط اگر انجام داده‌اید روشن کنید.</p></div>' +
       '</section>' +
 
       '<div class="save-bar"><span class="msg" id="hostMsg"></span>' +
-        '<a class="btn ghost" href="#/hosts">Cancel</a>' +
+        '<a class="btn ghost" href="#/hosts">انصراف</a>' +
         '<button class="btn primary" id="hostSaveBtn">' + (isNew ? 'ایجاد پروفایل' : 'ذخیره') + '</button>' +
       '</div>'
     );
@@ -1462,17 +1467,17 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const photoBtn = document.getElementById('h_photoBtn');
     if (photoBtn) photoBtn.addEventListener('click', async function(){
       const f = document.getElementById('h_photoFile');
-      if (!f.files || !f.files[0]) { toast('Choose an image first', true); return; }
-      if (ed.isNew) { toast('Save the profile first', true); return; }
+      if (!f.files || !f.files[0]) { toast('ابتدا یک عکس انتخاب کنید', true); return; }
+      if (ed.isNew) { toast('ابتدا پروفایل را ذخیره کنید', true); return; }
       photoBtn.disabled = true;
       try {
         const data = await uploadHostImage(ed, f.files[0]);
         ed.photoPath = data.path;
         document.getElementById('h_photoBox').innerHTML = hostPhotoHtml(ed.photoPath);
         f.value = '';
-        toast('Photo uploaded — remember to save');
+        toast('عکس بارگذاری شد؛ فراموش نکنید ذخیره کنید');
       } catch(e){
-        toast(e.status === 422 ? 'That file was rejected (png/jpeg/webp only)' : 'Upload failed', true);
+        toast(e.status === 422 ? 'این فایل پذیرفته نشد (فقط png / jpeg / webp)' : 'بارگذاری ممکن نشد', true);
       } finally { photoBtn.disabled = false; }
     });
 
@@ -1481,7 +1486,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       ed.photoPath = '';
       document.getElementById('h_photoBox').innerHTML = hostPhotoHtml('');
       clearBtn.remove();
-      toast('Photo cleared — remember to save');
+      toast('عکس حذف شد؛ فراموش نکنید ذخیره کنید');
     });
   }
 
@@ -1499,25 +1504,25 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     return '<section class="panel" id="amenitiesPanel"><h2>امکانات <span class="where">روی صفحه: «امکانات»</span></h2>' +
       '<div class="chips" id="h_amenityChips"></div>' +
       '<div class="th-add" style="margin-top:12px;">' +
-        '<div class="field" style="margin-bottom:0;"><label>Add an amenity</label>' +
+        '<div class="field" style="margin-bottom:0;"><label>افزودن امکانات</label>' +
           '<input type="text" id="h_amenityInput" maxlength="40" placeholder="وای‌فای"></div>' +
-        '<button type="button" class="btn small ghost" id="h_amenityAdd">+ Add</button>' +
+        '<button type="button" class="btn small ghost" id="h_amenityAdd">+ افزودن</button>' +
       '</div>' +
       '<p style="color:var(--ink-muted);font-size:12px;margin-top:12px;">' +
-        'Up to 20, each up to 40 characters. Saved with the rest of the profile.</p>' +
+        'حداکثر ۲۰ مورد و هر کدام ۴۰ نویسه. همراه بقیهٔ پروفایل ذخیره می‌شود.</p>' +
     '</section>';
   }
 
   function locationPanelHtml(host){
     return '<section class="panel"><h2>موقعیت <span class="where">روی صفحه: «کجاست» (محدودهٔ تقریبی)</span></h2>' +
-      '<div class="field" style="display:inline-block;width:48%;margin-inline-end:2%;"><label>Latitude</label>' +
+      '<div class="field" style="display:inline-block;width:48%;margin-inline-end:2%;"><label>عرض جغرافیایی</label>' +
         '<input type="text" id="h_lat" dir="ltr" value="' + esc(host.latitude == null ? '' : host.latitude) + '" placeholder="36.812"></div>' +
-      '<div class="field" style="display:inline-block;width:48%;"><label>Longitude</label>' +
+      '<div class="field" style="display:inline-block;width:48%;"><label>طول جغرافیایی</label>' +
         '<input type="text" id="h_lng" dir="ltr" value="' + esc(host.longitude == null ? '' : host.longitude) + '" placeholder="50.898"></div>' +
       '<p style="color:var(--ink-muted);font-size:12px;">' +
-        'Enter the real point — it is kept for you, not published. The public page only ever shows it ' +
-        '<b>rounded to 2 decimals (~1 km)</b> as a map area, never an exact pin or an address. ' +
-        'Both fields together or both empty; must be inside Iran.</p>' +
+        'نقطهٔ واقعی را وارد کنید؛ فقط نزد شما می‌ماند و منتشر نمی‌شود. صفحهٔ عمومی آن را فقط ' +
+        '<b>با دو رقم اعشار (حدود ۱ کیلومتر)</b> و به‌صورت یک محدوده نشان می‌دهد، نه نقطهٔ دقیق و نه نشانی. ' +
+        'هر دو فیلد با هم یا هر دو خالی؛ باید داخل ایران باشد.</p>' +
     '</section>';
   }
 
@@ -1526,7 +1531,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     if (!box) return;
     box.innerHTML = ed.amenities.length
       ? ed.amenities.map(function(a, i){
-          return '<span class="chip">' + esc(a) + '<button type="button" class="chip-x" data-i="' + i + '" title="Remove">×</button></span>';
+          return '<span class="chip">' + esc(a) + '<button type="button" class="chip-x" data-i="' + i + '" title="حذف">×</button></span>';
         }).join('')
       : '<span style="color:var(--ink-muted);font-size:13px;">هنوز موردی نیست.</span>';
     box.querySelectorAll('.chip-x').forEach(function(btn){
@@ -1543,8 +1548,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const addIt = function(){
       const v = (input.value || '').trim();
       if (!v) return;
-      if (ed.amenities.length >= 20){ toast('20 amenities is the limit', true); return; }
-      if (ed.amenities.indexOf(v) !== -1){ toast('Already listed', true); input.value = ''; return; }
+      if (ed.amenities.length >= 20){ toast('حداکثر ۲۰ مورد', true); return; }
+      if (ed.amenities.indexOf(v) !== -1){ toast('قبلاً اضافه شده است', true); input.value = ''; return; }
       ed.amenities.push(v);
       input.value = '';
       drawAmenities(ed);
@@ -1564,8 +1569,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const rows = ed.media.map(function(m, i){
       return '<div class="th-row media-row" data-i="' + i + '">' +
         '<div class="th-ord">' +
-          '<button type="button" class="gm-up"' + (i === 0 ? ' disabled' : '') + ' title="Move up">↑</button>' +
-          '<button type="button" class="gm-down"' + (i === ed.media.length - 1 ? ' disabled' : '') + ' title="Move down">↓</button>' +
+          '<button type="button" class="gm-up"' + (i === 0 ? ' disabled' : '') + ' title="بالا">↑</button>' +
+          '<button type="button" class="gm-down"' + (i === ed.media.length - 1 ? ' disabled' : '') + ' title="پایین">↓</button>' +
         '</div>' +
         '<div class="gm-thumb"><img src="' + esc(m.photoPath) + '" alt=""></div>' +
         '<input type="text" class="gm-caption" maxlength="120" aria-label="زیرنویس" placeholder="زیرنویس (اختیاری)" value="' + esc(m.caption || '') + '">' +
@@ -1576,16 +1581,16 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
     panel.innerHTML =
       '<h2>گالری <span class="where">روی صفحه: «فضا و حال‌وهوا» با زیرنویس و متن جایگزین</span></h2>' +
-      (ed.media.length ? rows : '<p style="color:var(--ink-muted);font-size:13px;">No images yet.</p>') +
+      (ed.media.length ? rows : '<p style="color:var(--ink-muted);font-size:13px;">هنوز عکسی نیست.</p>') +
       '<div class="th-add">' +
         '<input type="file" id="gmFile" accept="image/png,image/jpeg,image/webp" style="max-width:220px;">' +
-        '<button type="button" class="btn small ghost" id="gmAdd">+ Upload</button>' +
-        '<button type="button" class="btn small primary" id="gmSave">Save gallery</button>' +
+        '<button type="button" class="btn small ghost" id="gmAdd">+ بارگذاری</button>' +
+        '<button type="button" class="btn small primary" id="gmSave">ذخیرهٔ گالری</button>' +
         '<span class="msg" id="gmMsg" style="font-size:13px;color:var(--ink-muted);"></span>' +
       '</div>' +
       '<p style="color:var(--ink-muted);font-size:12px;margin-top:12px;">' +
-        'Shown on the public profile in this order. Uploading adds an image immediately; ' +
-        '<b>Save gallery</b> is what stores the list, its order and its captions.</p>';
+        'با همین ترتیب روی صفحهٔ عمومی نمایش داده می‌شود. بارگذاری، عکس را همان لحظه اضافه می‌کند؛ ' +
+        '<b>ذخیرهٔ گالری</b> فهرست، ترتیب، زیرنویس‌ها و متن‌های جایگزین را ذخیره می‌کند.</p>';
 
     panel.querySelectorAll('.gm-rm').forEach(function(btn){
       btn.addEventListener('click', function(){
@@ -1620,15 +1625,15 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
     document.getElementById('gmAdd').addEventListener('click', async function(){
       const f = document.getElementById('gmFile');
-      if (!f.files || !f.files[0]) { toast('Choose an image first', true); return; }
+      if (!f.files || !f.files[0]) { toast('ابتدا یک عکس انتخاب کنید', true); return; }
       this.disabled = true;
       try {
         const data = await uploadHostImage(ed, f.files[0]);
         ed.media.push({ photoPath: data.path, caption: '', alt: '' });
         drawHostMedia(ed);
-        toast('Uploaded — remember to save the gallery');
+        toast('بارگذاری شد؛ گالری را ذخیره کنید');
       } catch(e){
-        toast(e.status === 422 ? 'That file was rejected (png/jpeg/webp only)' : 'Upload failed', true);
+        toast(e.status === 422 ? 'این فایل پذیرفته نشد (فقط png / jpeg / webp)' : 'بارگذاری ممکن نشد', true);
         this.disabled = false;
       }
     });
@@ -1639,10 +1644,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       this.disabled = true;
       try {
         await api('/admin/hosts/' + ed.host.id + '/media', { method:'PUT', body: { media: ed.media } });
-        toast('Gallery saved');
+        toast('گالری ذخیره شد');
       } catch(e){
         if (e.status === 401){ state.admin = null; renderLogin(); return; }
-        msg.textContent = e.status === 422 ? 'One of these images was rejected. Re-upload it.' : 'Could not save the gallery.';
+        msg.textContent = e.status === 422 ? 'یکی از عکس‌ها پذیرفته نشد. دوباره بارگذاری کنید.' : 'ذخیرهٔ گالری ممکن نشد.';
       } finally { this.disabled = false; }
     });
   }
@@ -1686,34 +1691,34 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // Maps the server's per-field 422 codes onto the field they belong to, so a
   // rejected save says which input is wrong instead of "check the fields".
   const HOST_FIELD_MSG = {
-    displayName: 'Name is required (max 80 characters).',
-    bio: 'Bio/description is too long (max 1500 characters).',
-    expertise: 'Expertise is too long (max 120 characters).',
-    region: 'Region is too long (max 120 characters).',
-    lodgingType: 'Lodging type is too long (max 60 characters).',
-    amenities: 'Amenities must be at most 20 items of at most 40 characters each.',
-    latitude: 'Latitude must be a number inside Iran (roughly 24–40).',
-    longitude: 'Longitude must be a number inside Iran (roughly 43–64).',
-    coordinates: 'Give both latitude and longitude, or neither.',
-    instagramHandle: 'Instagram handle is not valid — username only, no @ or link.',
-    contactPhone: 'Contact phone is not a valid Iranian mobile number.',
-    photoPath: 'Photo path is not one of our uploads. Re-upload the image.',
-    credentials: 'Credentials are too long (max 600 characters).',
-    capacityGuests: 'Capacity must be a whole number from 1 to 500.',
-    houseRules: 'House rules are too long (max 1000 characters).',
-    seekingPlaceTypes: 'Seeking types: at most 10 items of at most 40 characters.',
-    acceptsExperienceTypes: 'Accepted types: at most 10 items of at most 40 characters.',
-    status: 'Status must be hidden or active.',
-    slug: 'Slug must be 2–40 lowercase letters, digits or hyphens.'
+    displayName: 'نام لازم است (حداکثر ۸۰ نویسه).',
+    bio: 'معرفی بیش از ۱۵۰۰ نویسه است.',
+    expertise: 'زمینهٔ تخصص بیش از ۱۲۰ نویسه است.',
+    region: 'منطقه بیش از ۱۲۰ نویسه است.',
+    lodgingType: 'نوع اقامت بیش از ۶۰ نویسه است.',
+    amenities: 'امکانات حداکثر ۲۰ مورد و هر کدام ۴۰ نویسه.',
+    latitude: 'عرض جغرافیایی باید عددی داخل ایران باشد (تقریباً ۲۴ تا ۴۰).',
+    longitude: 'طول جغرافیایی باید عددی داخل ایران باشد (تقریباً ۴۳ تا ۶۴).',
+    coordinates: 'عرض و طول جغرافیایی را با هم وارد کنید یا هر دو را خالی بگذارید.',
+    instagramHandle: 'نام کاربری اینستاگرام معتبر نیست؛ بدون @ و لینک.',
+    contactPhone: 'تلفن تماس شمارهٔ موبایل معتبر ایرانی نیست.',
+    photoPath: 'مسیر عکس از بارگذاری‌های خودمان نیست. دوباره بارگذاری کنید.',
+    credentials: 'سوابق بیش از ۶۰۰ نویسه است.',
+    capacityGuests: 'ظرفیت باید عدد صحیح ۱ تا ۵۰۰ باشد.',
+    houseRules: 'قوانین بیش از ۱۰۰۰ نویسه است.',
+    seekingPlaceTypes: 'حداکثر ۱۰ مورد و هر کدام ۴۰ نویسه.',
+    acceptsExperienceTypes: 'حداکثر ۱۰ مورد و هر کدام ۴۰ نویسه.',
+    status: 'وضعیت باید پنهان یا فعال باشد.',
+    slug: 'نشانی (slug) باید ۲ تا ۴۰ حرف کوچک انگلیسی، عدد یا خط تیره باشد.'
   };
 
   function hostErrorText(e){
-    if (e.status === 409) return 'That slug is already taken.';
+    if (e.status === 409) return 'این نشانی قبلاً استفاده شده است.';
     if (e.status === 422 && e.body && e.body.fields){
-      const msgs = Object.keys(e.body.fields).map(function(f){ return HOST_FIELD_MSG[f] || (f + ' is invalid.'); });
+      const msgs = Object.keys(e.body.fields).map(function(f){ return HOST_FIELD_MSG[f] || (f + ' نامعتبر است.'); });
       if (msgs.length) return msgs.join(' ');
     }
-    return 'Save failed. Try again.';
+    return 'ذخیره نشد. دوباره تلاش کنید.';
   }
 
   async function saveHost(ed){
@@ -1722,14 +1727,14 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     msg.textContent = '';
 
     const patch = hostPatchFromForm(ed);
-    if (!patch.displayName){ msg.textContent = 'Name is required.'; return; }
-    if (ed.isPlace && !patch.region){ msg.textContent = 'A place needs a region.'; return; }
+    if (!patch.displayName){ msg.textContent = 'عنوان لازم است.'; return; }
+    if (ed.isPlace && !patch.region){ msg.textContent = 'مکان باید منطقه داشته باشد.'; return; }
 
     let slug = ed.host.slug;
     if (ed.isNew){
       slug = (document.getElementById('h_slug').value || '').trim();
       if (!HOST_SLUG_RE.test(slug)){
-        msg.textContent = 'Slug must be 2–40 lowercase letters, digits or hyphens (e.g. arash-niko).';
+        msg.textContent = 'نشانی (slug) باید ۲ تا ۴۰ حرف کوچک انگلیسی، عدد یا خط تیره باشد (مثلاً arash-niko).';
         return;
       }
     }
@@ -1738,12 +1743,12 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     try {
       if (ed.isNew){
         const created = await api('/admin/hosts', { method:'POST', body: Object.assign({ slug: slug }, patch) });
-        toast('Profile created');
+        toast('پروفایل ساخته شد');
         location.hash = '#/hosts/' + created.host.id + '/edit';
         route();
       } else {
         await api('/admin/hosts/' + ed.host.id, { method:'PUT', body: patch });
-        toast('Saved');
+        toast('ذخیره شد');
         renderHostEditor(ed.host.id);
       }
     } catch(e){
@@ -1774,12 +1779,12 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       state.applications = data.applications;
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      toast('Could not load applications', true);
+      toast('بارگذاری درخواست‌ها ممکن نشد', true);
       state.applications = [];
     }
 
     const filterOptions = ['', 'pending', 'approved', 'rejected'].map(function(v){
-      return '<option value="' + v + '"' + (state.applicationsFilter === v ? ' selected' : '') + '>' + (v || 'All') + '</option>';
+      return '<option value="' + v + '"' + (state.applicationsFilter === v ? ' selected' : '') + '>' + (v ? fa(v) : 'همه') + '</option>';
     }).join('');
 
     const cards = state.applications.map(function(a){
@@ -1789,38 +1794,37 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
           '<div class="app-top">' +
             '<b>' + esc(a.fullName) + '</b>' +
             '<span class="badge ' + esc(a.kind) + '">' + esc(KIND_LABEL[a.kind] || a.kind) + '</span>' +
-            '<span class="badge ' + esc(a.status) + '">' + esc(a.status) + '</span>' +
+            '<span class="badge ' + esc(a.status) + '">' + esc(fa(a.status)) + '</span>' +
             '<span class="app-meta">' + esc(String(a.createdAt || '').slice(0, 16).replace('T', ' ')) + '</span>' +
           '</div>' +
           // The applicant's identity comes from their account, not the form —
           // admin-only, and never part of any public response.
           '<div class="app-meta">' +
-            'Account: ' + (a.applicant
+            'حساب: ' + (a.applicant
               ? esc(a.applicant.firstName + ' ' + a.applicant.lastName) + ' · <span dir="ltr">' + esc(a.applicant.phone) + '</span>'
-              : '<i>no account (submitted before sign-in was required)</i>'
+              : '<i>بدون حساب (قبل از اجباری شدن ورود ثبت شده)</i>'
                 + (a.phone ? ' · <span dir="ltr">' + esc(a.phone) + '</span>' : '')) +
           '</div>' +
           '<div class="app-meta">' +
-            (a.instagramHandle ? 'Instagram: <span dir="ltr">@' + esc(a.instagramHandle) + '</span> · ' : '') +
+            (a.instagramHandle ? 'اینستاگرام: <span dir="ltr">@' + esc(a.instagramHandle) + '</span> · ' : '') +
             (a.kind === 'place'
               ? [a.lodgingType, a.region, a.capacityGuests ? ('ظرفیت ~' + a.capacityGuests + ' نفر') : ''].filter(Boolean).map(esc).join(' · ')
               : esc(a.expertise || '')) +
           '</div>' +
           '<div class="app-desc">' + esc(a.description) + '</div>' +
-          (a.adminNote ? '<div class="app-meta">Note: ' + esc(a.adminNote) + '</div>' : '') +
-          (a.hostId ? '<div class="app-meta">→ <a href="#/hosts/' + a.hostId + '/edit">open the organizer profile</a></div>' : '') +
+          (a.adminNote ? '<div class="app-meta">یادداشت: ' + esc(a.adminNote) + '</div>' : '') +
+          (a.hostId ? '<div class="app-meta">→ <a href="#/hosts/' + a.hostId + '/edit">باز کردن پروفایل</a></div>' : '') +
           (pending
             ? '<div class="app-actions">' +
-                '<div class="field"><label>Slug for the new profile</label>' +
+                '<div class="field"><label>نشانی (slug) پروفایل جدید</label>' +
                   '<input type="text" class="app-slug" value="' + esc(slugSuggestion(a.fullName)) + '" placeholder="arash-niko"></div>' +
-                '<button class="btn small primary app-approve">Approve</button>' +
-                '<button class="btn small danger app-reject">Reject</button>' +
+                '<button class="btn small primary app-approve">پذیرش</button>' +
+                '<button class="btn small danger app-reject">رد</button>' +
               '</div>' +
               '<p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">' +
-                'Approving creates a <b>hidden</b> ' + esc((KIND_LABEL[a.kind] || a.kind).toLowerCase()) +
-                ' profile, prefilled from this submission, owned by the applicant\'s account and carrying ' +
-                'their account phone as its internal contact. Nothing appears on the site until you complete ' +
-                'it and set it to active.</p>'
+                'پذیرش یک پروفایل <b>پنهان</b> ' + esc(KIND_LABEL[a.kind] || a.kind) +
+                ' از روی همین درخواست می‌سازد؛ مالک آن حساب درخواست‌دهنده است و ' +
+                'شمارهٔ حسابش تلفن داخلی تماس می‌شود. تا وقتی پروفایل را کامل نکنید و فعال نکنید چیزی روی سایت نمی‌آید.</p>'
             : '') +
         '</div>'
       );
@@ -1828,8 +1832,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
     app.innerHTML = shell(
       '<div class="list-head"><h1>درخواست‌ها</h1></div>' +
-      '<div class="filter-row"><label>Status</label><select id="appFilter">' + filterOptions + '</select></div>' +
-      (state.applications.length ? cards : '<div class="empty">No applications.</div>')
+      '<div class="filter-row"><label>وضعیت</label><select id="appFilter">' + filterOptions + '</select></div>' +
+      (state.applications.length ? cards : '<div class="empty">درخواستی نیست.</div>')
     );
     bindLogout();
 
@@ -1853,36 +1857,36 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
   async function approveApplication(id, slug, btn){
     if (!HOST_SLUG_RE.test(slug)){
-      toast('Slug must be 2–40 lowercase letters, digits or hyphens', true);
+      toast('نشانی (slug) باید ۲ تا ۴۰ حرف کوچک انگلیسی، عدد یا خط تیره باشد', true);
       return;
     }
     btn.disabled = true;
     try {
       const data = await api('/admin/host-applications/' + id + '/approve', { method:'POST', body: { slug: slug } });
-      toast('Approved — complete the profile, then set it to active');
+      toast('پذیرفته شد؛ پروفایل را کامل کنید و فعال کنید');
       location.hash = '#/hosts/' + data.host.id + '/edit';
       route();
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      if (e.status === 409) toast('That slug is already taken', true);
-      else if (e.status === 404) toast('This application is no longer pending', true);
-      else toast('Approve failed', true);
+      if (e.status === 409) toast('این نشانی قبلاً استفاده شده است', true);
+      else if (e.status === 404) toast('این درخواست دیگر در انتظار نیست', true);
+      else toast('پذیرش ممکن نشد', true);
       btn.disabled = false;
     }
   }
 
   async function rejectApplication(id, btn){
-    const note = prompt('Reject this application?\n\nOptional internal note (not sent to the applicant):');
+    const note = prompt('این درخواست رد شود؟\n\nیادداشت داخلی (اختیاری؛ برای درخواست‌دهنده ارسال نمی‌شود):');
     if (note === null) return;
     btn.disabled = true;
     try {
       await api('/admin/host-applications/' + id + '/reject', { method:'POST', body: { adminNote: note } });
-      toast('Application rejected');
+      toast('درخواست رد شد');
       renderApplications();
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      if (e.status === 404) toast('This application is no longer pending', true);
-      else toast('Reject failed', true);
+      if (e.status === 404) toast('این درخواست دیگر در انتظار نیست', true);
+      else toast('رد ممکن نشد', true);
       btn.disabled = false;
     }
   }
@@ -1891,12 +1895,13 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // Owner edits awaiting review (host_revisions)
   // ---------------------------------------------------------------------
   const REV_LABELS = {
-    displayName: 'Name', bio: 'Bio / description', photoPath: 'Photo', instagramHandle: 'Instagram',
-    expertise: 'Expertise', credentials: 'Credentials', seekingPlaceTypes: 'Seeking place types (internal)',
-    region: 'Region', lodgingType: 'Lodging type', amenities: 'Amenities', capacityGuests: 'Capacity',
-    houseRules: 'House rules', acceptsExperienceTypes: 'Accepts experience types (internal)',
-    latitude: 'Latitude (exact, private)', longitude: 'Longitude (exact, private)', media: 'Gallery'
+    displayName: 'نام', bio: 'معرفی', photoPath: 'عکس', instagramHandle: 'اینستاگرام',
+    expertise: 'زمینهٔ تخصص', credentials: 'سوابق و گواهینامه‌ها', credentialsPublic: 'نمایش عمومی سوابق', seekingPlaceTypes: 'نوع مکان مطلوب (داخلی)',
+    region: 'منطقه', lodgingType: 'نوع اقامت', amenities: 'امکانات', capacityGuests: 'ظرفیت',
+    houseRules: 'قوانین مکان', acceptsExperienceTypes: 'تجربه‌های پذیرفته‌شده (داخلی)',
+    latitude: 'عرض جغرافیایی (دقیق، خصوصی)', longitude: 'طول جغرافیایی (دقیق، خصوصی)', media: 'گالری'
   };
+
 
   function revValueHtml(key, v){
     if (key === 'photoPath') return v ? '<span class="rev-thumbs">' + hostPhotoHtml(v) + '</span>' : '<i>—</i>';
@@ -1904,8 +1909,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       return (v && v.length)
         ? '<span class="rev-thumbs">' + v.map(function(m){
             return '<span class="rev-thumb" title="' + esc(m.caption || '') + '"><img src="' + esc(imgSrc(m.photoPath)) + '" alt=""></span>';
-          }).join('') + '</span><div class="app-meta">' + v.length + ' image(s)</div>'
-        : '<i>none</i>';
+          }).join('') + '</span><div class="app-meta">' + v.length + ' عکس</div>'
+        : '<i>هیچ</i>';
     }
     if (key === 'credentialsPublic') return v ? 'عمومی' : 'فقط چکمه';
     if (Array.isArray(v)) return v.length ? v.map(esc).join('، ') : '<i>—</i>';
@@ -1930,10 +1935,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       list = (await api('/admin/host-revisions' + qs)).revisions;
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      toast('Could not load revisions', true);
+      toast('بارگذاری بازبینی‌ها ممکن نشد', true);
     }
     const filterOptions = ['pending', 'approved', 'rejected', ''].map(function(v){
-      return '<option value="' + v + '"' + (state.revisionsFilter === v ? ' selected' : '') + '>' + (v || 'All') + '</option>';
+      return '<option value="' + v + '"' + (state.revisionsFilter === v ? ' selected' : '') + '>' + (v ? fa(v) : 'همه') + '</option>';
     }).join('');
     const cards = list.map(function(r){
       const keys = Object.keys(r.payload).filter(function(k){ return REV_LABELS[k]; });
@@ -1948,25 +1953,25 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<div class="app-card" data-id="' + r.id + '">' +
           '<div class="app-top"><b>' + esc(r.host.displayName) + '</b>' +
             '<span class="badge ' + esc(r.host.kind) + '">' + esc(KIND_LABEL[r.host.kind] || r.host.kind) + '</span>' +
-            '<span class="badge ' + esc(r.status) + '">' + esc(r.status) + '</span>' +
+            '<span class="badge ' + esc(r.status) + '">' + esc(fa(r.status)) + '</span>' +
             '<span class="app-meta">' + esc(String(r.createdAt || '').slice(0, 16).replace('T', ' ')) + '</span></div>' +
-          '<div class="app-meta">Owner: ' + (r.owner ? esc(r.owner.firstName + ' ' + r.owner.lastName) + ' · <span dir="ltr">' + esc(r.owner.phone) + '</span>' : '<i>—</i>') +
-            ' · <a href="#/hosts/' + r.host.id + '/edit">open profile</a></div>' +
+          '<div class="app-meta">مالک: ' + (r.owner ? esc(r.owner.firstName + ' ' + r.owner.lastName) + ' · <span dir="ltr">' + esc(r.owner.phone) + '</span>' : '<i>—</i>') +
+            ' · <a href="#/hosts/' + r.host.id + '/edit">باز کردن پروفایل</a></div>' +
           (changed.length
-            ? '<table class="tours rev-table"><thead><tr><th>Field</th><th>Current</th><th>Proposed</th></tr></thead><tbody>' + rows + '</tbody></table>'
-            : '<div class="app-meta"><i>No field differs from the live profile.</i></div>') +
-          (r.adminNote ? '<div class="app-meta">Note: ' + esc(r.adminNote) + '</div>' : '') +
+            ? '<table class="tours rev-table"><thead><tr><th>فیلد</th><th>فعلی</th><th>پیشنهادی</th></tr></thead><tbody>' + rows + '</tbody></table>'
+            : '<div class="app-meta"><i>هیچ فیلدی با پروفایل فعلی فرق ندارد.</i></div>') +
+          (r.adminNote ? '<div class="app-meta">یادداشت: ' + esc(r.adminNote) + '</div>' : '') +
           (pending
-            ? '<div class="app-actions"><button class="btn small primary rev-approve">Approve &amp; apply</button>' +
-              '<button class="btn small danger rev-reject">Reject</button></div>'
+            ? '<div class="app-actions"><button class="btn small primary rev-approve">پذیرش و اعمال</button>' +
+              '<button class="btn small danger rev-reject">رد</button></div>'
             : '') +
         '</div>'
       );
     }).join('');
     app.innerHTML = shell(
       '<div class="list-head"><h1>بازبینی تغییرات</h1></div>' +
-      '<div class="filter-row"><label>Status</label><select id="revFilter">' + filterOptions + '</select></div>' +
-      (list.length ? cards : '<div class="empty">Nothing here.</div>')
+      '<div class="filter-row"><label>وضعیت</label><select id="revFilter">' + filterOptions + '</select></div>' +
+      (list.length ? cards : '<div class="empty">موردی نیست.</div>')
     );
     bindLogout();
     document.getElementById('revFilter').addEventListener('change', function(){ state.revisionsFilter = this.value; renderRevisions(); });
@@ -1975,27 +1980,27 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         btn.disabled = true;
         try {
           await api('/admin/host-revisions/' + Number(btn.closest('.app-card').dataset.id) + '/approve', { method:'POST', body: {} });
-          toast('Applied to the profile');
+          toast('روی پروفایل اعمال شد');
           renderRevisions();
         } catch(e){
           if (e.status === 401){ state.admin = null; renderLogin(); return; }
-          toast(e.status === 404 ? 'No longer pending' : 'Approve failed', true);
+          toast(e.status === 404 ? 'این مورد دیگر در انتظار نیست' : 'پذیرش ممکن نشد', true);
           btn.disabled = false;
         }
       });
     });
     app.querySelectorAll('.rev-reject').forEach(function(btn){
       btn.addEventListener('click', async function(){
-        const note = prompt('Reject this edit?\n\nOptional note (the owner will see it):');
+        const note = prompt('این تغییرات رد شود؟\n\nیادداشت (اختیاری؛ مالک آن را می‌بیند):');
         if (note === null) return;
         btn.disabled = true;
         try {
           await api('/admin/host-revisions/' + Number(btn.closest('.app-card').dataset.id) + '/reject', { method:'POST', body: { adminNote: note } });
-          toast('Rejected');
+          toast('رد شد');
           renderRevisions();
         } catch(e){
           if (e.status === 401){ state.admin = null; renderLogin(); return; }
-          toast(e.status === 404 ? 'No longer pending' : 'Reject failed', true);
+          toast(e.status === 404 ? 'این مورد دیگر در انتظار نیست' : 'رد ممکن نشد', true);
           btn.disabled = false;
         }
       });
@@ -2015,36 +2020,36 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       list = (await api('/admin/proposals' + qs)).proposals;
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
-      toast('Could not load proposals', true);
+      toast('بارگذاری پیشنهادها ممکن نشد', true);
     }
     const filterOptions = [''].concat(PROPOSAL_STATUSES).map(function(v){
-      return '<option value="' + v + '"' + (state.proposalsFilter === v ? ' selected' : '') + '>' + (v || 'All') + '</option>';
+      return '<option value="' + v + '"' + (state.proposalsFilter === v ? ' selected' : '') + '>' + (v ? fa(v) : 'همه') + '</option>';
     }).join('');
     const cards = list.map(function(p){
       return (
         '<div class="app-card" data-id="' + p.id + '">' +
           '<div class="app-top"><b>' + esc(p.title) + '</b>' +
             (p.host ? '<span class="badge ' + esc(p.host.kind) + '">' + esc(KIND_LABEL[p.host.kind] || p.host.kind) + '</span>' : '') +
-            '<span class="badge ' + esc(p.status) + '">' + esc(p.status) + '</span>' +
+            '<span class="badge ' + esc(p.status) + '">' + esc(fa(p.status)) + '</span>' +
             '<span class="app-meta">' + esc(String(p.createdAt || '').slice(0, 16).replace('T', ' ')) + '</span></div>' +
-          '<div class="app-meta">From: ' + (p.host ? esc(p.host.displayName) : '—') +
+          '<div class="app-meta">از طرف: ' + (p.host ? esc(p.host.displayName) : '—') +
             (p.owner ? ' · ' + esc(p.owner.firstName + ' ' + p.owner.lastName) + ' · <span dir="ltr">' + esc(p.owner.phone) + '</span>' : '') + '</div>' +
-          '<div class="app-meta">Wants: ' + esc(p.wantedCounterpartKind) + (p.preferredMonths ? ' · Months: ' + esc(p.preferredMonths) : '') + '</div>' +
+          '<div class="app-meta">همکار دلخواه: ' + esc({ none: 'فرقی نمی‌کند', person: 'برگزارکننده', place: 'مکان' }[p.wantedCounterpartKind] || p.wantedCounterpartKind) + (p.preferredMonths ? ' · ماه‌ها: ' + esc(p.preferredMonths) : '') + '</div>' +
           '<div class="app-desc">' + esc(p.description) + '</div>' +
           '<div class="app-actions">' +
-            '<div class="field"><label>Status</label><select class="prop-status">' +
-              PROPOSAL_STATUSES.map(function(v){ return '<option value="' + v + '"' + (p.status === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') +
+            '<div class="field"><label>وضعیت</label><select class="prop-status">' +
+              PROPOSAL_STATUSES.map(function(v){ return '<option value="' + v + '"' + (p.status === v ? ' selected' : '') + '>' + fa(v) + '</option>'; }).join('') +
             '</select></div>' +
-            '<div class="field" style="flex:1"><label>Internal note</label><input type="text" class="prop-note" maxlength="2000" value="' + esc(p.adminNote || '') + '"></div>' +
-            '<button class="btn small primary prop-save">Save</button>' +
+            '<div class="field" style="flex:1"><label>یادداشت داخلی</label><input type="text" class="prop-note" maxlength="2000" value="' + esc(p.adminNote || '') + '"></div>' +
+            '<button class="btn small primary prop-save">ذخیره</button>' +
           '</div>' +
         '</div>'
       );
     }).join('');
     app.innerHTML = shell(
       '<div class="list-head"><h1>پیشنهادهای تجربه</h1></div>' +
-      '<div class="filter-row"><label>Status</label><select id="propFilter">' + filterOptions + '</select></div>' +
-      (list.length ? cards : '<div class="empty">No proposals.</div>')
+      '<div class="filter-row"><label>وضعیت</label><select id="propFilter">' + filterOptions + '</select></div>' +
+      (list.length ? cards : '<div class="empty">پیشنهادی نیست.</div>')
     );
     bindLogout();
     document.getElementById('propFilter').addEventListener('change', function(){ state.proposalsFilter = this.value; renderProposals(); });
@@ -2055,11 +2060,11 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         try {
           await api('/admin/proposals/' + Number(card.dataset.id), { method:'PUT',
             body: { status: card.querySelector('.prop-status').value, adminNote: card.querySelector('.prop-note').value } });
-          toast('Saved');
+          toast('ذخیره شد');
           renderProposals();
         } catch(e){
           if (e.status === 401){ state.admin = null; renderLogin(); return; }
-          toast('Save failed', true);
+          toast('ذخیره ممکن نشد', true);
           btn.disabled = false;
         }
       });
@@ -2106,7 +2111,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // A linked profile that is hidden is silently absent from the public page,
   // so say so here rather than let someone assign it and see nothing.
   function hiddenWarning(status){
-    return status !== 'active' ? ' — <b>hidden</b>, will not show on the site' : '';
+    return status !== 'active' ? ' — <b>پنهان</b>، روی سایت دیده نمی‌شود' : '';
   }
 
   function venueSectionHtml(){
@@ -2125,16 +2130,16 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<div class="field" style="margin-bottom:0;"><label>' + (current ? 'تغییر محل' : 'انتخاب محل') + '</label>' +
           '<select id="tvPick">' +
             (places.length
-              ? '<option value="">None</option>' + places.map(function(h){
+              ? '<option value="">هیچ‌کدام</option>' + places.map(function(h){
                   return '<option value="' + h.id + '"' + (h.id === tourHosts.venueId ? ' selected' : '') + '>' +
-                    esc(h.displayName) + ' (' + esc(h.status) + ')</option>';
+                    esc(h.displayName) + ' (' + esc(fa(h.status)) + ')</option>';
                 }).join('')
-              : '<option value="">No places yet</option>') +
+              : '<option value="">هنوز مکانی نیست</option>') +
           '</select></div>' +
       '</div>' +
       '<p style="color:var(--ink-muted);font-size:12px;margin:10px 0 24px;">' +
-        'A tour is held in one place. Only profiles of kind <b>place</b> appear here — ' +
-        '<a href="#/hosts/new?kind=place">create one</a> if the venue is missing.</p>';
+        'هر تجربه در یک مکان برگزار می‌شود. فقط پروفایل‌های نوع <b>مکان</b> اینجا می‌آیند — ' +
+        'اگر مکان نیست <a href="#/hosts/new?kind=place">یکی بسازید</a>.</p>';
   }
 
   function peopleSectionHtml(){
@@ -2146,8 +2151,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     const rows = tourHosts.people.map(function(a, i){
       return '<div class="th-row" data-i="' + i + '">' +
           '<div class="th-ord">' +
-            '<button type="button" class="th-up" ' + (i === 0 ? 'disabled' : '') + ' title="Move up">↑</button>' +
-            '<button type="button" class="th-down" ' + (i === tourHosts.people.length - 1 ? 'disabled' : '') + ' title="Move down">↓</button>' +
+            '<button type="button" class="th-up" ' + (i === 0 ? 'disabled' : '') + ' title="بالا">↑</button>' +
+            '<button type="button" class="th-down" ' + (i === tourHosts.people.length - 1 ? 'disabled' : '') + ' title="پایین">↓</button>' +
           '</div>' +
           '<div class="th-name">' + esc(a.displayName) +
             '<small>/host/' + esc(a.slug) + hiddenWarning(a.status) + '</small></div>' +
@@ -2160,18 +2165,18 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '</div>';
     }).join('');
 
-    return '<h3 style="font-size:14px;margin:0 0 10px;">برگزارکنندگان — People</h3>' +
-      (tourHosts.people.length ? rows : '<p style="color:var(--ink-muted);font-size:13px;">No people assigned.</p>') +
+    return '<h3 style="font-size:14px;margin:0 0 10px;">برگزارکنندگان</h3>' +
+      (tourHosts.people.length ? rows : '<p style="color:var(--ink-muted);font-size:13px;">هنوز برگزارکننده‌ای تعیین نشده.</p>') +
       '<div class="th-add">' +
         '<div class="field" style="margin-bottom:0;"><label>افزودن برگزارکننده</label>' +
           '<select id="thPick">' +
             (available.length
-              ? '<option value="">Choose…</option>' + available.map(function(h){
-                  return '<option value="' + h.id + '">' + esc(h.displayName) + ' (' + esc(h.status) + ')</option>';
+              ? '<option value="">انتخاب…</option>' + available.map(function(h){
+                  return '<option value="' + h.id + '">' + esc(h.displayName) + ' (' + esc(fa(h.status)) + ')</option>';
                 }).join('')
-              : '<option value="">No other people available</option>') +
+              : '<option value="">برگزارکنندهٔ دیگری نیست</option>') +
           '</select></div>' +
-        '<button type="button" class="btn small ghost" id="thAdd"' + (available.length ? '' : ' disabled') + '>+ Add</button>' +
+        '<button type="button" class="btn small ghost" id="thAdd"' + (available.length ? '' : ' disabled') + '>+ افزودن</button>' +
       '</div>';
   }
 
@@ -2187,9 +2192,9 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<span class="msg" id="thMsg" style="font-size:13px;color:var(--ink-muted);"></span>' +
       '</div>' +
       '<p style="color:var(--ink-muted);font-size:12px;margin-top:12px;">' +
-        'The venue and the people are saved together, in one step. Order here is the order on the tour page; ' +
-        'leads are always shown before co-hosts. Only <b>active</b> profiles appear publicly. ' +
-        '<a href="#/hosts">Manage profiles →</a></p>';
+        'محل و برگزارکنندگان با هم ذخیره می‌شوند. ترتیب اینجا همان ترتیب صفحهٔ تجربه است؛ ' +
+        'برگزارکنندهٔ اصلی همیشه قبل از همراهان می‌آید. فقط پروفایل‌های <b>فعال</b> عمومی نمایش داده می‌شوند. ' +
+        '<a href="#/hosts">مدیریت پروفایل‌ها ←</a></p>';
 
     const pick = document.getElementById('tvPick');
     if (pick) pick.addEventListener('change', function(){
@@ -2262,17 +2267,17 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       await api('/admin/tours/' + encodeURIComponent(tourHosts.tourId) + '/hosts', {
         method: 'PUT', body: { hosts: payload }
       });
-      toast('Partners saved');
+      toast('همکاران ذخیره شدند');
       await initTourHosts(tourHosts.tourId);
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
       const field = e.body && e.body.fields ? (e.body.fields.role || e.body.fields.hostId) : null;
-      if (field === 'duplicate') msg.textContent = 'The same profile is listed twice.';
-      else if (field === 'place_must_be_venue') msg.textContent = 'A place can only be the venue, not a co-host.';
-      else if (field === 'person_cannot_be_venue') msg.textContent = 'A person cannot be the venue.';
-      else if (field === 'multiple_venues') msg.textContent = 'A tour can only have one venue.';
-      else if (e.status === 422) msg.textContent = 'One of these profiles no longer exists — reload the page.';
-      else msg.textContent = 'Could not save partners.';
+      if (field === 'duplicate') msg.textContent = 'یک پروفایل دو بار آمده است.';
+      else if (field === 'place_must_be_venue') msg.textContent = 'مکان فقط می‌تواند محل برگزاری باشد، نه همراه.';
+      else if (field === 'person_cannot_be_venue') msg.textContent = 'شخص نمی‌تواند محل برگزاری باشد.';
+      else if (field === 'multiple_venues') msg.textContent = 'هر تجربه فقط یک محل دارد.';
+      else if (e.status === 422) msg.textContent = 'یکی از این پروفایل‌ها دیگر وجود ندارد؛ صفحه را دوباره باز کنید.';
+      else msg.textContent = 'ذخیرهٔ همکاران ممکن نشد.';
       btn.disabled = false;
     }
   }

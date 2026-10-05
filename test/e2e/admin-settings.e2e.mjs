@@ -108,6 +108,22 @@ await p.click('.secnav [data-sec="sec-5"]');
 await p.waitForSelector('table.editions');
 await shot(p, 'd-admin-tour-editor.png');
 
+// ---- revisions: an owner's opt-in to publish credentials shows up as a diff row
+const owner = db.db.prepare("SELECT id FROM users LIMIT 1").get().id;
+const coach = db.db.prepare("SELECT * FROM hosts WHERE slug = 'coach-fx'").get();
+db.db.prepare('UPDATE hosts SET credentials_public = 0 WHERE id = ?').run(coach.id);
+db.submitRevision(coach, owner, { displayName: coach.display_name, bio: coach.bio, photoPath: coach.photo_path, instagramHandle: coach.instagram_handle, expertise: coach.expertise, credentials: coach.credentials, credentialsPublic: true, seekingPlaceTypes: null }, () => {});
+await p.goto(`${O}/admin#/revisions`);
+await p.waitForSelector('.rev-table');
+assert.ok((await p.innerText('.rev-table')).includes('نمایش عمومی سوابق') && (await p.innerText('.rev-table')).includes('عمومی'), 'credentials opt-in is visible to the reviewer');
+await shot(p, 'd-admin-revision-credentials.png');
+// the host editor has the checkbox, off by default
+await p.goto(`${O}/admin#/hosts/${coach.id}/edit`);
+await p.waitForSelector('#h_credentialsPublic');
+assert.equal(await p.isChecked('#h_credentialsPublic'), false);
+await p.check('#h_credentialsPublic'); await p.click('#hostSaveBtn'); await p.waitForTimeout(500);
+assert.equal(db.getHostAdmin(coach.id).credentialsPublic, true);
+
 // ---- host editor: region stamp + gallery alt
 const lodge = db.db.prepare("SELECT id FROM hosts WHERE slug = 'lodge-fx'").get().id;
 await p.goto(`${O}/admin#/hosts/${lodge}/edit`);
