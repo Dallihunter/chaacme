@@ -8,7 +8,7 @@ import { Readable } from 'node:stream';
 import { request as httpRequest } from 'node:http';
 
 const dir = mkdtempSync(join(tmpdir(), 'chaacme-render-'));
-const PORT = 4300 + Math.floor(Math.random() * 400);
+const PORT = 7000 + Math.floor(Math.random() * 400);
 const IMAGES = join(dir, 'images');
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),

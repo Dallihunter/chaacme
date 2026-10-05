@@ -37,7 +37,7 @@ test('empty site: home has no sections, no hero; footer has only the link that a
   assert.match(text, /<main class="hm-main" id="main"><\/main>/);
   assert.ok(text.includes('ck-site-header') && !text.includes('ck-site-header--overlay'), 'no hero -> solid header');
   assert.equal((text.match(/<footer[\s\S]*<\/footer>/)[0].match(/<a /g) || []).length, 1);
-  for (const p of ['/about', '/terms', '/refund', '/privacy']) assert.equal((await get(p)).status, 404, p);
+  for (const p of ['/about', '/contact', '/terms', '/refund', '/privacy']) assert.equal((await get(p)).status, 404, p);
 });
 
 test('empty site: the seeded undated tours list without a filter bar (nothing to filter by); places show their empty state', async () => {
@@ -229,6 +229,37 @@ ft('info pages: paragraphs from the settings; empty -> 404 and no footer link', 
   assert.equal((await get('/terms/')).status, 200, 'trailing slash');
 });
 
+ft('contact page: only the rows that have a value, real tel:/mailto: links, empty = 404 and no footer link', async () => {
+  settings.writeSettings({ contact_phone: null, contact_email: null, contact_address: null, contact_hours: null }); // the full fixture fills them
+  assert.equal((await get('/contact')).status, 404, 'nothing filled in');
+  assert.ok(!(await get('/')).text.includes('href="/contact"'));
+  // one field is enough
+  settings.writeSettings({ contact_phone: '+98 21 1234 5678' });
+  let r = await get('/contact');
+  assert.equal(r.status, 200);
+  clean(r.text, 'contact-minimal');
+  assert.ok(r.text.includes('<h1 class="ex-title">تماس با ما</h1>') && r.text.includes('href="tel:+982112345678"') && r.text.includes('تلفن'));
+  for (const absent of ['mailto:', 'ایمیل', 'نشانی', 'ساعت کاری']) assert.ok(!r.text.includes(absent), absent);
+  assert.ok((await get('/')).text.includes('href="/contact"'), 'footer link appears with content');
+  assert.equal(JSON.parse((await get('/api/pages/info/contact')).text).page.contact.phone, '+98 21 1234 5678');
+  // everything, with Persian digits typed in
+  settings.writeSettings({ contact_phone: '۰۲۱-۱۲۳۴۵۶۷۸', contact_email: 'hello@chaacme.example', contact_address: 'خیابان نمونه\nپلاک ۱', contact_hours: 'شنبه تا چهارشنبه ۹ تا ۱۷' });
+  r = await get('/contact');
+  clean(r.text, 'contact-full');
+  assert.ok(r.text.includes('href="tel:02112345678"') && r.text.includes('href="mailto:hello@chaacme.example"') && r.text.includes('<span class="in-line">خیابان نمونه</span><span class="in-line">پلاک ۱</span>'));
+  assert.ok(r.text.includes('۰۲۱-۱۲۳۴۵۶۷۸'), 'shown with Persian digits');
+  assert.ok(r.text.includes('<meta name="description" content="خیابان نمونه">'));
+  // payloads are text everywhere
+  const P = '"><img src=x onerror=alert(1)><script>alert(2)</script>';
+  settings.writeSettings({ contact_address: `A${P}`.slice(0, 300), contact_hours: `H${P}`.slice(0, 200) });
+  r = await get('/contact');
+  assert.ok(!r.text.includes('<img src=x') && !r.text.includes('<script>alert') && r.text.includes('A&quot;&gt;&lt;img src=x onerror=alert(1)&gt;'));
+  assert.ok(!r.text.includes('javascript:'));
+  settings.writeSettings({ contact_phone: null, contact_email: null, contact_address: null, contact_hours: null });
+  assert.equal((await get('/contact')).status, 404);
+  assert.ok(!(await get('/')).text.includes('href="/contact"'));
+});
+
 ft('XSS: payloads in every setting, host and card field render as text in the HTML and the meta tags', async () => {
   const P = '"><img src=x onerror=alert(1)><script>alert(2)</script>';
   const esc = '&quot;&gt;&lt;img src=x onerror=alert(1)&gt;&lt;script&gt;alert(2)&lt;/script&gt;';
@@ -290,7 +321,7 @@ ft('view models: public projection only (deep scan of every page endpoint)', asy
 });
 
 ft('unknown paths: the 404 page for GET, JSON 404 for the rest; old tour URLs redirect', async () => {
-  for (const p of ['/nothing', '/contact', '/about/x', '/places/x', '/login/../x']) {
+  for (const p of ['/nothing', '/about/x', '/contact/x', '/places/x', '/login/../x']) {
     const r = await get(p);
     assert.equal(r.status, 404, p);
     assert.ok(r.text.includes('ck-site-header'), p);

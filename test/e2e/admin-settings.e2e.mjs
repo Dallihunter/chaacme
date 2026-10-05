@@ -63,6 +63,7 @@ await p.fill('#s_become_host_title', 'همکار شو'); await p.fill('#s_become
 await p.fill('#s_instagram_handle', '@chaacme_test');
 await p.click('#stAddLink');
 await p.fill('#stLinks [data-l="label"]', 'مکان‌ها'); await p.fill('#stLinks [data-l="href"]', '/places');
+await p.fill('#s_contact_phone', '۰۲۱۱۲۳۴۵۶۷۸'); await p.fill('#s_contact_email', 'team@chaacme.example'); await p.fill('#s_contact_hours', 'شنبه تا چهارشنبه');
 await p.fill('#s_page_about', `پاراگراف یک\n\n${XSS}`);
 await p.fill('#s_page_privacy', 'حریم خصوصی من');
 await shot(p, 'd-admin-settings.png');
@@ -88,6 +89,9 @@ const home = await pub.content();
 assert.ok(home.includes('<video') && home.includes('hero-') && home.includes('همکار شو') && home.includes('href="/privacy"') && home.includes('href="/about"') && !home.includes('href="/terms"') && home.includes('href="/places"') && home.includes('instagram.com/chaacme_test'));
 assert.equal(await pub.evaluate(() => window.__xss), undefined, 'payload in the headline did not run');
 assert.equal((await pub.goto(`${O}/terms`)).status(), 404, 'empty info page');
+assert.equal((await pub.goto(`${O}/contact`)).status(), 200);
+assert.ok((await pub.content()).includes('href="tel:02112345678"') && (await pub.content()).includes('href="mailto:team@chaacme.example"') && !(await pub.innerText('main')).includes('نشانی'));
+assert.ok((await (await pub.goto(`${O}/`)).text()).includes('href="/contact"'), 'footer link');
 const about = await pub.goto(`${O}/about`);
 assert.equal(about.status(), 200);
 assert.equal(await pub.evaluate(() => window.__xss), undefined);

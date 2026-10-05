@@ -86,7 +86,7 @@ db.submitRevision(db.db.prepare('SELECT * FROM hosts WHERE id = ?').get(lodgeId)
 db.createProposal(u1.user.id, site.person.id, { title: 'پیشنهاد نمونه', description: 'توضیح بلند برای پیشنهاد نمونه', preferredMonths: null, wantedCounterpartKind: 'none' });
 await capture('full', {
   pages: [['home', '/'], ['experiences', '/experiences'], ['experiences-filtered', '/experiences?region=forest&open=1'], ['experiences-no-results', '/experiences?region=desert&type=' + encodeURIComponent('غذا و فرهنگ')], ['places', '/places'], ['tour', '/tour/fx-flow'],
-    ['place-profile', '/host/lodge-fx'], ['person-profile', '/host/coach-fx'], ['about', '/about'], ['not-found', '/no-such-page']],
+    ['place-profile', '/host/lodge-fx'], ['person-profile', '/host/coach-fx'], ['about', '/about'], ['contact', '/contact'], ['not-found', '/no-such-page']],
   screens: {
     anon: [['login', '/login', '#password'], ['signup', '/signup', '#username'], ['become-host-gate', '/become-host', '[data-gate]'], ['booking-result-gone', '/booking/result?ref=CHK-00000', 'main h1']],
     users: {
@@ -113,7 +113,7 @@ db.createTour({ id: 'min-booked', status: 'published', name: 'تجربهٔ رز�
 const mbd = db.addTourDate('min-booked', { label: 'اجرا', capacity: 6, startsOn: fx.future(db, 20) });
 const mb2 = db.createBooking({ userId: m1.user.id, tourId: 'min-booked', tourDateId: mbd.id, guests: 1 });
 await capture('minimal', {
-  pages: [['home', '/'], ['experiences', '/experiences'], ['places', '/places'], ['tour', '/tour/min-tour'], ['place-profile', '/host/lodge-min'], ['person-profile', '/host/coach-min'], ['about-404', '/about']],
+  pages: [['home', '/'], ['experiences', '/experiences'], ['places', '/places'], ['tour', '/tour/min-tour'], ['place-profile', '/host/lodge-min'], ['person-profile', '/host/coach-min'], ['about-404', '/about'], ['contact-404', '/contact']],
   screens: {
     anon: [['login', '/login', '#password'], ['signup', '/signup', '#username'], ['become-host-gate', '/become-host', '[data-gate]']],
     users: {

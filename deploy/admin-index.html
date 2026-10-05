@@ -213,7 +213,13 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         '<div class="field st-links"><label>پیوندهای بیشتر <span class="muted">(حداکثر ۸؛ مسیرهای داخلی فقط از صفحه‌های موجود یا آدرس https)</span></label><div id="stLinks"></div>' +
         '<button type="button" class="btn small ghost" id="stAddLink">+ پیوند</button>' +
         '<datalist id="stPaths">' + (data.footerPaths || []).map(function(x){ return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' +
-        '<p class="hint">پیوند به «درباره، قوانین، استرداد، حریم خصوصی» به‌صورت خودکار و فقط وقتی متن آن نوشته شده باشد در فوتر می‌آید.</p></div>' +
+        '<p class="hint">پیوند به «درباره، تماس، قوانین، استرداد، حریم خصوصی» به‌صورت خودکار و فقط وقتی متن آن نوشته شده باشد در فوتر می‌آید.</p></div>' +
+      '</section>' +
+
+      '<section class="panel"><h2>تماس با ما ' + where('/contact و فوتر') + '</h2>' +
+        '<p class="hint" style="margin-bottom:14px">هر فیلدی که پر شود در صفحهٔ «تماس با ما» می‌آید؛ تلفن و ایمیل لینک تماس می‌شوند. اگر همه خالی باشند صفحه منتشر نمی‌شود (۴۰۴) و لینک آن در فوتر نمی‌آید.</p>' +
+        '<div class="grid2">' + txt('contact_phone', 'تلفن', 'مثلاً ۰۲۱۱۲۳۴۵۶۷۸ یا +98 21 12345678') + txt('contact_email', 'ایمیل', '') + '</div>' +
+        txt('contact_address', 'نشانی', '', 3) + txt('contact_hours', 'ساعت کاری', 'هر خط یک مورد، مثلاً «شنبه تا چهارشنبه، ۹ تا ۱۷».', 3) +
       '</section>' +
 
       '<section class="panel"><h2>صفحه‌های متنی ' + where('/about، /terms، /refund، /privacy') + '</h2>' +

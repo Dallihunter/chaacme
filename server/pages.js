@@ -21,7 +21,7 @@ function renderOrError(req, res, build) {
   }
 }
 
-const INFO_PATHS = { '/about': 'about', '/terms': 'terms', '/refund': 'refund', '/privacy': 'privacy' };
+const INFO_PATHS = { '/about': 'about', '/contact': 'contact', '/terms': 'terms', '/refund': 'refund', '/privacy': 'privacy' };
 const SCREEN_PATHS = { '/login': 'login', '/signup': 'signup', '/account': 'account', '/become-host': 'become-host', '/booking/result': 'booking-result' };
 const PARTNER_PATH_RE = /^\/partner(?:\/(?:experiences|propose)|\/profile\/[a-z0-9-]+)?$/;
 const HOST_PATH_RE = /^\/host\/([^/]+)\/?$/;

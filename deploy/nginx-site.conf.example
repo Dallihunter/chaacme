@@ -13,8 +13,8 @@
 
 # --- the pages (proxy to the service) --------------------------------------------------------------
 # One block with a regex does it; or list them. Paths: / /experiences /places /host/<slug> /tour/<slug>
-# /about /terms /refund /privacy /login /signup /account /become-host /booking/result /partner[/...]
-location ~ ^/(?:experiences|places|about|terms|refund|privacy|login|signup|account|become-host|partner(?:/.*)?|booking/result|tour/[^/]+|host/[^/]+|tours/[^/]+|experience/[^/]+|experiences/[^/]+)/?$ {
+# /about /contact /terms /refund /privacy /login /signup /account /become-host /booking/result /partner[/...]
+location ~ ^/(?:experiences|places|about|contact|terms|refund|privacy|login|signup|account|become-host|partner(?:/.*)?|booking/result|tour/[^/]+|host/[^/]+|tours/[^/]+|experience/[^/]+|experiences/[^/]+)/?$ {
     proxy_pass http://127.0.0.1:3100;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -26,7 +26,7 @@ location = / {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     error_page 502 503 504 = /index.html;
 }
-# (An unknown path such as /contact still reaches the service only if you route it there. To get the
+# (An unknown path such as /nope still reaches the service only if you route it there. To get the
 # designed 404 page for EVERY unknown path, replace the SPA `location /` with a proxy to the service
 # instead of the regex above.)
 

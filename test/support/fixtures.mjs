@@ -103,6 +103,7 @@ export async function seedFullSite({ db, upload, settings, makeImage, videoPath 
     explainer_3_title: 'مسافران', explainer_3_text: 'گروه کوچک، یک تاریخ مشخص', explainer_3_image: await img({ site: '1' }, 1200, 800),
     become_host_title: 'مربی هستی یا مکانی برای میزبانی داری؟', become_host_text: 'پروفایلت را بساز؛ چکمه تو را با نیمهٔ دیگر تجربه کنار هم می‌گذارد.', become_host_cta: 'همکاری با چکمه',
     instagram_handle: 'chaacme_fx', footer_links: [{ label: 'تجربه‌ها', href: '/experiences' }],
+    contact_phone: '۰۲۱-۱۲۳۴۵۶۷۸', contact_email: 'team@chaacme.example', contact_address: 'تهران، خیابان نمونه، پلاک ۱', contact_hours: 'شنبه تا چهارشنبه، ۹ تا ۱۷',
     page_about: 'درباره چکمه.\n\nپاراگراف دوم.', page_terms: 'قوانین و مقررات.', page_refund: 'شرایط استرداد.', page_privacy: 'حریم خصوصی.'
   };
   if (videoPath) set.home_hero_video = videoPath;

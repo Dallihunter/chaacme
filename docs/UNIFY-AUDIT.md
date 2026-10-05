@@ -15,7 +15,7 @@ Pre-check: `origin/main` contains phase 1 (server-rendered `/tour/<slug>`, `depl
 | `/tour/<slug>` | server-rendered (phase 1), SPA shell as fallback | unchanged template; on a render error the generic **error page** (the SPA fallback is removed) | server |
 | `/host/<slug>` | SPA `page-host`, one layout for both kinds | **place profile** (03) or **person profile**, branched on `kind` | server |
 | `/about` `/terms` `/refund` `/privacy` | `about` was an SPA state with English copy; the others do not exist | **info page** template; body from site settings; empty content = 404 and no footer link | server |
-| `/contact` | SPA state with a placeholder e-mail ("Replace the email above…") | **removed**: no data source, placeholder content. Contact details belong in the `/about` body. Answers the 404 page | – |
+| `/contact` | SPA state with a placeholder e-mail ("Replace the email above…") | **info page** like `/about`, structured: phone, e-mail, address, hours from site settings (`tel:`/`mailto:` links); empty = 404, no footer link | server |
 | `/login`, `/signup` | SPA states (no URL for signup) | client screens in the new styling; OTP/password toggle kept (OTP tab stays hidden while `OTP_LOGIN_DISABLED`) | shell by server + client |
 | `/account` | SPA state | client screen (07) | shell + client |
 | `/become-host` | SPA route | client screen (06); same validation, honeypot and rate limits | shell + client |
@@ -25,7 +25,7 @@ Pre-check: `origin/main` contains phase 1 (server-rendered `/tour/<slug>`, `depl
 | any other path | SPA redirected unknown paths to `/` | the 404 page (status 404) | server |
 | old SPA tour URLs (`/tours/<slug>`, `/experiences/<slug>`) | n/a / SPA | 301 → `/tour/<slug>` | server |
 
-Nothing is left on the old styling. The only thing that cannot be converted is `/contact` (above).
+Nothing is left on the old styling.
 
 ## 2. Data per page: existing field | MISSING
 
@@ -43,7 +43,7 @@ Nothing is left on the old styling. The only thing that cannot be converted is `
 | | number of experiences, linked experiences, reviews | derived from `tour_hosts`, `tours`, `reviews` |
 | | "suitable for" fact in the reference | **not built**: no field exists and the owner never entered it; the fact is omitted |
 | Person profile | portrait, expertise, credentials, bio, instagram | existing; credentials public only with the new `hosts.credentials_public` (migration 005) |
-| Info pages | four bodies | **MISSING** → `site_settings` |
+| Info pages | four bodies + contact details (phone, e-mail, address, hours) | **MISSING** → `site_settings` |
 | Footer | links, Instagram handle | **MISSING** → `site_settings` |
 | Booking result | booking by ref for its owner (tour title, edition, party size, total, payment status) | existing in `bookings`; **new** owner-only endpoint `GET /api/me/bookings/<ref>` |
 | Account | bookings with cover + payment status | `payment_status` and cover were not in `GET /api/bookings/me` → added (additive) |

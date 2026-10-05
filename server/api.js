@@ -94,7 +94,7 @@ export async function handleApi(req, res, url) {
   if (path === '/api/pages/experiences' && method === 'GET') return pageJson(buildExperiencesPage(url.searchParams));
   if (path === '/api/pages/places' && method === 'GET') return pageJson(buildPlacesPage());
   if ((m = new RegExp(`^/api/pages/host/${SLUG}$`).exec(path)) && method === 'GET') return pageJson(buildHostPage(m[1]));
-  if ((m = /^\/api\/pages\/info\/(about|terms|refund|privacy)$/.exec(path)) && method === 'GET') return pageJson(buildInfoPage(m[1]));
+  if ((m = /^\/api\/pages\/info\/(about|contact|terms|refund|privacy)$/.exec(path)) && method === 'GET') return pageJson(buildInfoPage(m[1]));
 
   if ((m = new RegExp(`^/api/tours/${ID}$`).exec(path)) && method === 'GET') {
     const tour = db.getTourDetail(m[1]);

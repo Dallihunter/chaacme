@@ -10,7 +10,7 @@ import * as db from './db.js';
 import { describeImage } from './images.js';
 import { regionInfo, REGION_KEYS } from '../deploy/assets/js/shared/regions.js';
 import { jalaliMonthKey, jalaliMonthLabel } from '../deploy/assets/js/shared/format.js';
-import { getSettings, infoParagraphs } from './settings.js';
+import { getSettings, infoParagraphs, contactDetails } from './settings.js';
 import { INFO_PAGES } from '../deploy/assets/js/shared/site.js';
 
 const MAX_RELATED = 3;
@@ -274,7 +274,12 @@ export function buildPlacesPage() {
 export function buildInfoPage(key) {
   const def = INFO_PAGES.find((p) => p.key === key);
   if (!def) return null;
-  const paragraphs = infoParagraphs(getSettings()[def.setting]);
+  const st = getSettings();
+  if (def.key === 'contact') {
+    const contact = contactDetails(st);
+    return contact ? { key: def.key, path: def.path, title: def.label, paragraphs: [], contact } : null;
+  }
+  const paragraphs = infoParagraphs(st[def.setting]);
   return paragraphs.length ? { key: def.key, path: def.path, title: def.label, paragraphs } : null;
 }
 

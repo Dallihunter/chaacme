@@ -77,6 +77,10 @@ test('validation: lengths, unknown keys, paths, handle, footer links', async () 
   await bad({ home_hero_video: '/images/site/a.jpg' }, 'home_hero_video', 'format');
   await bad({ home_hero_video: '/images/uploads/a.mp4' }, 'home_hero_video', 'format');
   await bad({ instagram_handle: 'bad handle!' }, 'instagram_handle', 'format');
+  for (const phone of ['abc', 'javascript:1', '12', '+98 21 <b>', '0'.repeat(31), '123456; DROP']) await bad({ contact_phone: phone }, 'contact_phone', 'format');
+  for (const email of ['nope', 'a@b', '<x>@y.com', 'a@b.com\nbcc:evil@x.com', 'javascript:alert(1)//@x.com', 'a b@c.com']) await bad({ contact_email: email }, 'contact_email', 'format');
+  await bad({ contact_address: 'x'.repeat(301) }, 'contact_address', 'length');
+  await bad({ contact_hours: 'x'.repeat(201) }, 'contact_hours', 'length');
   await bad({ home_cta_primary: 5 }, 'home_cta_primary', 'type');
   await bad({ footer_links: [{ label: 'x', href: 'javascript:alert(1)' }] }, 'footer_links', 'href');
   await bad({ footer_links: [{ label: 'x', href: 'http://plain.example' }] }, 'footer_links', 'href');
@@ -105,6 +109,16 @@ test('values are normalised and plain text; empty deletes', async () => {
   assert.equal(cleared.status, 200);
   assert.ok(Object.values(cleared.data.settings).every((v) => v === null));
   assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM site_settings').get().n, 0, 'rows are deleted, not stored empty');
+});
+
+test('contact settings are normalised: ASCII digits stored, empty deletes', async () => {
+  const r = await put({ contact_phone: ' ۰۲۱ - ۱۲۳۴۵۶۷۸ ', contact_email: ' team@chaacme.example ', contact_address: 'خیابان\r\n\r\n\r\nنمونه', contact_hours: '' });
+  assert.equal(r.status, 200, r.text);
+  const s = r.data.settings;
+  assert.deepEqual([s.contact_phone, s.contact_email, s.contact_address, s.contact_hours], ['021 - 12345678', 'team@chaacme.example', 'خیابان\n\nنمونه', null]);
+  assert.deepEqual(settings.contactDetails(s).address, ['خیابان', 'نمونه']);
+  await put({ contact_phone: '', contact_email: '', contact_address: '' });
+  assert.equal(settings.contactDetails(), null);
 });
 
 test('footer: only pages that exist; info links appear once their body is written', async () => {

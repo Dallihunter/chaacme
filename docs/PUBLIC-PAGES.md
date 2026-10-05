@@ -17,7 +17,7 @@ One site, one stylesheet (`deploy/assets/chaacme.css`), one header, one footer, 
 | `/places` | `places.js` | `GET /api/pages/places` |
 | `/tour/<slug>` | `tour.js` | `GET /api/pages/tour/<slug>` |
 | `/host/<slug>` (place or person) | `host.js` | `GET /api/pages/host/<slug>` |
-| `/about /terms /refund /privacy` | `info.js` (404 while the body is empty) | `GET /api/pages/info/<key>` |
+| `/about /contact /terms /refund /privacy` | `info.js` (404 while the body / contact details are empty; `/contact` is structured: phone, e-mail, address, hours with `tel:`/`mailto:` links) | `GET /api/pages/info/<key>` |
 | `/login /signup /account /become-host /booking/result /partner…` | `screen.js` shell + `assets/js/screens/*.js` | `/api/me/*`, `/api/partner/*`, `GET /api/me/bookings/<ref>` |
 | anything else | `errors.js` 404 (status 404) | – |
 | `/tours/<slug>`, `/experiences/<slug>` | 301 → `/tour/<slug>` | – |

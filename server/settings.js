@@ -8,13 +8,13 @@
 //    depends on a value is hidden while it is missing. Nothing is seeded.
 import { db } from './db.js';
 import { isPublicImagePath } from './util.js';
-import { INFO_PAGES, instagramUrl } from '../deploy/assets/js/shared/site.js';
+import { INFO_PAGES, instagramUrl, telHref, isEmail, asciiDigits } from '../deploy/assets/js/shared/site.js';
 
 const HANDLE_RE = /^[A-Za-z0-9._]{1,30}$/;
 export const VIDEO_PATH_RE = /^\/images\/site\/[A-Za-z0-9][A-Za-z0-9._-]*\.mp4$/;
 
 /** Internal destinations a footer link may use; an external link must be https. */
-export const FOOTER_PATHS = ['/', '/experiences', '/places', '/become-host', '/about', '/terms', '/refund', '/privacy'];
+export const FOOTER_PATHS = ['/', '/experiences', '/places', '/become-host', '/about', '/contact', '/terms', '/refund', '/privacy'];
 const MAX_FOOTER_LINKS = 8;
 
 // kind: line = one trimmed line; text = paragraphs; image/video = path from the upload endpoints
@@ -37,6 +37,10 @@ export const SETTINGS = {
   become_host_cta: field('line', 40),
   instagram_handle: field('handle'),
   footer_links: field('links'),
+  contact_phone: field('phone'),
+  contact_email: field('email'),
+  contact_address: field('text', 300),
+  contact_hours: field('text', 200),
   page_about: field('text', 20000),
   page_terms: field('text', 20000),
   page_refund: field('text', 20000),
@@ -79,6 +83,17 @@ function normalise(key, raw) {
   if (def.kind === 'video') {
     const v = raw.trim();
     return VIDEO_PATH_RE.test(v) ? { value: v } : { error: 'format' };
+  }
+  if (def.kind === 'phone') {
+    // stored with ASCII digits; must make a usable tel: link
+    const v = asciiDigits(raw).replace(/\s+/g, ' ').trim();
+    if (!v) return { value: null };
+    return v.length <= 30 && /^[0-9+\-() ]+$/.test(v) && telHref(v) ? { value: v } : { error: 'format' };
+  }
+  if (def.kind === 'email') {
+    const v = raw.trim();
+    if (!v) return { value: null };
+    return isEmail(v) ? { value: v } : { error: 'format' };
   }
   if (def.kind === 'handle') {
     // accepts @name or a pasted instagram.com URL, stores the bare handle
@@ -159,9 +174,24 @@ function parseLinks(raw) {
   try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-/** Info pages that have content, as { key, path, label, paragraphs }. */
+/** The contact page's data, or null while nothing is filled in. */
+export function contactDetails(settings = getSettings()) {
+  const lines = (t) => String(t || '').split('\n').map((x) => x.trim()).filter(Boolean);
+  const c = {
+    phone: settings.contact_phone || null,
+    email: settings.contact_email || null,
+    address: lines(settings.contact_address),
+    hours: lines(settings.contact_hours)
+  };
+  return c.phone || c.email || c.address.length || c.hours.length ? c : null;
+}
+
+/** Info pages that have content, as { key, path, label, paragraphs? / contact? }. */
 export function publishedInfoPages(settings = getSettings()) {
-  return INFO_PAGES.map((p) => ({ ...p, paragraphs: infoParagraphs(settings[p.setting]) })).filter((p) => p.paragraphs.length);
+  return INFO_PAGES.map((p) => (p.key === 'contact'
+    ? { ...p, contact: contactDetails(settings) }
+    : { ...p, paragraphs: infoParagraphs(settings[p.setting]) }))
+    .filter((p) => (p.key === 'contact' ? p.contact : p.paragraphs.length));
 }
 
 /**

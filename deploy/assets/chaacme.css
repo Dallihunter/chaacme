@@ -549,6 +549,14 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
 .ex-empty-link { margin: 0; text-align: center; }
 .pl-grid--wide { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 .in-doc { max-width: 720px; display: flex; flex-direction: column; gap: 24px; }
+.in-contact { margin: 0; display: flex; flex-direction: column; }
+.in-contact__row { display: flex; gap: 24px; padding: 18px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.in-contact__row:last-child { border-bottom: 1px solid var(--line); }
+.in-contact dt { flex: 0 0 110px; color: var(--ink-muted); font-size: 14px; }
+.in-contact dd { margin: 0; font-size: 17px; line-height: 30px; min-width: 0; }
+.in-contact a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.in-line { display: block; }
+.in-ltr { unicode-bidi: isolate; }
 .in-body p { margin: 0 0 20px; font-size: 17px; line-height: 32px; white-space: pre-line; }
 
 /* ---------- place / person profile ---------- */
@@ -599,6 +607,7 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
 .pf-map__coords { bottom: 14px; inset-inline-end: 14px; font-size: 12px; direction: ltr; }
 
 @media (max-width: 720px) {
+  .in-contact__row { flex-direction: column; gap: 2px; }
   .hm-hero { height: 560px; }
   .hm-hero__copy { bottom: 40px; }
   .hm-hero__title { font-size: 44px; line-height: 50px; }
