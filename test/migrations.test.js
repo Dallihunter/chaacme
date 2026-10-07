@@ -29,7 +29,7 @@ const oldSchema = (db) => db.exec(`
 test('upgrades an old tour_dates table without losing rows, then is a no-op', () => {
   const db = new DatabaseSync(':memory:');
   oldSchema(db);
-  assert.deepEqual(runMigrations(db, migrations), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(runMigrations(db, migrations), [1, 2, 3, 4, 5, 6, 7]);
   assert.ok(hasColumn(db, 'tour_dates', 'starts_on'));
   assert.ok(hasColumn(db, 'tour_dates', 'ends_on'));
   const row = db.prepare('SELECT * FROM tour_dates').get();
@@ -37,7 +37,7 @@ test('upgrades an old tour_dates table without losing rows, then is a no-op', ()
   assert.equal(row.seats_taken, 9);
   assert.equal(row.starts_on, null); // no guessed years
   assert.deepEqual(runMigrations(db, migrations), []);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 6);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 7);
   // partner panel: new columns/tables exist, existing rows untouched
   for (const c of ['credentials', 'seeking_place_types', 'capacity_guests', 'house_rules', 'accepts_experience_types']) {
     assert.ok(hasColumn(db, 'hosts', c), c);
@@ -98,8 +98,41 @@ test('credentials stay private after the migration: the flag is added at 0 for e
   runMigrations(db, migrations.slice(0, 2)); // the schema as it was when owners entered their credentials
   db.exec("UPDATE hosts SET credentials = 'سابقهٔ خصوصی'");
   db.exec("INSERT INTO hosts (slug, credentials) VALUES ('second', 'دومی')");
-  assert.deepEqual(runMigrations(db, migrations), [3, 4, 5, 6]);
+  assert.deepEqual(runMigrations(db, migrations), [3, 4, 5, 6, 7]);
   assert.ok(hasColumn(db, 'hosts', 'credentials_public'));
   const rows = db.prepare('SELECT credentials, credentials_public AS p FROM hosts ORDER BY id').all();
   assert.deepEqual(rows.map((r) => [r.credentials, r.p]), [['سابقهٔ خصوصی', 0], ['دومی', 0]]);
+});
+
+test('migration 007: booking mode, link, label, note and the per-link role label are additive; old rows keep today\'s behaviour', () => {
+  const db = new DatabaseSync(':memory:');
+  oldSchema(db);
+  db.exec(`CREATE TABLE tour_hosts (tour_id TEXT NOT NULL, host_id INTEGER NOT NULL, role TEXT NOT NULL DEFAULT 'lead', sort_order INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tour_id, host_id));
+    INSERT INTO tour_hosts (tour_id, host_id, role, sort_order) VALUES ('old-tour', 1, 'lead', 3);`);
+  runMigrations(db, migrations.slice(0, 6));
+  const before = db.prepare('SELECT * FROM tours').get();
+  assert.equal(hasColumn(db, 'tours', 'booking_mode'), false);
+
+  assert.deepEqual(runMigrations(db, migrations), [7]);
+  for (const c of ['booking_mode', 'booking_url', 'booking_label', 'booking_note']) assert.ok(hasColumn(db, 'tours', c), c);
+  assert.ok(hasColumn(db, 'tour_hosts', 'role_label'));
+
+  const tour = db.prepare('SELECT * FROM tours').get();
+  for (const k of Object.keys(before)) assert.equal(tour[k], before[k], `tours.${k} is unchanged`);
+  assert.equal(tour.booking_mode, 'online', 'every existing tour keeps the online booking behaviour');
+  assert.equal(tour.booking_url, null);
+  assert.equal(tour.booking_label, 'رزرو');
+  assert.equal(tour.booking_note, null);
+  const link = db.prepare('SELECT * FROM tour_hosts').get();
+  assert.deepEqual([link.tour_id, link.host_id, link.role, link.sort_order, link.role_label], ['old-tour', 1, 'lead', 3, null]);
+
+  // the database refuses a mode that is not one of the three
+  assert.throws(() => db.exec("UPDATE tours SET booking_mode = 'free-for-all'"), /CHECK constraint/);
+  db.exec("INSERT INTO tours (id, name) VALUES ('new-tour', 'جدید')");
+  assert.equal(db.prepare("SELECT booking_mode FROM tours WHERE id = 'new-tour'").get().booking_mode, 'online');
+
+  // idempotent: a second pass changes nothing, and an insert that names none of the new columns (the previous release's) still works
+  assert.deepEqual(runMigrations(db, migrations), []);
+  db.exec("INSERT INTO tour_hosts (tour_id, host_id, role) VALUES ('new-tour', 2, 'co_host')");
+  assert.equal(db.prepare('SELECT role_label FROM tour_hosts WHERE host_id = 2').get().role_label, null);
 });

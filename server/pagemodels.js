@@ -11,22 +11,29 @@ import { describeImage } from './images.js';
 import { regionInfo, REGION_KEYS } from '../deploy/assets/js/shared/regions.js';
 import { jalaliMonthKey, jalaliMonthLabel } from '../deploy/assets/js/shared/format.js';
 import { getSettings, infoParagraphs, contactDetails } from './settings.js';
+import { effectiveBooking } from './booking.js';
 import { INFO_PAGES } from '../deploy/assets/js/shared/site.js';
 
 const MAX_RELATED = 3;
 
 const imageOrNull = (path, meta) => (path ? describeImage(path, meta) : null);
 
-function editionView(d) {
+/**
+ * One edition for the page. `seatsReal` is true only when the site itself takes the bookings (effective mode
+ * 'online'): only then are capacity, seats left and the booking id meaningful. In every other mode the platform
+ * has no booking data (reservations happen elsewhere), so no seat count, capacity or availability wording is passed
+ * on, and `full` means only what the admin did: the edition was closed.
+ */
+function editionView(d, seatsReal) {
   return {
-    id: d.id,                        // the booking endpoint's tourDateId; the only non-slug id exposed
+    id: seatsReal ? d.id : null,     // the booking endpoint's tourDateId; the only non-slug id exposed
     label: d.label,
     startsOn: d.startsOn,
     endsOn: d.endsOn,
-    capacity: d.capacity,
-    available: d.available,          // seats left (0 when full or past)
-    full: d.disabled,                // not bookable (full, closed)
-    status: d.status
+    capacity: seatsReal ? d.capacity : null,
+    available: seatsReal ? d.available : null,   // seats left (0 when full or past)
+    full: seatsReal ? d.disabled : d.closed,     // «تکمیل»: not bookable (online) / closed by the admin (otherwise)
+    status: seatsReal ? d.status : null
   };
 }
 
@@ -35,6 +42,7 @@ function personView(h) {
     slug: h.slug,
     name: h.displayName,
     role: h.role,
+    roleLabel: h.roleLabel || null,  // what this card says instead of the default role word, set per tour link
     verified: !!h.verified,
     expertise: h.expertise || null,
     photo: imageOrNull(h.photoPath, { alt: h.displayName })
@@ -75,7 +83,11 @@ export function cardView(row) {
   const lead = hosts.find((h) => h.role === 'lead') || hosts.find((h) => h.role !== 'venue') || null;
   const venue = hosts.find((h) => h.role === 'venue') || null;
   const dates = row.status === 'published' ? db.tourDates(row.id).filter((d) => !d.past) : [];
-  const next = dates.find((d) => !d.disabled) || null;
+  // Seats only mean something when the site takes the bookings itself; otherwise "open" is just "not closed".
+  const seatsReal = effectiveBooking(row).effective === 'online';
+  const isOpen = (d) => (seatsReal ? !d.disabled : !d.closed);
+  // The first open edition; with none open, the first dated one (shown with «تکمیل»), so a future date is never hidden.
+  const next = dates.find(isOpen) || dates.find((d) => d.startsOn) || null;
   return {
     slug: row.id,
     name: row.name,
@@ -84,11 +96,13 @@ export function cardView(row) {
     cover: cardCover(row),
     leadName: lead ? lead.displayName : null,
     venueName: venue ? venue.displayName : null,
-    nextEdition: next ? { label: next.label, startsOn: next.startsOn, endsOn: next.endsOn, available: next.available } : null,
+    nextEdition: next
+      ? { label: next.label, startsOn: next.startsOn, endsOn: next.endsOn, available: seatsReal ? next.available : null, full: !isOpen(next) }
+      : null,
     price: row.price ?? null,
     duration: row.duration || null,
     experienceType: row.experience_type || null,
-    editions: dates.filter((d) => d.startsOn).map((d) => ({ startsOn: d.startsOn, open: !d.disabled }))
+    editions: dates.filter((d) => d.startsOn).map((d) => ({ startsOn: d.startsOn, open: isOpen(d) }))
   };
 }
 
@@ -129,8 +143,10 @@ export function buildTourPage(slug) {
   // An edition with no ISO date that cannot be booked (closed, full) tells a visitor nothing but a bare label of a
   // date that is not coming. It is left out, so a tour whose only editions are those reads «تاریخ بعدی اعلام می‌شود».
   // Dated editions are always listed (a full one as «تکمیل»); an open one is listed even before it has a date.
+  const eb = effectiveBooking(db.getTourBookingRow(t.id));
+  const seatsReal = eb.effective === 'online';
   const editions = t.status === 'published'
-    ? t.bookingDates.filter((d) => !d.past && (d.startsOn || !d.disabled)).map(editionView)
+    ? t.bookingDates.filter((d) => !d.past && (d.startsOn || !(seatsReal ? d.disabled : d.closed))).map((d) => editionView(d, seatsReal))
     : [];
 
   const reviews = t.reviews.map((r) => ({
@@ -160,6 +176,15 @@ export function buildTourPage(slug) {
     itinerary,
     venue: venueHost ? venueView(venueHost) : null,
     people: people.map(personView),
+    // How this tour is reserved right now (server/booking.js): `effective` is what the page does, `link` the
+    // validated button of an 'external' tour, `soon` an online tour while the site-wide switch is off.
+    booking: {
+      mode: eb.mode,
+      effective: eb.effective,
+      soon: eb.soon,
+      link: eb.link ? { href: eb.link.href, newTab: eb.link.newTab, label: eb.label } : null,
+      note: eb.note
+    },
     editions,
     reviews: { count: t.reviewSummary.count, average: t.reviewSummary.average, items: reviews },
     related: db.listRelatedTours(t.id, t.region, MAX_RELATED).map(cardView)
@@ -192,7 +217,7 @@ export function buildHomePage() {
   const st = getSettings();
   const published = db.listTourCardRows().filter((r) => r.status === 'published').map(cardView);
   const upcoming = published
-    .filter((c) => c.nextEdition && c.nextEdition.startsOn)
+    .filter((c) => c.nextEdition && c.nextEdition.startsOn && !c.nextEdition.full)
     .sort((a, b) => a.nextEdition.startsOn.localeCompare(b.nextEdition.startsOn))
     .slice(0, MAX_HOME_TOURS);
   // No open dated edition anywhere: the published experiences in catalogue order, with the date left open (an

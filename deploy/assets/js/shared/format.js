@@ -22,6 +22,7 @@ export const formatPriceFa = formatNumberFa;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const jalali = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' });
 const jalaliMonth = new Intl.DateTimeFormat('fa-IR-u-ca-persian', { timeZone: 'UTC', month: 'long' });
+const jalaliWeekday = new Intl.DateTimeFormat('fa-IR-u-ca-persian', { timeZone: 'UTC', weekday: 'long' });
 
 function parts(iso) {
   const m = ISO_DATE.exec(String(iso || ''));
@@ -30,7 +31,7 @@ function parts(iso) {
   // reject rolled-over dates such as 2026-13-45 or 2026-02-30
   if (Number.isNaN(date.getTime()) || date.getUTCMonth() !== +m[2] - 1 || date.getUTCDate() !== +m[3]) return null;
   const p = Object.fromEntries(jalali.formatToParts(date).map((x) => [x.type, x.value]));
-  return { day: Number(p.day), month: Number(p.month), year: Number(p.year), monthName: jalaliMonth.format(date) };
+  return { day: Number(p.day), month: Number(p.month), year: Number(p.year), monthName: jalaliMonth.format(date), weekday: jalaliWeekday.format(date) };
 }
 
 /** "2026-10-30" -> "۸ آبان ۱۴۰۵" (Jalali). '' for a missing or invalid date. */
@@ -49,6 +50,19 @@ export function formatDateRangeFa(startIso, endIso) {
   if (a.year === b.year && a.month === b.month) return toFaDigits(`${a.day} تا ${b.day} ${a.monthName} ${a.year}`);
   if (a.year === b.year) return toFaDigits(`${a.day} ${a.monthName} تا ${b.day} ${b.monthName} ${a.year}`);
   return toFaDigits(`${a.day} ${a.monthName} ${a.year} تا ${b.day} ${b.monthName} ${b.year}`);
+}
+
+/**
+ * The date of an edition on a card: "2026-10-09" -> "جمعه ۱۷ مهر" (weekday, day, month; no year, a card shows the next
+ * date). A range has no weekday: "۱۷ تا ۱۹ مهر" / "۲۸ مهر تا ۱ آبان". '' for a missing or invalid date.
+ */
+export function formatCardDateFa(startIso, endIso) {
+  const a = parts(startIso);
+  if (!a) return '';
+  const b = endIso && endIso !== startIso ? parts(endIso) : null;
+  if (!b) return toFaDigits(`${a.weekday} ${a.day} ${a.monthName}`);
+  if (a.year === b.year && a.month === b.month) return toFaDigits(`${a.day} تا ${b.day} ${a.monthName}`);
+  return toFaDigits(`${a.day} ${a.monthName} تا ${b.day} ${b.monthName}`);
 }
 
 /** "2026-10-30" -> "1405-08": the Jalali year-month an edition starts in (filter key). null for an invalid date. */

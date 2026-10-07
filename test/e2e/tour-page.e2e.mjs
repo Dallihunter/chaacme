@@ -48,7 +48,8 @@ Object.assign(process.env, {
   FRONTEND_STATIC_DIR: join(dir, 'images'), PORT: String(APP_PORT), HOST: '127.0.0.1', SERVE_STATIC: '1',
   FRONTEND_ORIGIN: O, SITE_ORIGIN: O,
   ZARINPAL_BASE_URL_OVERRIDE: MOCK, ZARINPAL_MERCHANT_ID: '11111111-1111-1111-1111-111111111111',
-  ZARINPAL_CALLBACK_URL: `${O}/api/payments/zarinpal/callback`
+  ZARINPAL_CALLBACK_URL: `${O}/api/payments/zarinpal/callback`,
+  BOOKING_ONLINE_ENABLED: 'true' // this file drives the site's own booking card; test/e2e/booking-modes.e2e.mjs covers the other modes
 });
 const repo = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/$/, '');
 const { server } = await import(repo + '/server/index.js');

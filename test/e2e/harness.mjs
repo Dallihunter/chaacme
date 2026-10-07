@@ -13,7 +13,9 @@ export async function boot({ name, port = 5000 + Math.floor(Math.random() * 800)
   const O = `http://127.0.0.1:${port}`;
   Object.assign(process.env, {
     CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24), FRONTEND_STATIC_DIR: join(dir, 'images'),
-    SERVE_STATIC: '1', PORT: String(port), HOST: '127.0.0.1', FRONTEND_ORIGIN: O, SITE_ORIGIN: O, ...env
+    SERVE_STATIC: '1', PORT: String(port), HOST: '127.0.0.1', FRONTEND_ORIGIN: O, SITE_ORIGIN: O,
+    // the browser runs cover the site's own booking card, so the switch is ON here; a run that tests the other states passes env: { BOOKING_ONLINE_ENABLED: 'false' }
+    BOOKING_ONLINE_ENABLED: 'true', ...env
   });
   const { server } = await import(`${repo}/server/index.js`);
   const mods = {

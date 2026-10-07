@@ -108,7 +108,9 @@ function initBooking() {
       const booking = await call('/bookings', { tourId, tourDateId: Number(edition.value), guests: Number(guests.value) });
       if (booking.status === 401) { location.assign(loginUrl()); return; }
       if (booking.status !== 201) {
-        showError(booking.data.error === 'not_enough_seats' || booking.data.error === 'date_in_past'
+        showError(booking.data.error === 'online_booking_disabled' || booking.data.error === 'online_booking_unavailable'
+          ? 'رزرو آنلاین فعلاً فعال نیست.'
+          : booking.data.error === 'not_enough_seats' || booking.data.error === 'date_in_past'
           ? 'ظرفیت این تاریخ تکمیل شده است. لطفاً تاریخ دیگری انتخاب کنید.'
           : booking.status === 429 ? 'تعداد تلاش‌ها زیاد شده است. کمی بعد دوباره تلاش کنید.'
             : 'ثبت رزرو انجام نشد. لطفاً دوباره تلاش کنید.');

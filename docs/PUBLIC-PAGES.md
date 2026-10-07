@@ -53,6 +53,38 @@ deploy/assets/js/shared/layout.js    <head>/OG/meta + header + <main> + footer f
   reads «تاریخ بعدی اعلام می‌شود» with no booking form and no «انتخاب تاریخ» button (price still shown). A closed or full edition **with**
   an ISO date is listed as «تکمیل» (card: «ظرفیت تکمیل است»); an open undated edition is listed by its label and can be booked.
 
+### How a tour is reserved: the switch, the three modes (migration 007)
+
+* **`BOOKING_ONLINE_ENABLED`** (environment, read at call time, default **off**; only `true` or `1` turn it on) is the site-wide switch for the site's own
+  booking and ZarinPal payment. Off: `POST /api/bookings` and `POST /api/payments/zarinpal/request` answer **409 `online_booking_disabled`** for every tour
+  (before the session and the body are looked at, so an anonymous probe gets it too), a gateway callback of an old session confirms nothing (302 to
+  `/booking/result?status=disabled&ref=…`, the booking stays as it is), and no page renders a booking form, a payment sentence or a booking button.
+  History (`/api/bookings/me`, `/api/me/bookings/<ref>`, `/booking/result`) and the admin's booking views are unaffected; `/api/health` says which it is
+  in the `x-online-booking: on|off` header (the body is still `{"status":"ok"}`), which the deploy's post-check reads. A running release that
+  predates the switch sends no such header: the post-check fails, because that release would take sandbox payments.
+* **`tours.booking_mode`** `online` (default, today's behaviour) | `external` | `none`, with `booking_url` (≤ 300; **https://, tel: or mailto: only**, one
+  validator for the admin save and for the page: `deploy/assets/js/shared/booking.js`), `booking_label` (≤ 40, default «رزرو») and `booking_note` (≤ 200,
+  plain text). What a page does is `effectiveBooking()` (`server/booking.js`) and is in the model as `booking`:
+
+  | stored mode | switch | the booking card |
+  |---|---|---|
+  | `online` | on | the site's form, as before (seat counts, «رزرو این تجربه», ZarinPal) |
+  | `online` | off | like `none`, plus the line «رزرو آنلاین به‌زودی فعال می‌شود» |
+  | `external` (valid link) | any | the dates as information, the price, the note and **one** primary button with the label, linking to the URL (`target="_blank" rel="noopener"` for https; none for tel: / mailto:) |
+  | `external` (no valid link) / `none` | any | the dates and the note, no button |
+
+  The mobile sticky bar follows the same rules. A booking for a tour that is not effectively `online` is refused (409 `online_booking_unavailable`).
+  A stored link that is not valid (it can only get there by a direct database write) never becomes a button.
+* **Seat counts are shown only when the site takes the bookings itself** (effective `online`): the platform has no booking data for a tour reserved elsewhere
+  (`seats_taken` is only moved by an online payment), so in the other modes the model carries no capacity, no seats left, no availability wording and no
+  booking id, and an edition is «تکمیل» only when the admin closed it. If real counts are wanted for `external` tours, the admin needs a seats field it maintains (not built).
+* **Dates in every mode.** A future dated edition shows its date on the tour page and, as «جمعه ۱۷ مهر» (`formatCardDateFa`: weekday, day, month), on the cards.
+  A tour whose only dated edition is closed shows that date with «تکمیل» on its card (the home «تجربه‌های پیش‌رو» row still lists only editions that are open).
+* **Region «تهران»** (`tehran`, tone `city`): stamp `.ck-stamp--city` on `--inverse` / `--on-inverse` (about 15:1 in both themes), `.ck-photo--city`, `.ex-dot--city`;
+  it is in the admin's region selects (tours and place profiles) and in the experiences filter.
+* **Role label per partner link** (`tour_hosts.role_label`, ≤ 40, plain text): the person's card says it instead of «برگزارکننده» / «هم‌برگزارکننده»; the admin sets it in
+  «۴. مکان و برگزارکنندگان» next to each linked person (a venue has none) and orders them there (the lead still comes first). The people are a grid on desktop and one column on a phone.
+
 ## Caching
 
 | What | Cache-Control |

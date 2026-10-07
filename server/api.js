@@ -3,6 +3,7 @@ import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
 import * as settings from './settings.js';
+import { onlineBookingEnabled } from './booking.js';
 import { buildTourPage, buildHomePage, buildExperiencesPage, buildPlacesPage, buildHostPage, buildInfoPage } from './pagemodels.js';
 import { PAGE_CACHE_CONTROL } from './render.js';
 import { handleUpload, handleVideoUpload, MAX_VIDEO_BYTES, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
@@ -10,7 +11,7 @@ import {
   json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie, legacyAdminCookieClear,
   normalisePhone, validateProfile, validateReview, validatePassword,
   validateHostProfile, validateHostApplication, validateHostMedia, validateUserName,
-  isValidHostSlug, validateEditionDates, validateRevision, validateProposal, isPendingPathFor, validateTourEditorial
+  isValidHostSlug, validateEditionDates, validateRevision, validateProposal, isPendingPathFor, validateTourEditorial, validateRoleLabel
 } from './util.js';
 
 function bearerOrCookieToken(req) {
@@ -69,6 +70,18 @@ function bookingResultRedirect(status, extra = {}) {
 function redirect(res, location) {
   res.writeHead(302, { location });
   res.end();
+}
+
+// The site-wide online booking switch (BOOKING_ONLINE_ENABLED, server/booking.js). Checked before anything else
+// in the booking and payment routes: before the session, before the body is read, so an anonymous probe gets the
+// same answer and nothing is created.
+const ONLINE_BOOKING_DISABLED = { error: 'online_booking_disabled', message: 'Online booking is not enabled.' };
+
+// An 'external' tour needs a link: the one in this request, else the stored one. `stored` is null for a new tour.
+function bookingProblem(editorial, stored) {
+  const mode = 'bookingMode' in editorial ? editorial.bookingMode : (stored ? stored.booking_mode : 'online');
+  const url = 'bookingUrl' in editorial ? editorial.bookingUrl : (stored ? stored.booking_url : null);
+  return mode === 'external' && !url ? { bookingUrl: 'required' } : null;
 }
 
 export async function handleApi(req, res, url) {
@@ -319,8 +332,13 @@ export async function handleApi(req, res, url) {
     if (!user) return;
     let ref = '';
     try { ref = decodeURIComponent(m[1]); } catch { /* malformed: not found */ }
-    const booking = db.getUserBookingByRef(user.id, ref);
-    return booking ? json(res, 200, { booking }, { 'cache-control': 'private, no-store' }) : json(res, 404, { error: 'not_found' });
+    const row = db.getUserBookingByRef(user.id, ref);
+    if (!row) return json(res, 404, { error: 'not_found' });
+    // `onlineBookingOpen`: whether a new online booking of this tour is possible at all right now (the result page
+    // offers "try again" only then). The tour's stored mode itself is not part of the answer.
+    const { tourBookingMode, ...booking } = row;
+    const onlineBookingOpen = onlineBookingEnabled() && (!tourBookingMode || tourBookingMode === 'online');
+    return json(res, 200, { booking, onlineBookingOpen }, { 'cache-control': 'private, no-store' });
   }
 
   if (path === '/api/me/reviews' && method === 'GET') {
@@ -433,6 +451,7 @@ export async function handleApi(req, res, url) {
 
   // --- bookings -----------------------------------------------------------
   if (path === '/api/bookings' && method === 'POST') {
+    if (!onlineBookingEnabled()) return json(res, 409, ONLINE_BOOKING_DISABLED);
     const user = requireUser(req, res);
     if (!user) return;
     const body = await readJson(req);
@@ -454,7 +473,7 @@ export async function handleApi(req, res, url) {
       return json(res, 201, { ok: true, booking: { id: booking.id, ref: booking.ref, total: booking.total, status: booking.status } });
     } catch (err) {
       if (err instanceof db.BookingError) {
-        const status = (err.code === 'not_enough_seats' || err.code === 'date_in_past') ? 409 : 404;
+        const status = (err.code === 'not_enough_seats' || err.code === 'date_in_past' || err.code === 'online_booking_unavailable') ? 409 : 404;
         return json(res, status, { error: err.code });
       }
       throw err;
@@ -473,6 +492,7 @@ export async function handleApi(req, res, url) {
   // in Toman) — never from anything the client sends — and converted to
   // Rial only at the point of building the ZarinPal payload (zarinpal.js).
   if (path === '/api/payments/zarinpal/request' && method === 'POST') {
+    if (!onlineBookingEnabled()) return json(res, 409, ONLINE_BOOKING_DISABLED);
     const user = requireUser(req, res);
     if (!user) return;
     const body = await readJson(req);
@@ -483,6 +503,9 @@ export async function handleApi(req, res, url) {
 
     const booking = db.getBookingWithTourName(bookingId);
     if (!booking || booking.user_id !== user.id) return json(res, 404, { error: 'not_found' });
+    if (booking.tourBookingMode && booking.tourBookingMode !== 'online') {
+      return json(res, 409, { error: 'online_booking_unavailable' });
+    }
     if (booking.payment_status !== 'pending') {
       return json(res, 400, { error: 'not_payable', paymentStatus: booking.payment_status });
     }
@@ -513,6 +536,10 @@ export async function handleApi(req, res, url) {
     const status = url.searchParams.get('Status') || '';
     const booking = authority ? db.getBookingByAuthority(authority) : null;
     if (!booking) return redirect(res, bookingResultRedirect('error'));
+
+    // Switch off: a gateway session that was started before it went off is not confirmed either. The booking stays
+    // exactly as it is (nothing is marked paid or failed, no seat is taken) and the result page says so.
+    if (!onlineBookingEnabled()) return redirect(res, bookingResultRedirect('disabled', { ref: booking.ref }));
 
     // Idempotent: ZarinPal (or the user's browser) may hit this callback more
     // than once for the same authority. Once a booking has left 'pending' it
@@ -577,7 +604,8 @@ export async function handleApi(req, res, url) {
     if (!admin) return json(res, 401, { error: 'unauthorized' });
 
     if (path === '/api/admin/me' && method === 'GET') {
-      return json(res, 200, { admin });
+      // `onlineBooking`: the site-wide switch, so the tour editor can say that «آنلاین» does not book while it is off
+      return json(res, 200, { admin, onlineBooking: onlineBookingEnabled() });
     }
 
     if (path === '/api/admin/tours' && method === 'GET') {
@@ -593,7 +621,8 @@ export async function handleApi(req, res, url) {
       if (!body.value.name) return json(res, 422, { error: 'validation_failed', fields: { name: 'required' } });
       if (db.tourExists(id)) return json(res, 409, { error: 'id_taken' });
       const editorial = validateTourEditorial(body.value);
-      if (!editorial.ok) return json(res, 422, { error: 'validation_failed', fields: editorial.errors });
+      const missing = editorial.ok ? bookingProblem(editorial.value, null) : null;
+      if (!editorial.ok || missing) return json(res, 422, { error: 'validation_failed', fields: editorial.ok ? missing : editorial.errors });
       return json(res, 201, { tour: db.createTour({ ...body.value, ...editorial.value, id }) });
     }
     if ((m = new RegExp(`^/api/admin/tours/${ID}$`).exec(path)) && method === 'GET') {
@@ -606,7 +635,8 @@ export async function handleApi(req, res, url) {
       const body = await readJson(req, 64 * 1024);
       if (!body.ok) return json(res, 400, { error: body.error });
       const editorial = validateTourEditorial(body.value);
-      if (!editorial.ok) return json(res, 422, { error: 'validation_failed', fields: editorial.errors });
+      const missing = editorial.ok ? bookingProblem(editorial.value, db.getTourBookingRow(m[1])) : null;
+      if (!editorial.ok || missing) return json(res, 422, { error: 'validation_failed', fields: editorial.ok ? missing : editorial.errors });
       return json(res, 200, { tour: db.updateTour(m[1], { ...body.value, ...editorial.value }) });
     }
     if ((m = new RegExp(`^/api/admin/tours/${ID}$`).exec(path)) && method === 'DELETE') {
@@ -915,7 +945,11 @@ export async function handleApi(req, res, url) {
           return json(res, 422, { error: 'validation_failed', fields: { role: 'multiple_venues' } });
         }
 
-        entries.push({ hostId, role, sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : entries.length });
+        // The label a person's card carries on this tour (plain text, <= 40); a venue has none.
+        const label = validateRoleLabel(role === 'venue' ? null : raw.roleLabel);
+        if (!label.ok) return json(res, 422, { error: 'validation_failed', fields: { roleLabel: label.error } });
+
+        entries.push({ hostId, role, roleLabel: label.value, sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : entries.length });
       }
       return json(res, 200, { hosts: db.setTourHosts(tourId, entries) });
     }
@@ -955,7 +989,9 @@ export async function handleApi(req, res, url) {
   if (path === '/api/health' && method === 'GET') {
     try {
       db.db.prepare('SELECT 1').get();
-      return json(res, 200, { status: 'ok' });
+      // The body stays exactly {status:"ok"}; the switch is a header, read by the deploy's post-check
+      // (POST /api/bookings must answer 409 while it is off, 401 to an anonymous caller while it is on).
+      return json(res, 200, { status: 'ok' }, { 'x-online-booking': onlineBookingEnabled() ? 'on' : 'off' });
     } catch {
       return json(res, 503, { status: 'error' });
     }

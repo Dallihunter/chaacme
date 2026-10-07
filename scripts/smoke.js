@@ -94,6 +94,7 @@ const server = spawn(process.execPath, ['server/index.js'], {
     ZARINPAL_BASE_URL_OVERRIDE: ZARINPAL_MOCK_BASE,
     ZARINPAL_MERCHANT_ID: '11111111-1111-1111-1111-111111111111',
     ZARINPAL_CALLBACK_URL: `${BASE}/api/payments/zarinpal/callback`,
+    BOOKING_ONLINE_ENABLED: 'true', // the smoke run walks the whole online booking flow (the switch's off state is test/booking-switch.test.js)
     FRONTEND_ORIGIN: TEST_ORIGIN // never actually called — smoke only inspects the redirect Location; also the write-guard allowlist
   },
   stdio: ['ignore', 'pipe', 'pipe']

@@ -104,12 +104,15 @@
 .ck-stamp--desert { background: var(--clay); color: var(--on-clay); }
 .ck-stamp--forest { background: var(--forest); color: var(--paper); }
 .ck-stamp--sea { background: var(--sea); color: var(--paper); }
+/* city (Tehran): the inverse pair, so the contrast follows the theme (about 15:1 in both) */
+.ck-stamp--city { background: var(--inverse); color: var(--on-inverse); }
 
 /* ---------- Photo frame (real photo or honest placeholder) ---------- */
 .ck-photo { position: relative; overflow: hidden; border-radius: var(--radius-md); aspect-ratio: 4 / 3; background: var(--clay-tint); }
 .ck-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ck-photo--forest { background: var(--forest-tint); }
 .ck-photo--sea { background: var(--sea-tint); }
+.ck-photo--city { background: var(--line); }
 .ck-photo__empty { position: absolute; inset: 0; display: grid; place-items: center; font: 400 12px/19px var(--font-sans); color: var(--ink-muted); }
 
 /* ---------- Experience card ---------- */
@@ -339,8 +342,9 @@ body { margin: 0; background: var(--paper); }
 .tp-venue__line { margin: 0; color: var(--ink-muted); }
 .tp-venue__more { margin-top: auto; color: var(--clay); font-weight: 600; font-size: 14px; }
 
-.tp-people { display: flex; flex-direction: column; gap: 12px; }
-.tp-people .ck-pcard { max-width: 520px; }
+.tp-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.tp-people .ck-pcard { min-width: 0; }
+.tp-people .ck-pcard > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .tp-initial { display: grid; place-items: center; font-family: var(--font-display); font-size: 30px; color: var(--forest); }
 .tp-note { margin: 0; font-size: 14px; color: var(--ink-muted); }
 .tp-note b { color: var(--ink); }
@@ -380,6 +384,9 @@ body { margin: 0; background: var(--paper); }
 .tp-book__total b { color: var(--ink); font-size: 17px; }
 .tp-book__cta { min-height: 52px; font-size: 15px; }
 .tp-book__reason { margin: 0; text-align: center; font-size: 14px; color: var(--ink-muted); }
+.tp-book__note { margin: 0; font-size: 14px; line-height: 24px; color: var(--ink); overflow-wrap: anywhere; }
+a.tp-book__cta { text-align: center; }
+.tp-ed--info { cursor: default; }
 .tp-book__fine { margin: 0; font-size: 12px; line-height: 20px; color: var(--ink-muted); text-align: center; }
 
 .tp-related { margin-top: 80px; padding-top: 48px; border-top: 1px solid var(--line); }
@@ -460,6 +467,7 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
   .tp-venue__chips { display: none; }
   .tp-venue__more { margin-top: 6px; }
   .tp-note { font-size: 13px; }
+  .tp-people { grid-template-columns: 1fr; }
   .tp-related { margin-top: 56px; padding: 40px 16px 0; }
   .ck-site-footer { margin-top: 56px; }
   .tp-sticky { display: flex; position: fixed; bottom: 0; right: 0; left: 0; z-index: 20; background: var(--paper-raised); border-top: 1px solid var(--line);
@@ -538,7 +546,7 @@ dialog.tp-lb::backdrop { background: rgba(31, 26, 20, 0.92); }
 .ex-chip:has(input:checked) .ex-chip__in { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .ex-chip:has(input:focus-visible) .ex-chip__in { outline: 2px solid var(--focus); outline-offset: 2px; }
 .ex-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.ex-dot--forest { background: var(--forest); } .ex-dot--clay { background: var(--clay); } .ex-dot--sea { background: var(--sea); }
+.ex-dot--forest { background: var(--forest); } .ex-dot--clay { background: var(--clay); } .ex-dot--sea { background: var(--sea); } .ex-dot--city { background: var(--inverse); }
 .ex-select { min-width: 180px; }
 .ex-check, .ck-check { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; cursor: pointer; }
 .ex-check input, .ck-check input { accent-color: var(--clay); width: 20px; height: 20px; margin: 0; }
@@ -909,6 +917,7 @@ select.ck-input { appearance: auto; }
 .ad .th-row .th-name small { display: block; color: var(--ink-muted); font-size: 12px; }
 .ad .th-row select { width: auto; min-width: 120px; }
 .ad .th-row .th-ord { display: flex; gap: 4px; }
+.ad .th-row .th-label { flex: 1 1 100%; }
 .ad .th-row .th-ord button { width: 36px; height: 36px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--paper-raised); cursor: pointer; }
 .ad .th-row .th-ord button:disabled { opacity: .35; cursor: default; }
 .ad .th-add { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px; }

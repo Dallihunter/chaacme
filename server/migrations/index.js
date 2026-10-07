@@ -9,6 +9,7 @@ import m003 from './003_tour_page_content.js';
 import m004 from './004_site_content.js';
 import m005 from './005_credentials_public.js';
 import m006 from './006_absolute_image_paths.js';
+import m007 from './007_booking_mode_role_label.js';
 
 // Append only; ids strictly increasing.
-export default [m001, m002, m003, m004, m005, m006];
+export default [m001, m002, m003, m004, m005, m006, m007];

@@ -6,7 +6,7 @@ import { experienceCard } from '../components/experienceCard.js';
 import { emptyState } from '../components/emptyState.js';
 import { toFaDigits } from '../format.js';
 
-const DOT = { desert: 'clay', forest: 'forest', sea: 'sea' };
+const DOT = { desert: 'clay', forest: 'forest', sea: 'sea', city: 'city' };
 
 function regionChips(model) {
   const { regions } = model.options;

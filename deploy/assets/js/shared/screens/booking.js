@@ -40,20 +40,26 @@ const RESULT_NOTICE = {
   pending: { tone: 'pending', title: 'پرداخت هنوز تأیید نشده', text: 'اگر مبلغی از حساب شما کسر شده، چند دقیقه صبر کنید و این صفحه را دوباره باز کنید.' },
   failed: { tone: 'error', title: 'پرداخت انجام نشد', text: 'پرداخت تکمیل یا تأیید نشد. می‌توانید دوباره تلاش کنید.' },
   paid_no_capacity: { tone: 'error', title: 'پرداخت شما ثبت شد، اما ظرفیت این تاریخ تکمیل شده بود', text: 'برای پیگیری با پشتیبانی چکمه تماس بگیرید و کد رزرو را اعلام کنید.' },
-  canceled: { tone: 'pending', title: 'این رزرو لغو شده است', text: null }
+  canceled: { tone: 'pending', title: 'این رزرو لغو شده است', text: null },
+  // an old, still pending booking while the site-wide online booking switch is off: it is never confirmed or paid
+  online_off: { tone: 'pending', title: 'رزرو آنلاین فعلاً فعال نیست', text: 'این رزرو تأیید نشده است و پرداختی برای آن ثبت نمی‌شود.' }
 };
 
-export function resultNotice(b) {
-  const key = b.status === 'cancelled' ? 'canceled' : b.paymentStatus;
+/** `onlineOpen`: whether an online booking can be made right now (false while the switch is off); only a pending booking changes. */
+export function resultNotice(b, { onlineOpen = true } = {}) {
+  const key = b.status === 'cancelled' ? 'canceled' : (b.paymentStatus === 'pending' && !onlineOpen ? 'online_off' : b.paymentStatus);
   const n = RESULT_NOTICE[key] || RESULT_NOTICE.pending;
   return notice({ tone: n.tone, title: n.title, text: n.text });
 }
 
-/** The payment-result page body for one real booking. */
-export function resultView(b) {
+/**
+ * The payment-result page body for one real booking. `onlineOpen` is the API's `onlineBookingOpen`: while it is false the
+ * page does not offer "try again" and a pending booking says that online booking is off.
+ */
+export function resultView(b, { onlineOpen = true } = {}) {
   const st = bookingStatus(b);
   const paid = b.paymentStatus === 'paid' && b.status !== 'cancelled';
-  const retry = !paid && b.tourPublic && b.status !== 'cancelled' && b.paymentStatus !== 'paid_no_capacity';
+  const retry = onlineOpen && !paid && b.tourPublic && b.status !== 'cancelled' && b.paymentStatus !== 'paid_no_capacity';
   const rows = [
     ['تجربه', html`<a href="/tour/${encodeURIComponent(b.tourSlug)}">${b.tourTitle}</a>`],
     ['تاریخ اجرا', editionText(b) || null],
@@ -63,7 +69,7 @@ export function resultView(b) {
     ['کد رزرو', html`<span class="ck-latin">${b.ref}</span>`]
   ].filter(([, v]) => v);
   return html`<div class="au-card br-card"><h1 class="au-title">رزرو شما</h1>
-    ${resultNotice(b)}
+    ${resultNotice(b, { onlineOpen })}
     <dl class="br-list">${rows.map(([k, v]) => html`<div class="br-row"><dt>${k}</dt><dd>${v}</dd></div>`)}</dl>
     <div class="br-actions">
       ${retry ? html`<a class="ck-btn ck-btn--primary" href="/tour/${encodeURIComponent(b.tourSlug)}">تلاش دوباره برای رزرو</a>` : ''}

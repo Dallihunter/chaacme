@@ -17,6 +17,7 @@ import { experienceCard } from '../components/experienceCard.js';
 import { partnerCard } from '../components/partnerCard.js';
 import { pairing } from '../pairing.js';
 import { formatDateRangeFa, formatNumberFa, toFaDigits } from '../format.js';
+import { bookingLink, ONLINE_SOON_TEXT } from '../booking.js';
 
 export const MAX_GUESTS = 8;
 const MAX_MOSAIC = 5;
@@ -25,14 +26,30 @@ const editionText = (e) => formatDateRangeFa(e.startsOn, e.endsOn) || e.label;
 const dayLabel = (it, i) => it.label || `روز ${toFaDigits(i + 1)}`;
 const altOf = (img, fallback) => (img && img.alt) || fallback;
 
-/** Which state the booking card is in; shared by the card, the sticky bar and the island. */
+/**
+ * Which state the booking card is in; shared by the card, the sticky bar and the island.
+ * `page.booking.effective` (server/booking.js) decides first: 'online' is the site's own form (the states below),
+ * 'external' a button to the tour's reservation link, 'none' dates and notes only (`soon`: an online tour while
+ * the site-wide switch is off). Only an 'online' page ever renders a form or a payment sentence.
+ */
 export function bookingState(page) {
+  const b = page.booking || { effective: 'online', soon: false, link: null, note: null };
+  if (b.effective === 'external') {
+    const link = b.link ? bookingLink(b.link.href) : null;
+    if (link) return { kind: 'external', open: [], link: { ...link, label: b.link.label }, reason: page.editions.length ? null : 'تاریخ بعدی اعلام می‌شود' };
+  }
+  if (b.effective !== 'online') {
+    return { kind: 'info', open: [], soon: !!b.soon, reason: page.editions.length ? null : 'تاریخ بعدی اعلام می‌شود' };
+  }
   const open = page.editions.filter((e) => !e.full && e.available > 0);
   if (page.comingSoon || !page.editions.length) return { kind: 'none', open, reason: 'تاریخ بعدی اعلام می‌شود' };
   if (!open.length) return { kind: 'full', open, reason: 'ظرفیت تکمیل است' };
   if (!(page.price > 0)) return { kind: 'no_price', open, reason: 'قیمت به‌زودی اعلام می‌شود' };
   return { kind: 'open', open, reason: null };
 }
+
+/** The anchor attributes of a reservation button: https opens in a new tab with rel="noopener"; tel: and mailto: do not. */
+const linkAttrs = (link) => (link.newTab ? html` target="_blank" rel="noopener"` : '');
 
 function guestOptions(max, selected = 1) {
   const n = Math.max(1, Math.min(MAX_GUESTS, max));
@@ -132,8 +149,23 @@ function conditions(page) {
 }
 
 // ---------------------------------------------------------------- booking card
+/** Dates as information (external / none / online while the switch is off): no radio, no form, no seat count. */
+function infoCard(page, st) {
+  const price = formatNumberFa(page.price);
+  const b = page.booking || {};
+  return html`<div class="tp-book" id="booking">
+    ${price ? html`<div><div class="tp-book__k">هزینهٔ هر نفر</div><div class="tp-book__price ck-num">${price} <small>تومان</small></div></div>` : ''}
+    ${page.editions.length ? html`<ul class="tp-eds">${page.editions.map((e) => html`<li class="tp-ed tp-ed--info${e.full ? ' tp-ed--full' : ''}"><span class="tp-ed__main"><span><b>${editionText(e)}</b>${page.duration ? html`<span class="tp-ed__sub">${page.duration}</span>` : ''}</span></span>${e.full ? statusBadge('hidden', 'تکمیل') : ''}</li>`)}</ul>` : ''}
+    ${st.reason ? html`<p class="tp-book__reason">${st.reason}</p>` : ''}
+    ${b.note ? html`<p class="tp-book__note">${b.note}</p>` : ''}
+    ${st.soon ? html`<p class="tp-book__reason" data-online-soon>${ONLINE_SOON_TEXT}</p>` : ''}
+    ${st.kind === 'external' ? html`<a class="ck-btn ck-btn--primary ck-btn--block tp-book__cta" href="${st.link.href}"${linkAttrs(st.link)} data-external-booking>${st.link.label}</a>` : ''}
+  </div>`;
+}
+
 function bookingCard(page) {
   const st = bookingState(page);
+  if (st.kind === 'external' || st.kind === 'info') return infoCard(page, st);
   const price = formatNumberFa(page.price);
   const first = st.open[0] || null;
   const fine = html`پرداخت امن با زرین‌پال`;
@@ -146,6 +178,7 @@ function bookingCard(page) {
     return html`<div class="tp-book" id="booking">${head}
       ${full.length ? html`<ul class="tp-eds">${full.map((e) => html`<li class="tp-ed tp-ed--full"><span class="tp-ed__main"><b>${editionText(e)}</b></span>${statusBadge('hidden', 'تکمیل')}</li>`)}</ul>` : ''}
       <p class="tp-book__reason">${st.reason}</p>
+      ${page.booking && page.booking.note ? html`<p class="tp-book__note">${page.booking.note}</p>` : ''}
     </div>`;
   }
   const maxFirst = Math.min(MAX_GUESTS, first.available);
@@ -161,6 +194,7 @@ function bookingCard(page) {
     </fieldset>
     <label class="ck-field"><span class="ck-field__label">تعداد نفرات</span><select class="ck-input" name="guests" data-guests>${guestOptions(maxFirst)}</select></label>
     <div class="tp-book__total" data-total-row><span>مبلغ کل</span><b class="ck-num" data-total>${formatNumberFa(page.price)} تومان</b></div>
+    ${page.booking && page.booking.note ? html`<p class="tp-book__note">${page.booking.note}</p>` : ''}
     ${notice({ tone: 'error', hidden: true })}
     <button type="submit" class="ck-btn ck-btn--primary ck-btn--block tp-book__cta" data-submit>رزرو این تجربه</button>
     <p class="tp-book__fine">${fine}</p>
@@ -170,8 +204,17 @@ function bookingCard(page) {
 function stickyBar(page) {
   const st = bookingState(page);
   const price = formatNumberFa(page.price);
-  if (!price && st.kind === 'none') return null;
   const first = st.open[0] || null;
+  const shown = page.editions.find((e) => !e.full) || page.editions[0] || null;
+  if (st.kind === 'external' || st.kind === 'info') {
+    const sub = shown ? editionText(shown) : st.reason;
+    if (!price && !sub && st.kind === 'info' && !st.soon) return null;
+    return html`<div class="tp-sticky" data-sticky>
+    <div>${price ? html`<div class="tp-sticky__price ck-num">${price} <small>تومان / نفر</small></div>` : ''}${sub ? html`<div class="tp-sticky__sub">${sub}</div>` : ''}${st.soon ? html`<div class="tp-sticky__sub">${ONLINE_SOON_TEXT}</div>` : ''}</div>
+    ${st.kind === 'external' ? html`<a class="ck-btn ck-btn--primary" href="${st.link.href}"${linkAttrs(st.link)} data-external-booking>${st.link.label}</a>` : ''}
+  </div>`;
+  }
+  if (!price && st.kind === 'none') return null;
   const sub = first ? [editionText(first), `${toFaDigits(first.available)} جای خالی`].join(' · ') : st.reason;
   return html`<div class="tp-sticky" data-sticky>
     <div>${price ? html`<div class="tp-sticky__price ck-num">${price} <small>تومان / نفر</small></div>` : ''}${sub ? html`<div class="tp-sticky__sub">${sub}</div>` : ''}</div>

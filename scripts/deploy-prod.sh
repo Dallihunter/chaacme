@@ -438,6 +438,28 @@ run_post_checks() {
   fi
   if [[ "${hdr,,}" == *'samesite=none'* ]]; then log "  FAIL a session cookie is SameSite=None"; rc=1; fi
 
+  # --- online booking switch (BOOKING_ONLINE_ENABLED) ---
+  # While the payment gateway is the ZarinPal sandbox nobody may "pay" and believe they bought a ticket, so the
+  # site ships with the switch OFF. The app says which it is in the x-online-booking header of /api/health. Off: an
+  # anonymous same-origin POST /api/bookings must be refused with 409 (and so must a payment request), before any
+  # session or body is looked at. On: the same request is a plain 401 (it needs a session). Either way nothing is
+  # created. A running release that predates the switch sends no header: that is a FAIL, because it would take
+  # (sandbox) payments (this is what a rollback to 2b565cc or older looks like).
+  fetch_page /api/health
+  local sw="${PAGE_HEAD,,}"
+  if [[ "$sw" == *'x-online-booking: off'* ]]; then
+    expect "online booking is off: POST /api/bookings is refused (409)" \
+      "$(site_post /api/bookings -H "Origin: $own" -H 'Content-Type: application/json' --data '{}')" 409 || rc=1
+    expect "online booking is off: POST /api/payments/zarinpal/request is refused (409)" \
+      "$(site_post /api/payments/zarinpal/request -H "Origin: $own" -H 'Content-Type: application/json' --data '{}')" 409 || rc=1
+  elif [[ "$sw" == *'x-online-booking: on'* ]]; then
+    expect "online booking is on: an anonymous POST /api/bookings needs a session (401)" \
+      "$(site_post /api/bookings -H "Origin: $own" -H 'Content-Type: application/json' --data '{}')" 401 || rc=1
+    log "  info online booking is ON (BOOKING_ONLINE_ENABLED): the site takes bookings and sends them to the payment gateway"
+  else
+    log "  FAIL /api/health does not say whether online booking is on or off (no x-online-booking header): the running release predates the switch and would take payments"; rc=1
+  fi
+
   # Hygiene, not a deploy gate: whether backup URLs are blocked is an nginx
   # concern that has been turned on and off independently of any deploy, and a
   # deploy must not be held hostage to it. Warn, do not fail.

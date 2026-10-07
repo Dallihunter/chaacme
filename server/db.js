@@ -569,6 +569,7 @@ export function tourDates(tourId) {
       endsOn: d.ends_on,
       capacity: d.capacity,
       past,
+      closed: !!d.closed,
       ...dateAvailability(d.capacity, d.seats_taken, d.closed, past)
     };
   });
@@ -722,7 +723,17 @@ export function getTourDetailAdmin(id) {
   if (!t) return null;
   // The editor's «روز/ماه روی کارت» fields read dayLabel/monthLabel; the shared view only carries the derived `date`, so a save
   // would blank both labels. They are admin-only here (the public JSON keeps `date`).
-  return { ...tourDetailFields(t), dayLabel: t.day_label ?? null, monthLabel: t.month_label ?? null };
+  return { ...tourDetailFields(t), dayLabel: t.day_label ?? null, monthLabel: t.month_label ?? null, ...bookingFields(t) };
+}
+
+/** The stored reservation setup of a tour, as the admin editor reads it (never part of the public JSON). */
+function bookingFields(t) {
+  return { bookingMode: t.booking_mode || 'online', bookingUrl: t.booking_url ?? null, bookingLabel: t.booking_label ?? null, bookingNote: t.booking_note ?? null };
+}
+
+/** The raw booking columns of a tour row (booking_mode, booking_url, booking_label, booking_note) for server/booking.js; null when there is no such tour. */
+export function getTourBookingRow(id) {
+  return db.prepare('SELECT id, status, booking_mode, booking_url, booking_label, booking_note FROM tours WHERE id = ?').get(id) ?? null;
 }
 
 // --- admin: catalog -------------------------------------------------------
@@ -785,12 +796,14 @@ export function createTour(t) {
   try {
     db.prepare(
       `INSERT INTO tours (id, status, featured, ordinal, name, subtitle_en, tags, duration, price, description, included, photo_path, day_label, month_label,
-                          story, region, experience_type, level, bring_list, seo_description)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                          story, region, experience_type, level, bring_list, seo_description,
+                          booking_mode, booking_url, booking_label, booking_note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(t.id, t.status || 'draft', t.featured ? 1 : 0, t.ordinal ?? 0, t.name, t.subtitleEn ?? null,
       t.tags ?? null, t.duration ?? null, t.price ?? null, t.description ?? null, t.included ?? null,
       t.photoPath ?? null, t.dayLabel ?? null, t.monthLabel ?? null,
-      t.story ?? null, t.region ?? null, t.experienceType ?? null, t.level ?? null, t.bringList ?? null, t.seoDescription ?? null);
+      t.story ?? null, t.region ?? null, t.experienceType ?? null, t.level ?? null, t.bringList ?? null, t.seoDescription ?? null,
+      t.bookingMode ?? 'online', t.bookingUrl ?? null, t.bookingLabel ?? 'رزرو', t.bookingNote ?? null);
     replaceTourChildren(t.id, t);
     db.exec('COMMIT');
   } catch (err) {
@@ -805,7 +818,8 @@ const TOUR_FIELDS = {
   tags: 'tags', duration: 'duration', price: 'price', description: 'description', included: 'included',
   photoPath: 'photo_path', dayLabel: 'day_label', monthLabel: 'month_label',
   story: 'story', region: 'region', experienceType: 'experience_type', level: 'level',
-  bringList: 'bring_list', seoDescription: 'seo_description'
+  bringList: 'bring_list', seoDescription: 'seo_description',
+  bookingMode: 'booking_mode', bookingUrl: 'booking_url', bookingLabel: 'booking_label', bookingNote: 'booking_note'
 };
 
 export function updateTour(id, patch) {
@@ -969,6 +983,8 @@ export function createBooking({ userId, tourId, tourDateId, guests }) {
 
   const tour = db.prepare(`SELECT * FROM tours WHERE id = ? AND status = 'published'`).get(tourId);
   if (!tour) throw new BookingError('tour_not_found');
+  // A tour reserved elsewhere ('external') or not reservable ('none') never takes an online booking.
+  if (tour.booking_mode && tour.booking_mode !== 'online') throw new BookingError('online_booking_unavailable');
 
   if (isPastEdition(tourDate)) throw new BookingError('date_in_past');
   const avail = dateAvailability(tourDate.capacity, tourDate.seats_taken, tourDate.closed);
@@ -995,7 +1011,7 @@ export function getBookingByAuthority(authority) {
 /** Booking row plus the tour name needed for the ZarinPal request description. */
 export function getBookingWithTourName(id) {
   return db.prepare(
-    `SELECT b.*, t.name AS tourName FROM bookings b JOIN tours t ON t.id = b.tour_id WHERE b.id = ?`
+    `SELECT b.*, t.name AS tourName, t.booking_mode AS tourBookingMode FROM bookings b JOIN tours t ON t.id = b.tour_id WHERE b.id = ?`
   ).get(id);
 }
 
@@ -1097,7 +1113,7 @@ export function getUserBookingByRef(userId, ref) {
   if (!userId || typeof ref !== 'string' || !/^CHK-\d{5}$/.test(ref)) return null;
   const b = db.prepare(
     `SELECT b.ref, b.guests, b.total, b.price_per_person AS pricePerPerson, b.status, b.payment_status AS paymentStatus, b.created_at AS createdAt,
-            t.id AS tourSlug, t.name AS tourTitle, t.status AS tourStatus,
+            t.id AS tourSlug, t.name AS tourTitle, t.status AS tourStatus, t.booking_mode AS tourBookingMode,
             d.label AS dateLabel, d.starts_on AS startsOn, d.ends_on AS endsOn
      FROM bookings b JOIN tours t ON t.id = b.tour_id JOIN tour_dates d ON d.id = b.tour_date_id
      WHERE b.ref = ? AND b.user_id = ?`
@@ -1353,11 +1369,11 @@ export function setHostMedia(hostId, items, deleteFile) {
  */
 export function tourHostsPublic(tourId) {
   return db.prepare(
-    `SELECT h.*, th.role FROM tour_hosts th
+    `SELECT h.*, th.role, th.role_label FROM tour_hosts th
      JOIN hosts h ON h.id = th.host_id
      WHERE th.tour_id = ? AND h.status = 'active'
      ORDER BY CASE th.role WHEN 'venue' THEN 0 WHEN 'lead' THEN 1 ELSE 2 END, th.sort_order, h.id`
-  ).all(tourId).map((h) => ({ ...publicHostFields(h), role: h.role }));
+  ).all(tourId).map((h) => ({ ...publicHostFields(h), role: h.role, roleLabel: h.role_label || null }));
 }
 
 /**
@@ -1505,11 +1521,11 @@ export function updateHost(id, v) {
 /** Replaces a tour's whole host list in one transaction. */
 export function setTourHosts(tourId, entries) {
   const del = db.prepare('DELETE FROM tour_hosts WHERE tour_id = ?');
-  const ins = db.prepare('INSERT INTO tour_hosts (tour_id, host_id, role, sort_order) VALUES (?, ?, ?, ?)');
+  const ins = db.prepare('INSERT INTO tour_hosts (tour_id, host_id, role, sort_order, role_label) VALUES (?, ?, ?, ?, ?)');
   db.exec('BEGIN');
   try {
     del.run(tourId);
-    entries.forEach((e, i) => ins.run(tourId, e.hostId, e.role, e.sortOrder ?? i));
+    entries.forEach((e, i) => ins.run(tourId, e.hostId, e.role, e.sortOrder ?? i, e.roleLabel || null));
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
@@ -1532,7 +1548,7 @@ export function hostKindsById(ids) {
 export function tourHostsAdmin(tourId) {
   return db.prepare(
     `SELECT h.id AS hostId, h.slug, h.display_name AS displayName, h.kind, h.status,
-            th.role, th.sort_order AS sortOrder
+            th.role, th.sort_order AS sortOrder, th.role_label AS roleLabel
      FROM tour_hosts th JOIN hosts h ON h.id = th.host_id
      WHERE th.tour_id = ?
      ORDER BY CASE th.role WHEN 'venue' THEN 0 WHEN 'lead' THEN 1 ELSE 2 END, th.sort_order, h.id`

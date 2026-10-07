@@ -16,6 +16,6 @@ import { loginHref } from '/assets/js/shared/site.js';
   if (!(await currentUser())) { location.replace(loginHref(resultHref(ref))); return; }
   const r = await api('GET', `/me/bookings/${encodeURIComponent(ref)}`);
   if (r.status === 401) { location.replace(loginHref(resultHref(ref))); return; }
-  mount(root, r.ok && r.data.booking ? resultView(r.data.booking) : resultNotFound());
+  mount(root, r.ok && r.data.booking ? resultView(r.data.booking, { onlineOpen: r.data.onlineBookingOpen !== false }) : resultNotFound());
   const h1 = root.querySelector('h1'); if (h1) { h1.tabIndex = -1; h1.focus(); }
 })();

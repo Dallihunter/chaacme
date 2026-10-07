@@ -13,7 +13,9 @@ const IMAGES = join(dir, 'images');
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),
   FRONTEND_STATIC_DIR: IMAGES, SITE_ORIGIN: 'https://example.test/', PORT: String(PORT), HOST: '127.0.0.1',
-  FRONTEND_ORIGIN: 'https://example.test'
+  FRONTEND_ORIGIN: 'https://example.test',
+  // these tests cover the site's own booking card; the switch's off state is covered in test/booking-switch.test.js
+  BOOKING_ONLINE_ENABLED: 'true'
 });
 
 const { server } = await import('../server/index.js');

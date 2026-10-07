@@ -2,23 +2,26 @@ import { html } from '../html.js';
 import { photo } from './photo.js';
 import { regionStamp } from './regionStamp.js';
 import { pairing } from '../pairing.js';
-import { formatDateRangeFa, formatNumberFa, toFaDigits } from '../format.js';
+import { formatCardDateFa, formatNumberFa, toFaDigits } from '../format.js';
 
 /**
  * Card for one experience (view-model "card": slug, name, region, comingSoon, cover, leadName,
  * venueName, nextEdition, price, duration). `meta` picks what follows the date: 'duration' (home,
  * profiles) or 'seats' (the experiences listing). No cover = the tinted frame only, never a label.
  * `dateTbd` (the home when no edition is open): the date line says the next date is still to come and no price is shown.
+ * The date is written as «جمعه ۱۷ مهر» (formatCardDateFa) in every booking mode; a seat count appears only when the card carries a
+ * real one (`available`, which the page model leaves null unless the site takes the bookings itself), and a closed edition says «تکمیل».
  */
 export function experienceCard(card, { meta = 'duration', dateTbd = false } = {}) {
   const tone = card.region ? card.region.tone : null;
-  const photoClass = tone === 'forest' || tone === 'sea' ? ` ck-photo--${tone}` : '';
+  const photoClass = tone === 'forest' || tone === 'sea' || tone === 'city' ? ` ck-photo--${tone}` : '';
   const next = card.nextEdition
-    ? (formatDateRangeFa(card.nextEdition.startsOn, card.nextEdition.endsOn) || card.nextEdition.label)
+    ? (formatCardDateFa(card.nextEdition.startsOn, card.nextEdition.endsOn) || card.nextEdition.label)
     : null;
-  const tail = meta === 'seats'
-    ? (card.nextEdition && card.nextEdition.available > 0 ? `${toFaDigits(card.nextEdition.available)} جای خالی` : null)
-    : card.duration;
+  const tail = card.nextEdition && card.nextEdition.full ? 'تکمیل'
+    : meta === 'seats'
+      ? (card.nextEdition && card.nextEdition.available > 0 ? `${toFaDigits(card.nextEdition.available)} جای خالی` : null)
+      : card.duration;
   const dateLine = dateTbd ? 'تاریخ بعدی به‌زودی اعلام می‌شود'
     : card.comingSoon ? 'به‌زودی' : next ? [next, tail].filter(Boolean).join(' · ') : 'اعلام می‌شود';
   const price = formatNumberFa(card.price);

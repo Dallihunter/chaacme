@@ -85,7 +85,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // ---------------------------------------------------------------------
   // App state + tiny hash router
   // ---------------------------------------------------------------------
-  const state = { admin: null, tours: [], bookings: [], bookingsFilter: '', busy: false,
+  const state = { admin: null, onlineBooking: null, tours: [], bookings: [], bookingsFilter: '', busy: false,
                   hosts: [], applications: [], applicationsFilter: '', hostsFilter: '',
                   revisionsFilter: 'pending', proposalsFilter: '' };
   const app = document.getElementById('app');
@@ -115,6 +115,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     try {
       const me = await api('/admin/me');
       state.admin = me.admin;
+      state.onlineBooking = me.onlineBooking === undefined ? null : !!me.onlineBooking;
     } catch(e){ state.admin = null; }
     route();
   }
@@ -357,6 +358,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         });
         const me = await api('/admin/me');
         state.admin = me.admin;
+        state.onlineBooking = me.onlineBooking === undefined ? null : !!me.onlineBooking;
         location.hash = '#/tours';
         route();
       } catch(err){
@@ -471,7 +473,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
   // Editor — shared for create + edit
   // ---------------------------------------------------------------------
   const MAX_ITIN_IMAGES = 6;
-  const REGIONS = [['', '— بدون —'], ['desert', 'کویر'], ['forest', 'جنگل شمال'], ['sea', 'جزیره']];
+  const REGIONS = [['', '— بدون —'], ['desert', 'کویر'], ['forest', 'جنگل شمال'], ['sea', 'جزیره'], ['tehran', 'تهران']];
   function limitedField(label, id, value, max, area){
     const v = value == null ? '' : value;
     return '<div class="field"><label>' + esc(label) + ' <span style="color:var(--ink-muted)">(حداکثر ' + max + ')</span></label>' +
@@ -486,6 +488,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       subtitleEn: '', tags: '', duration: '', price: '', description: '', included: '',
       story: '', region: '', experienceType: '', level: '', bringList: '', seoDescription: '',
       photoPath: '', dayLabel: '', monthLabel: '',
+      bookingMode: 'online', bookingUrl: '', bookingLabel: '', bookingNote: '',
       highlights: [], itinerary: [], reviewCategories: [],
       gallery: [], galleryPhotos: [], galleryMedia: []
     };
@@ -611,6 +614,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       '</section>' +
 
       '<section class="panel" id="sec-5"><h2>۵. اجراها و قیمت ' + hint('کارت رزرو') + '</h2>' +
+        bookingBlockHtml(t) +
+        '<h3 class="where" style="margin:8px 0 10px">اجراها (تاریخ‌ها)</h3>' +
         '<div id="editionsPanel">' +
         (ed.isNew
           ? '<p class="muted">ابتدا تجربه را ذخیره کنید، بعد تاریخ‌ها را اینجا اضافه کنید.</p>'
@@ -669,11 +674,117 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
 
     bindCoverUpload(ed);
     if (!ed.isNew) bindGallery(ed);
+    const bookingSel = document.getElementById('f_bookingMode');
+    if (bookingSel) bookingSel.addEventListener('change', paintBookingHint);
+    paintBookingHint();
 
     var delBtn = document.getElementById('deleteTourBtn');
     if (delBtn) delBtn.addEventListener('click', function(){ deleteTour(ed); });
 
     document.getElementById('saveBtn').addEventListener('click', function(){ saveTour(ed); });
+  }
+
+  // ---------------------------------------------------------------------
+  // Reservation: how the tour is booked (section 5)
+  // ---------------------------------------------------------------------
+  // The checks below mirror deploy/assets/js/shared/booking.js (this page is a plain script and does not import it);
+  // the server checks again and is the judge. test/booking-mode.test.js runs both over the same inputs.
+  const BOOKING_MODES = [
+    ['online', 'آنلاین (پرداخت در خود سایت)'],
+    ['external', 'رزرو بیرونی (دکمه‌ای که به لینک، تماس یا ایمیل می‌رود)'],
+    ['none', 'بدون رزرو (فقط تاریخ و توضیح)']
+  ];
+  const BOOKING_UNSAFE = /[\s\u0000-\u001f\u007f-\u009f"'<>`\\\u2028\u2029]/;
+  const BOOKING_TEL = /^tel:\+?[0-9()\-.]{3,30}$/i;
+  const BOOKING_MAILTO = /^mailto:[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+(?:\?[A-Za-z0-9._~%!$&()*+,;=:@/?-]*)?$/i;
+  // '' when the link is fine (or empty), else 'length' | 'format' | 'scheme'
+  function bookingUrlProblem(raw){
+    const s = String(raw == null ? '' : raw).trim();
+    if (!s) return '';
+    if (s.length > 300) return 'length';
+    if (BOOKING_UNSAFE.test(s)) return 'format';
+    const sc = /^([a-z][a-z0-9+.-]*):/i.exec(s);
+    const name = sc ? sc[1].toLowerCase() : '';
+    if (name === 'tel') return BOOKING_TEL.test(s) && /\d.*\d.*\d/.test(s) ? '' : 'format';
+    if (name === 'mailto') return BOOKING_MAILTO.test(s) ? '' : 'format';
+    if (name !== 'https') return 'scheme';
+    if (!/^https:\/\/[^/?#]/i.test(s)) return 'format';
+    try { const u = new URL(s); return (u.protocol === 'https:' && u.hostname && !u.username && !u.password) ? '' : 'format'; }
+    catch(e){ return 'format'; }
+  }
+  const BOOKING_MESSAGES = {
+    bookingMode: { value: 'حالت رزرو معتبر نیست.' },
+    bookingUrl: {
+      required: 'برای رزرو بیرونی، لینک رزرو لازم است.',
+      scheme: 'لینک رزرو فقط می‌تواند با https://‎ ، tel: یا mailto: شروع شود (http:// و بقیه پذیرفته نیست).',
+      format: 'لینک رزرو معتبر نیست. بدون فاصله و علامت اضافه، مثلاً https://example.com/book یا tel:+989121234567 یا mailto:info@example.com',
+      length: 'لینک رزرو حداکثر ۳۰۰ نویسه است.',
+      type: 'لینک رزرو معتبر نیست.'
+    },
+    bookingLabel: { length: 'متن دکمه حداکثر ۴۰ نویسه است.', format: 'متن دکمه نویسهٔ غیرمجاز دارد.', type: 'متن دکمه معتبر نیست.' },
+    bookingNote: { length: 'یادداشت حداکثر ۲۰۰ نویسه است.', format: 'یادداشت نویسهٔ غیرمجاز دارد.', type: 'یادداشت معتبر نیست.' },
+    roleLabel: { length: 'عنوان نقش حداکثر ۴۰ نویسه است.', format: 'عنوان نقش نویسهٔ غیرمجاز دارد.', type: 'عنوان نقش معتبر نیست.' }
+  };
+  // First Persian message for the booking fields in a server 422 body ({ fields: { bookingUrl: 'scheme', ... } }), or ''.
+  function bookingFieldMessage(fields){
+    const keys = Object.keys(BOOKING_MESSAGES);
+    for (let i = 0; i < keys.length; i++){
+      const code = fields && fields[keys[i]];
+      if (code) return BOOKING_MESSAGES[keys[i]][code] || ('این فیلد را بررسی کنید: ' + keys[i]);
+    }
+    return '';
+  }
+
+  function bookingBlockHtml(t){
+    const mode = t.bookingMode || 'online';
+    return '<h3 class="where" style="margin:0 0 10px">رزرو <span class="muted">(روی کارت رزرو و نوار پایین موبایل)</span></h3>' +
+      '<div class="field"><label>نوع رزرو</label><select id="f_bookingMode">' +
+        BOOKING_MODES.map(function(m){ return '<option value="' + m[0] + '"' + (m[0] === mode ? ' selected' : '') + '>' + esc(m[1]) + '</option>'; }).join('') +
+      '</select></div>' +
+      '<p class="muted" id="bookingModeHint" style="margin:-8px 0 14px"></p>' +
+      '<div id="bookingExtBox">' +
+        '<div class="grid2">' +
+          '<div class="field"><label>لینک رزرو <span class="muted">(فقط https:// ، tel: یا mailto: ؛ حداکثر ۳۰۰)</span></label>' +
+            '<input type="text" id="f_bookingUrl" dir="ltr" maxlength="300" value="' + esc(t.bookingUrl || '') + '" placeholder="https://example.com/book  یا  tel:+989121234567"></div>' +
+          limitedField('متن دکمه (خالی = «رزرو»)', 'f_bookingLabel', t.bookingLabel, 40) +
+        '</div>' +
+      '</div>' +
+      limitedField('یادداشت کنار تاریخ‌ها (متن ساده)', 'f_bookingNote', t.bookingNote, 200) +
+      '<p class="msg" id="bookingMsg" style="color:var(--danger);font-size:13px;min-height:0" role="alert"></p>';
+  }
+
+  function paintBookingHint(){
+    const sel = document.getElementById('f_bookingMode');
+    if (!sel) return;
+    const mode = sel.value;
+    const box = document.getElementById('bookingExtBox');
+    if (box) box.hidden = mode !== 'external';
+    const hint = document.getElementById('bookingModeHint');
+    if (!hint) return;
+    hint.textContent = mode === 'external'
+      ? 'تاریخ‌ها فقط برای اطلاع نشان داده می‌شوند (بدون تعداد جای خالی و ظرفیت)، همراه یک دکمه که به لینک بالا می‌رود.'
+      : mode === 'none'
+        ? 'فقط تاریخ‌ها و یادداشت نشان داده می‌شود؛ هیچ دکمه‌ای نیست.'
+        : (state.onlineBooking === false
+          ? 'رزرو آنلاین در کل سایت فعلاً خاموش است: این تجربه مثل «بدون رزرو» نشان داده می‌شود و زیرش نوشته می‌شود «رزرو آنلاین به‌زودی فعال می‌شود».'
+          : 'فرم رزرو و پرداخت خود سایت (ظرفیت و جای خالی از همین پنل).');
+  }
+
+  // '' when the booking fields are fine, else a Persian message (and the field is focused)
+  function bookingFormProblem(){
+    const mode = val('f_bookingMode');
+    const url = val('f_bookingUrl');
+    let code = '';
+    let field = '';
+    if (mode === 'external' && !url){ code = 'required'; field = 'f_bookingUrl'; }
+    else if (url && (code = bookingUrlProblem(url))) field = 'f_bookingUrl';
+    else if (val('f_bookingLabel').length > 40){ code = 'length'; field = 'f_bookingLabel'; }
+    else if (val('f_bookingNote').length > 200){ code = 'length'; field = 'f_bookingNote'; }
+    if (!code) return '';
+    const key = field === 'f_bookingUrl' ? 'bookingUrl' : (field === 'f_bookingLabel' ? 'bookingLabel' : 'bookingNote');
+    const el = document.getElementById(field);
+    if (el) el.focus();
+    return BOOKING_MESSAGES[key][code];
   }
 
   function field(label, id, value, placeholder, type){
@@ -1145,6 +1256,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       description: val('f_description'), included: val('f_included'),
       story: val('f_story'), region: val('f_region'), experienceType: val('f_experienceType'),
       level: val('f_level'), bringList: val('f_bringList'), seoDescription: val('f_seoDescription'),
+      bookingMode: val('f_bookingMode') || 'online', bookingUrl: val('f_bookingUrl'),
+      bookingLabel: val('f_bookingLabel'), bookingNote: val('f_bookingNote'),
       highlights: t.highlights.filter(function(h){ return h.name; }),
       itinerary: t.itinerary.filter(function(s){ return s.title; }),
       reviewCategories: t.reviewCategories.filter(function(c){ return c.label; })
@@ -1173,6 +1286,14 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     }
     const patch = readEditorFields(ed);
     if (!patch.name){ msg.textContent = 'عنوان لازم است.'; return; }
+    const bookingMsg = document.getElementById('bookingMsg');
+    if (bookingMsg) bookingMsg.textContent = '';
+    const bookingProblem = bookingFormProblem();
+    if (bookingProblem){
+      if (bookingMsg) bookingMsg.textContent = bookingProblem;
+      msg.textContent = bookingProblem;
+      return;
+    }
 
     const featuredWithoutDate = patch.featured && (!patch.dayLabel || !patch.monthLabel);
     const savedMsg = featuredWithoutDate
@@ -1194,6 +1315,10 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       }
     } catch(e){
       if (e.status === 409) msg.textContent = 'این شناسه قبلاً استفاده شده است.';
+      else if (e.status === 422 && bookingFieldMessage(e.body && e.body.fields)) {
+        msg.textContent = bookingFieldMessage(e.body.fields);
+        if (bookingMsg) bookingMsg.textContent = msg.textContent;
+      }
       else if (e.status === 422) msg.textContent = 'این فیلدها را بررسی کنید: ' + Object.keys((e.body && e.body.fields) || {}).join(', ');
       else msg.textContent = 'ذخیره نشد. دوباره تلاش کنید.';
     } finally {
@@ -2094,7 +2219,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       ]);
       assigned.hosts.forEach(function(h){
         if (h.role === 'venue') tourHosts.venueId = h.hostId;
-        else tourHosts.people.push({ hostId: h.hostId, slug: h.slug, displayName: h.displayName, status: h.status, role: h.role });
+        else tourHosts.people.push({ hostId: h.hostId, slug: h.slug, displayName: h.displayName, status: h.status, role: h.role, roleLabel: h.roleLabel || '' });
       });
       tourHosts.loaded = true;
     } catch(e){
@@ -2164,6 +2289,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
             }).join('') +
           '</select>' +
           '<button type="button" class="btn small danger th-rm">حذف</button>' +
+          '<input type="text" class="th-label" maxlength="40" value="' + esc(a.roleLabel || '') + '" placeholder="عنوان روی کارت (حداکثر ۴۰)، مثلاً موسیقی جز و بلوز" aria-label="عنوان نقش روی کارت ' + esc(a.displayName) + '">' +
         '</div>';
     }).join('');
 
@@ -2231,6 +2357,11 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
         drawTourHosts();
       });
     });
+    panel.querySelectorAll('.th-label').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        tourHosts.people[Number(inp.closest('.th-row').dataset.i)].roleLabel = inp.value;
+      });
+    });
     panel.querySelectorAll('.th-role').forEach(function(sel){
       sel.addEventListener('change', function(){
         tourHosts.people[Number(sel.closest('.th-row').dataset.i)].role = sel.value;
@@ -2243,7 +2374,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
       const h = hostById(Number(sel.value));
       if (!h) return;
       tourHosts.people.push({
-        hostId: h.id, slug: h.slug, displayName: h.displayName, status: h.status,
+        hostId: h.id, slug: h.slug, displayName: h.displayName, status: h.status, roleLabel: '',
         // First one added is the lead; the rest default to co-host.
         role: tourHosts.people.length === 0 ? 'lead' : 'co_host'
       });
@@ -2263,7 +2394,7 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     // the public tour page renders it above the people.
     if (tourHosts.venueId) payload.push({ hostId: tourHosts.venueId, role: 'venue', sortOrder: 0 });
     tourHosts.people.forEach(function(a, i){
-      payload.push({ hostId: a.hostId, role: a.role, sortOrder: payload.length + i });
+      payload.push({ hostId: a.hostId, role: a.role, roleLabel: (a.roleLabel || '').trim(), sortOrder: payload.length + i });
     });
     try {
       await api('/admin/tours/' + encodeURIComponent(tourHosts.tourId) + '/hosts', {
@@ -2274,7 +2405,8 @@ import { html, toHtmlString } from '/assets/js/shared/html.js';
     } catch(e){
       if (e.status === 401){ state.admin = null; renderLogin(); return; }
       const field = e.body && e.body.fields ? (e.body.fields.role || e.body.fields.hostId) : null;
-      if (field === 'duplicate') msg.textContent = 'یک پروفایل دو بار آمده است.';
+      if (e.body && e.body.fields && e.body.fields.roleLabel) msg.textContent = BOOKING_MESSAGES.roleLabel[e.body.fields.roleLabel] || 'عنوان نقش معتبر نیست.';
+      else if (field === 'duplicate') msg.textContent = 'یک پروفایل دو بار آمده است.';
       else if (field === 'place_must_be_venue') msg.textContent = 'مکان فقط می‌تواند محل برگزاری باشد، نه همراه.';
       else if (field === 'person_cannot_be_venue') msg.textContent = 'شخص نمی‌تواند محل برگزاری باشد.';
       else if (field === 'multiple_venues') msg.textContent = 'هر تجربه فقط یک محل دارد.';

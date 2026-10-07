@@ -68,7 +68,8 @@ Object.assign(process.env, {
   FRONTEND_ORIGIN: O,                                    // production-like: the write guard runs in allowlist mode
   ZARINPAL_BASE_URL_OVERRIDE: MOCK,                      // the server calls the mock gateway...
   ZARINPAL_MERCHANT_ID: '11111111-1111-1111-1111-111111111111',
-  ZARINPAL_CALLBACK_URL: `${O}/api/payments/zarinpal/callback`
+  ZARINPAL_CALLBACK_URL: `${O}/api/payments/zarinpal/callback`,
+  BOOKING_ONLINE_ENABLED: 'true'                         // the payment flow itself is under test
 });
 const repo = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/$/, '');
 const { server } = await import(repo + '/server/index.js');

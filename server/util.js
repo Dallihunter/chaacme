@@ -2,6 +2,8 @@ import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { db } from './db.js';
 import { isSandbox, looksLikeMerchantId } from './zarinpal.js';
 import { REGIONS } from '../deploy/assets/js/shared/regions.js';
+import { BOOKING_LIMITS, isBookingMode, checkBookingUrl, checkBookingText } from '../deploy/assets/js/shared/booking.js';
+import { onlineBookingEnabled } from './booking.js';
 
 export function json(res, status, payload, headers = {}) {
   const body = JSON.stringify(payload);
@@ -144,6 +146,12 @@ export function describeRuntimeConfig(env = process.env) {
       const callback = (env.ZARINPAL_CALLBACK_URL || '').trim();
       return `ZARINPAL_SANDBOX=${sandbox} — merchant id ${merchantId ? (looksLikeMerchantId(merchantId) ? 'set' : 'set but not UUID-shaped') : 'NOT SET'}, `
         + `callback url ${callback || 'NOT SET'}`;
+    })(),
+    (() => {
+      const raw = (env.BOOKING_ONLINE_ENABLED ?? '').trim();
+      return onlineBookingEnabled(env)
+        ? 'BOOKING_ONLINE_ENABLED=true — the site takes bookings and sends them to the payment gateway'
+        : `online booking is OFF (BOOKING_ONLINE_ENABLED ${raw ? `is "${raw}", only true or 1 turn it on` : 'is unset'}) — bookings and payment requests answer 409, no page shows a payment form`;
     })()
   ];
 }
@@ -224,6 +232,13 @@ export function assertRuntimeConfig(env = process.env) {
     if (production) problems.push(msg); else warnings.push(msg);
   } else if (!/^https?:\/\//i.test(zarinpalCallbackUrl)) {
     problems.push('ZARINPAL_CALLBACK_URL must be an absolute http(s) URL.');
+  }
+
+  // Visitors must never "pay" in the sandbox and believe they bought something: online booking against the
+  // sandbox gateway is a test setup. Not a failure (the staging and test setups do exactly this), but loud.
+  if (onlineBookingEnabled(env) && zarinpalSandbox) {
+    warnings.push('BOOKING_ONLINE_ENABLED is on while ZARINPAL_SANDBOX is on: visitors can complete a sandbox payment '
+      + 'that moves no money and buys no ticket. Turn one of them off on a public site.');
   }
 
   return { problems, warnings };
@@ -907,6 +922,27 @@ export function validateTourEditorial(input) {
     else if (typeof r === 'string' && Object.hasOwn(REGIONS, r)) value.region = r;
     else errors.region = 'value';
   }
+
+  // How the tour is reserved (deploy/assets/js/shared/booking.js): mode, link, button label and note.
+  // The link may only be https://, tel: or mailto:; label and note are plain text (escaped when rendered).
+  if ('bookingMode' in input) {
+    if (isBookingMode(input.bookingMode)) value.bookingMode = input.bookingMode;
+    else errors.bookingMode = 'value';
+  }
+  if ('bookingUrl' in input) {
+    const v = input.bookingUrl;
+    if (v === null || (typeof v === 'string' && !v.trim())) value.bookingUrl = null;
+    else {
+      const c = checkBookingUrl(v);
+      if (c.ok) value.bookingUrl = c.value; else errors.bookingUrl = c.error;
+    }
+  }
+  for (const [key, max] of [['bookingLabel', BOOKING_LIMITS.label], ['bookingNote', BOOKING_LIMITS.note]]) {
+    if (!(key in input)) continue;
+    const c = checkBookingText(input[key], max);
+    if (c.ok) value[key] = c.value; else errors[key] = c.error;
+  }
+
   const path = (v, field) => {
     if (v === null || v === undefined || v === '') return null;
     if (!isPublicImagePath(v)) { errors[field] = 'format'; return null; }
@@ -969,4 +1005,15 @@ export function validateTourEditorial(input) {
   }
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value };
+}
+
+export const ROLE_LABEL_MAX = 40;
+
+/**
+ * The label a partner card shows instead of the default role word («برگزارکننده») for one tour_hosts link, e.g.
+ * «موسیقی جز و بلوز». Plain text, at most 40 characters, whitespace collapsed; empty or absent = no label.
+ * Returns { ok: true, value: string | null } or { ok: false, error: 'type' | 'length' | 'format' }.
+ */
+export function validateRoleLabel(input) {
+  return checkBookingText(input, ROLE_LABEL_MAX);
 }
