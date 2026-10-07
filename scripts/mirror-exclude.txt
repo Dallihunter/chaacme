@@ -14,3 +14,7 @@ docs/RESTORE.md
 # Screenshots of the built tour page (generated gradient fixtures, reviewed 2026-10-05: no people, no real photos).
 # The publish scan refuses every image, so they stay on the server copy; they were already public on PR #1's branch.
 docs/screenshots/fe1-tour
+
+# Screenshots of every page and screen of the unified site (docs/unify-screens: 144 jpgs from test/e2e/screenshots.e2e.mjs; generated gradient fixtures and invented names,
+# all 144 reviewed on contact sheets on 2026-10-06: no people, no real photos). The publish scan refuses every image, so they stay on the server copy.
+docs/unify-screens

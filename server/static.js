@@ -48,15 +48,40 @@ export function assetVersion() {
   return versionMemo;
 }
 
-/** Shared ES modules the browser imports; mapped to versioned URLs by an import map so they can be cached forever. */
-export function sharedModuleUrls() {
+const toUrl = (f) => `/assets${f.slice(ASSETS_DIR.length).split(sep).join('/')}`;
+let moduleMemo = null;
+
+/** Every browser ES module under /assets/js, mapped to its versioned URL (so it can be cached forever). */
+export function moduleUrls() {
+  if (moduleMemo) return moduleMemo;
   const v = assetVersion();
-  const base = join(ASSETS_DIR, 'js', 'shared');
-  return Object.fromEntries(walk(base).filter((f) => f.endsWith('.js')).map((f) => {
-    const url = `/assets/js/shared${f.slice(base.length).split(sep).join('/')}`;
-    return [url, `${url}?v=${v}`];
-  }));
+  const base = join(ASSETS_DIR, 'js');
+  moduleMemo = Object.fromEntries(walk(base).filter((f) => f.endsWith('.js')).map((f) => [toUrl(f), `${toUrl(f)}?v=${v}`]));
+  return moduleMemo;
 }
+
+const IMPORT_RE = /(?:from|import)\s*['"](\/assets\/js\/[^'"?]+\.js)['"]/g;
+
+/**
+ * The import map a page needs: the entry scripts' static imports, transitively, each mapped to
+ * its versioned URL. Entries are '/assets/js/…' paths without a version.
+ */
+export function importMapFor(entries) {
+  const urls = moduleUrls();
+  const seen = new Set();
+  const visit = (url) => {
+    if (seen.has(url) || !urls[url]) return;
+    seen.add(url);
+    let src = '';
+    try { src = readFileSync(join(ASSETS_DIR, url.slice('/assets/'.length)), 'utf8'); } catch { return; }
+    for (const m of src.matchAll(IMPORT_RE)) visit(m[1]);
+  };
+  entries.forEach(visit);
+  return Object.fromEntries([...seen].sort().map((u) => [u, urls[u]]));
+}
+
+/** '/assets/js/shell.js' -> '/assets/js/shell.js?v=<hash>' */
+export const versioned = (url) => `${url}?v=${assetVersion()}`;
 
 function send(req, res, file, cache) {
   let body;

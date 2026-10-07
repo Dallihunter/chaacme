@@ -5,14 +5,14 @@
 //  * every block is hidden when its data is empty; there is no placeholder text;
 //  * every value goes through html`` (escaped); URLs through safeUrl();
 //  * the page reads fine without JavaScript — tour-island.js only enhances.
-import { html, jsonForScript, toHtmlString } from '../html.js';
-import { header } from '../components/header.js';
-import { footer } from '../components/footer.js';
+import { html, toHtmlString } from '../html.js';
+import { documentHtml, pageFrame } from '../layout.js';
 import { photo } from '../components/photo.js';
 import { regionStamp } from '../components/regionStamp.js';
 import { statusBadge } from '../components/statusBadge.js';
 import { emptyState } from '../components/emptyState.js';
 import { notice } from '../components/notice.js';
+import { reviewsSection } from '../components/reviews.js';
 import { experienceCard } from '../components/experienceCard.js';
 import { partnerCard } from '../components/partnerCard.js';
 import { pairing } from '../pairing.js';
@@ -51,7 +51,7 @@ function hero(page) {
     ${rest.map((img, i) => html`<a hidden href="${img.path}" data-lb data-lb-src="${(img.variants[img.variants.length - 1] || {}).url || img.path}" data-lb-alt="${altOf(img, `${page.name} — عکس ${toFaDigits(MAX_MOSAIC + i + 1)}`)}" data-lb-caption="${img.caption || ''}">${altOf(img, page.name)}</a>`)}
     ${imgs.length > 1 ? html`<a class="tp-hero__all" href="${imgs[0].path}" data-lb-open>همهٔ عکس‌ها (${toFaDigits(imgs.length)})</a>` : ''}
     <div class="tp-hero__tools">
-      <a class="tp-hero__btn" href="/" aria-label="بازگشت"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></a>
+      <a class="tp-hero__btn" href="/experiences" aria-label="بازگشت"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></a>
       <button class="tp-hero__btn" type="button" aria-label="اشتراک‌گذاری" data-share hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"></path><path d="M7 8l5-5 5 5"></path><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path></svg></button>
     </div>
     ${imgs.length > 1 ? html`<span class="tp-hero__count" aria-hidden="true">${toFaDigits(1)} / ${toFaDigits(imgs.length)}</span>` : ''}
@@ -123,15 +123,7 @@ function people(page) {
     <p class="tp-note">طراحی و هماهنگی: <b>چکمه</b> — از انتخاب مکان و برنامه تا رفت‌وآمد و سفره.</p></section>`;
 }
 
-function reviews(page) {
-  const r = page.reviews;
-  return html`<section class="tp-sec"><div class="ck-section-head" style="margin-bottom:0"><h2>نظر مسافران</h2></div>
-    ${r.items.length ? html`
-      ${r.average != null ? html`<p class="tp-rev-sum">${toFaDigits(String(r.average).replace('.', '٫'))} از ۵ · ${toFaDigits(r.count)} نظر</p>` : ''}
-      <ul class="tp-reviews">${r.items.map((x) => html`<li class="tp-review"><div class="tp-review__head"><span class="tp-review__name">${x.displayName}</span><span class="tp-review__stars" role="img" aria-label="امتیاز ${toFaDigits(x.rating)} از ۵">${'★'.repeat(x.rating)}${'☆'.repeat(5 - x.rating)}</span></div><p class="tp-review__body">${x.body}</p>${formatDateRangeFa(x.createdAt) ? html`<span class="tp-review__date">${formatDateRangeFa(x.createdAt)}</span>` : ''}</li>`)}</ul>`
-    : emptyState({ title: 'هنوز نظری ثبت نشده', text: 'نظرها فقط از مسافرانی می‌آیند که این تجربه را رفته‌اند.' })}
-  </section>`;
-}
+const reviews = (page) => reviewsSection(page.reviews);
 
 function conditions(page) {
   const items = [['چه چیزهایی در هزینه است', page.included], ['چه با خودم بیاورم', page.bringList]].filter(([, v]) => v);
@@ -189,7 +181,7 @@ function stickyBar(page) {
 
 function related(page) {
   if (!page.related.length) return null;
-  return html`<section class="tp-related"><div class="ck-section-head"><h2>تجربه‌های دیگر</h2><a href="/">همهٔ تجربه‌ها</a></div><div class="tp-related__grid">${page.related.map(experienceCard)}</div></section>`;
+  return html`<section class="tp-related"><div class="ck-section-head"><h2>تجربه‌های دیگر</h2><a href="/experiences">همهٔ تجربه‌ها</a></div><div class="tp-related__grid">${page.related.map(experienceCard)}</div></section>`;
 }
 
 // ---------------------------------------------------------------- document
@@ -205,45 +197,12 @@ export function metaDescription(page) {
   return text.length > 160 ? `${text.slice(0, 157)}…` : text;
 }
 
-/** Everything the layout needs besides the page itself. */
-export function documentHtml({ title, description = '', canonical = null, ogImage = null, ogType = 'article', robots = null, assets, body, bodyClass = '' }) {
-  return html`<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-${description ? html`<meta name="description" content="${description}">` : ''}
-${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${canonical ? html`<link rel="canonical" href="${canonical}">` : ''}
-<meta property="og:site_name" content="CHAACME">
-<meta property="og:locale" content="fa_IR">
-<meta property="og:type" content="${ogType}">
-<meta property="og:title" content="${title}">
-${description ? html`<meta property="og:description" content="${description}">` : ''}
-${canonical ? html`<meta property="og:url" content="${canonical}">` : ''}
-${ogImage ? html`<meta property="og:image" content="${ogImage}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${ogImage}">` : html`<meta name="twitter:card" content="summary">`}
-<meta name="twitter:title" content="${title}">
-${description ? html`<meta name="twitter:description" content="${description}">` : ''}
-<link rel="preload" href="${assets.font}" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="${assets.css}">
-${assets.script ? html`<script type="importmap">${jsonForScript({ imports: assets.imports })}</script><script type="module" src="${assets.script}"></script>` : ''}
-</head>
-<body class="${bodyClass}">
-${body}
-</body>
-</html>`;
-}
-
-/** Full experience page. `assets` = { css, font, script, imports }. */
-export function renderTourPage(page, { assets, canonical, ogImage, description }) {
+/** Full experience page. `assets` = { css, font, scripts, imports }; `site` = { footerLinks }. */
+export function renderTourPage(page, { assets, site = {}, canonical, ogImage, description }) {
   const sticky = stickyBar(page);
-  const body = html`<div class="ck-root ${sticky ? 'has-sticky' : ''}" dir="rtl">
-  <a class="ck-skip" href="#main">پرش به محتوا</a>
-  ${header({ active: 'experiences', next: `/tour/${page.slug}` })}
-  <main class="tp-main" id="main">
-    <p class="tp-crumbs"><a href="/">تجربه‌ها</a> / ${page.name}</p>
-    ${hero(page)}
+  const heroBlock = hero(page);
+  const main = html`<p class="tp-crumbs"><a href="/experiences">تجربه‌ها</a> / ${page.name}</p>
+    ${heroBlock}
     <div class="tp-body">
       <article class="tp-article">
         ${titleBlock(page)}
@@ -257,25 +216,10 @@ export function renderTourPage(page, { assets, canonical, ogImage, description }
       </article>
       <aside class="tp-aside" aria-label="رزرو">${bookingCard(page)}</aside>
     </div>
-    ${related(page)}
-  </main>
-  ${footer()}
-  ${sticky}
-</div>`;
-  return toHtmlString(documentHtml({
-    title: `${page.name} — CHAACME`, description, canonical, ogImage, assets, body
-  }));
-}
-
-/** The 404 page in the new design. */
-export function renderNotFoundPage({ assets }) {
-  const body = html`<div class="ck-root" dir="rtl">
-  ${header({})}
-  <main class="tp-main tp-404" id="main">
-    ${emptyState({ title: 'این تجربه پیدا نشد', text: 'ممکن است نشانی اشتباه باشد یا این تجربه دیگر منتشر نشده باشد.' })}
-    <a class="ck-btn ck-btn--primary ck-btn--block" href="/">دیدن همهٔ تجربه‌ها</a>
-  </main>
-  ${footer()}
-</div>`;
-  return toHtmlString(documentHtml({ title: 'تجربه پیدا نشد — CHAACME', robots: 'noindex', ogType: 'website', assets, body }));
+    ${related(page)}`;
+  const body = pageFrame({
+    main, mainClass: 'tp-main', site, after: sticky, rootClass: sticky ? 'has-sticky' : '',
+    headerOptions: { variant: heroBlock ? 'overlay-mobile' : 'site', active: 'experiences', next: `/tour/${page.slug}` }
+  });
+  return toHtmlString(documentHtml({ title: `${page.name} — CHAACME`, description, canonical, ogImage, ogType: 'article', assets, body }));
 }

@@ -8,14 +8,13 @@ import { Readable } from 'node:stream';
 import { request as httpRequest } from 'node:http';
 
 const dir = mkdtempSync(join(tmpdir(), 'chaacme-render-'));
-const PORT = 4300 + Math.floor(Math.random() * 400);
+const PORT = 7000 + Math.floor(Math.random() * 400);
 const IMAGES = join(dir, 'images');
 Object.assign(process.env, {
   CHAACME_PLATFORM_DB: join(dir, 't.db'), IP_HASH_SALT: 'x'.repeat(24), OTP_PEPPER: 'y'.repeat(24),
   FRONTEND_STATIC_DIR: IMAGES, SITE_ORIGIN: 'https://example.test/', PORT: String(PORT), HOST: '127.0.0.1',
   FRONTEND_ORIGIN: 'https://example.test'
 });
-delete process.env.FRONTEND_INDEX_FILE;
 
 const { server } = await import('../server/index.js');
 const db = await import('../server/db.js');
@@ -188,6 +187,33 @@ test('booking card states: full, no dates, coming soon', async () => {
   assert.ok(!/NaN|undefined|null/.test(textOf(soon)));
 });
 
+test('booking card: every edition closed and undated (placeholders) -> «تاریخ بعدی اعلام می‌شود», no button, no label of a date that is not coming', async () => {
+  db.createTour({ id: 'placeholders', status: 'published', name: 'فقط جایگزین', price: 6500000, duration: '۲ روز' });
+  for (const label of ['جایگزین اول', 'جایگزین دوم']) { const d = db.addTourDate('placeholders', { label, capacity: 12 }); db.updateTourDate(d.id, { closed: true }); }
+  const closed = (await get('/tour/placeholders')).text;
+  const t = textOf(closed);
+  assert.ok(t.includes('تاریخ بعدی اعلام می‌شود'), t.slice(0, 300));
+  assert.ok(!closed.includes('data-submit') && !closed.includes('data-jump-booking') && !closed.includes('data-booking'), 'no booking form, no button');
+  assert.ok(!t.includes('جایگزین اول') && !t.includes('جایگزین دوم') && !t.includes('ظرفیت تکمیل است') && !t.includes('تکمیل'), 'closed placeholders are not shown, not even as full');
+  assert.ok(closed.includes('tp-sticky') && t.includes('۶٬۵۰۰٬۰۰۰'), 'the price stays; the sticky bar offers no button');
+  assert.ok(!/NaN|undefined|null/.test(t));
+  const model = JSON.parse((await get('/api/pages/tour/placeholders')).text).page;
+  assert.deepEqual(model.editions, []);
+
+  // a dated closed edition is still shown as full; an undated OPEN one is still listed and bookable
+  const dated = db.addTourDate('placeholders', { label: 'تاریخ‌دار', capacity: 4, startsOn: future(40) }); db.updateTourDate(dated.id, { closed: true });
+  let page = textOf((await get('/tour/placeholders')).text);
+  assert.ok(page.includes('ظرفیت تکمیل است') && page.includes('تکمیل') && !page.includes('جایگزین اول'));
+  const live = db.addTourDate('placeholders', { label: 'بازِ بی‌تاریخ', capacity: 4 });
+  const bookable = (await get('/tour/placeholders')).text;
+  assert.ok(bookable.includes('data-submit') && bookable.includes('بازِ بی‌تاریخ') && !bookable.includes('جایگزین اول'));
+  db.updateTourDate(live.id, { closed: true });
+  page = textOf((await get('/tour/placeholders')).text);
+  assert.ok(!page.includes('بازِ بی‌تاریخ'), 'closing it hides the bare label again');
+  db.db.prepare("DELETE FROM tour_dates WHERE tour_id = 'placeholders'").run();
+  db.db.prepare("DELETE FROM tours WHERE id = 'placeholders'").run();
+});
+
 test('hidden, archived, unknown and malformed tours: 404 in the new design, no tour tags', async () => {
   for (const slug of ['draft-tour', 'archived-tour', 'does-not-exist', 'Bad_Slug', 'a--b']) {
     const { res, text, status } = await get(`/tour/${slug}`);
@@ -228,7 +254,7 @@ test('XSS: payloads in every text field, alt and caption render as text in the p
   assert.equal(status, 200);
   assert.ok(!text.includes('<img src=x'), 'raw <img> from a payload');
   assert.ok(!text.includes('<script>alert'), 'raw <script> from a payload');
-  assert.equal((text.match(/<script\b/g) || []).length, 2, 'only the import map and the island script');
+  assert.equal((text.match(/<script\b/g) || []).length, 3, 'only the import map, the shell script and the island script');
   for (const tag of text.match(/<[a-zA-Z][^>]*>/g) || []) assert.ok(!/\sonerror\s*=/i.test(tag.replace(/"[^"]*"/g, '""')), `a tag carrying onerror: ${tag.slice(0, 120)}`);
   const esc = '&quot;&gt;&lt;img src=x onerror=alert(1)&gt;&lt;/script&gt;&lt;script&gt;alert(2)&lt;/script&gt;';
   for (const marker of ['N', 'D', 'S', 'X', 'Lv', 'B', 'HN', 'HD', 'IL', 'ID', 'H', 'V', 'R', 'L', 'A', 'RN', 'RB']) {

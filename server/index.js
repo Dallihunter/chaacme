@@ -1,17 +1,17 @@
 import { createServer } from 'node:http';
 import { seed } from './db.js';
 import { handleApi } from './api.js';
-import { handleTourPage } from './pages.js';
+import { handlePage } from './pages.js';
 import { handleStatic } from './static.js';
 import { assertRuntimeConfig, describeRuntimeConfig, json, guardStateChange } from './util.js';
 
 const PORT = Number(process.env.PORT) || 3100;
 const HOST = process.env.HOST || '127.0.0.1';
 
-// Mostly a JSON API. It also renders the public experience page (/tour/<slug>,
-// see render.js) and serves the release's own /assets/. The rest of the site is
-// still the static SPA served by nginx, which calls this API same-origin or
-// cross-origin via FRONTEND_ORIGIN below.
+// The JSON API plus every page of the site: the service renders the public pages and the shells of the
+// screens behind login itself (render.js, pages.js) and serves the release's own /assets/. nginx serves
+// /images/ and /admin/ straight off disk and proxies everything else here (deploy/nginx-site.conf.example).
+// FRONTEND_ORIGIN below is the site's own origin: the write guard's allowlist and the CORS origin.
 const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || '').trim();
 
 const SECURITY_HEADERS = {
@@ -55,8 +55,8 @@ const server = createServer(async (req, res) => {
       return await handleApi(req, res, url);
     }
     if (handleStatic(req, res, url)) return;
-    if (handleTourPage(req, res, url)) return;
-    return json(res, 404, { error: 'not_found', message: 'This service serves /api/*, /tour/<slug> and /assets/*.' });
+    if (handlePage(req, res, url)) return;
+    return json(res, 404, { error: 'not_found', message: 'Not found.' });
   } catch (err) {
     console.error('[chaacme-platform]', err);
     if (!res.headersSent) json(res, 500, { error: 'internal_error' });

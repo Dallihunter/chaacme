@@ -27,8 +27,8 @@ export const PENDING_UPLOAD_DIR = (process.env.PENDING_UPLOAD_DIR
   }
 }
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_BODY_BYTES = MAX_FILE_BYTES + 64 * 1024; // headroom for multipart framing + other form fields
+export const MAX_FILE_BYTES = 5 * 1024 * 1024;
+export const MAX_BODY_BYTES = MAX_FILE_BYTES + 64 * 1024; // headroom for multipart framing + other form fields
 
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
 
@@ -238,7 +238,9 @@ export async function handleUpload(req) {
   const hostSlug = (parsed.fields.hostSlug || '').trim();
 
   let subdir;
-  if (hostSlug) {
+  if ((parsed.fields.site || '').trim() === '1') {
+    subdir = 'site'; // home page and settings images
+  } else if (hostSlug) {
     if (!HOST_SLUG_RE.test(hostSlug)) return { ok: false, status: 422, error: 'invalid_host_slug' };
     subdir = `host-${hostSlug}`;
   } else if (tourId) {
@@ -268,12 +270,48 @@ export async function handleUpload(req) {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------------
+// The home page hero video (admin only)
+// ---------------------------------------------------------------------------------------------
+
+export const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+// ISO base media "ftyp" major brands that mean an MP4/M4V file a browser can play.
+const MP4_BRANDS = new Set(['isom', 'iso2', 'iso4', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'dash', 'msnv', 'mmp4', 'M4V ']);
+
+/** Magic-byte check: bytes 4-8 are "ftyp" and the major brand is an MP4 one. The client's Content-Type and file name are ignored. */
+export function isMp4(buf) {
+  return buf.length > 12 && buf.slice(4, 8).toString('latin1') === 'ftyp' && MP4_BRANDS.has(buf.slice(8, 12).toString('latin1'));
+}
+
+/**
+ * POST /api/admin/upload-video: one mp4, at most MAX_VIDEO_BYTES, stored as-is under
+ * <images>/site/ (no transcoding, no processing). The caller has already proved the admin session.
+ */
+export async function handleVideoUpload(req) {
+  const contentType = req.headers['content-type'] || '';
+  const boundaryMatch = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+  if (!contentType.startsWith('multipart/form-data') || !boundaryMatch) return { ok: false, status: 400, error: 'expected_multipart' };
+  const raw = await readRawBody(req, MAX_VIDEO_BYTES + 64 * 1024);
+  if (!raw.ok) return { ok: false, status: raw.error === 'payload_too_large' ? 413 : 400, error: raw.error };
+  let parsed;
+  try { parsed = parseMultipart(raw.value, boundaryMatch[1] || boundaryMatch[2]); } catch { return { ok: false, status: 400, error: 'invalid_multipart' }; }
+  const file = parsed.files.file;
+  if (!file || !file.data || !file.data.length) return { ok: false, status: 422, error: 'file_required' };
+  if (file.data.length > MAX_VIDEO_BYTES) return { ok: false, status: 413, error: 'file_too_large' };
+  if (!isMp4(file.data)) return { ok: false, status: 422, error: 'unsupported_file_type' };
+  const dir = join(FRONTEND_STATIC_DIR, 'site');
+  mkdirSync(dir, { recursive: true });
+  const filename = `hero-${Date.now()}-${randomBytes(6).toString('hex')}.mp4`;
+  writeFileSync(join(dir, filename), file.data);
+  return { ok: true, status: 201, path: `/images/site/${filename}` };
+}
+
 // Only ever matches paths this module itself generated (see the `path` this
-// returns above): one `tour-<id>`, `host-<slug>` or `uploads` segment, one
+// returns above): one `tour-<id>`, `host-<slug>`, `site` or `uploads` segment, one
 // filename, no dots that could climb out of FRONTEND_STATIC_DIR. The host
 // alternative is the slug charset only (lowercase, digits, hyphen), so
 // "host-../" cannot match.
-const SAFE_UPLOAD_PATH = /^\/images\/(tour-[A-Za-z0-9_-]+|host-[a-z0-9-]+|uploads)\/[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
+const SAFE_UPLOAD_PATH = /^\/images\/(tour-[A-Za-z0-9_-]+|host-[a-z0-9-]+|uploads|site)\/[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
 /** Deletes a file previously returned by handleUpload's `path`. Silently no-ops on anything that doesn't match that shape or is already gone. */
 export function deleteUploadedFile(imagePath) {

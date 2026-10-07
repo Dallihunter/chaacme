@@ -1,0 +1,142 @@
+# The chaacme.ir server { } block as it must look once the whole site is rendered by the Node service
+# (docs/PUBLIC-PAGES.md). Example only: adjust the upstream and the web root to the host (deploy/target.example).
+# It is written against the block that is live after the fe1 release: the four deny rules, /tour/, /assets/, the
+# image-variant and *.meta.json locations and /api/ stay exactly as they are; what changes is marked "NEW" / "CHANGED".
+#
+# Every page of the site is rendered by the Node service: the public pages, the shell of the screens behind login
+# (the screens fill it in the browser) and the 404 page. nginx only serves what it serves today straight off disk:
+# /images/ (originals, variants and the home-page video), /media/, /admin/ (admin/index.html) and one static page
+# (index.html, a small "back in a moment" page) that it answers when the service is down.
+#
+# The old single-page app (index.html behind `try_files ... /index.html`) is gone: that fallback is replaced by the
+# service (location @site), so an unknown path gets the designed 404 page instead of a 200 with the wrong page.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name chaacme.ir www.chaacme.ir;
+
+    root /srv/chaacme-platform/frontend;
+    index index.html;
+
+    # --- never serve these (UNCHANGED; they sit first so they win over every regex location below) ---
+    location ~* ^/images/.+/pending(/|$) { return 404; }
+    location ~* \.(bak|orig|old|save|swp|swo|tmp|rej|copy)([^A-Za-z0-9][^/]*)?$ { return 404; }
+    location ~* ~$ { return 404; }
+    location ~ /\.(?!well-known) { return 404; }
+
+    # --- the tour page and the release's own assets (UNCHANGED) ---
+    # X-Forwarded-For is the TCP peer, never a client-supplied value (the app trusts it from loopback only).
+    location /tour/ {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        error_page 502 503 504 = /index.html;
+    }
+    location /assets/ {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # --- NEW: the other pages (rendered by the service) ---
+    # / /experiences /places /host/<slug> /about /contact /terms /refund /privacy
+    # /login /signup /account /become-host /booking/result /partner[/...]
+    # and the old SPA URLs /tours/<slug>, /experience(s)/<slug> (the service answers them with a 301 to /tour/<slug>).
+    # The service decides what is cached: public pages say `public, max-age=60`, the login screens say `no-cache`.
+    location ~ ^/(?:experiences|places|about|contact|terms|refund|privacy|login|signup|account|become-host|partner(?:/.*)?|booking/result|host/[^/]+|tours/[^/]+|experience/[^/]+|experiences/[^/]+)/?$ {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        error_page 502 503 504 = /index.html;
+    }
+    location = / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        error_page 502 503 504 = /index.html;
+    }
+
+    # --- images: variants are immutable, bookkeeping files are never public (UNCHANGED) ---
+    # The home-page video (/images/site/hero-*.mp4) is an ordinary file under /images/: served from the root with
+    # Content-Type video/mp4 (mime.types) and Range support (nginx does both for files on disk). No rule above or
+    # below may hide it; the variant location only matches *.w<N>.webp / *.og.jpg.
+    location ~* ^/images/.+\.(?:w\d+\.webp|og\.jpg)$ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+    location ~* ^/images/.+\.meta\.json$ { return 404; }
+
+    # --- the API ---
+    # NEW: the hero-video upload (mp4, up to 30 MB). nginx's default client_max_body_size (1 MB) would refuse it; the
+    # limit is raised on THIS location only, every other route keeps the default.
+    location = /api/admin/upload-video {
+        client_max_body_size 32m;
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    # NEW: the image uploads (admin: tours, hosts, settings; partner panel). The service accepts a photo up to 5 MB; nginx's
+    # default client_max_body_size (1 MB) refused every photo over 1 MB with a 413 before the service saw it. 6m = the
+    # service's 5 MB + its 64 KB of multipart framing, with room to spare; the service still enforces its own limit.
+    location = /api/admin/upload {
+        client_max_body_size 6m;
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location ~ ^/api/partner/profiles/[a-z0-9-]+/upload$ {
+        client_max_body_size 6m;
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # --- CHANGED: static files first (/images/, /media/, /admin/), then the service ---
+    # Was `try_files $uri $uri/ /index.html` (the SPA fallback). A path that is not a file on disk and not one of the
+    # locations above is not a page of the site: the service answers it with the designed 404 page.
+    location / {
+        try_files $uri $uri/ @site;
+    }
+    location @site {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        error_page 502 503 504 = /index.html;
+    }
+
+    # --- NEW: the static "back in a moment" page, only ever reached through the error_page lines above ---
+    # (scripts/deploy-prod.sh publishes deploy/index.html here). A direct request for /index.html is a 404.
+    location = /index.html { internal; }
+}
+
+# CDN (ArvanCloud) rules to match:
+#   /  /experiences  /places  /host/*  /tour/*  /about  /contact  /terms  /refund  /privacy  /api/pages/*
+#                          -> cache, honouring the origin's Cache-Control (public, max-age=60, stale-while-revalidate=300)
+#   /login /signup /account /become-host /booking/result /partner*   -> never cache (the origin sends no-cache)
+#   /assets/*              -> cache, honour Cache-Control (?v= URLs and /assets/fonts/* are immutable for a year)
+#   /images/*.webp, *.og.jpg -> cache for a year (immutable)
+#   /api/*                 -> bypass

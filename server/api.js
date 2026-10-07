@@ -2,9 +2,10 @@ import * as db from './db.js';
 import * as auth from './auth.js';
 import * as adminAuth from './adminAuth.js';
 import * as zarinpal from './zarinpal.js';
-import { buildTourPage } from './pagemodels.js';
+import * as settings from './settings.js';
+import { buildTourPage, buildHomePage, buildExperiencesPage, buildPlacesPage, buildHostPage, buildInfoPage } from './pagemodels.js';
 import { PAGE_CACHE_CONTROL } from './render.js';
-import { handleUpload, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
+import { handleUpload, handleVideoUpload, MAX_VIDEO_BYTES, deleteUploadedFile, handlePendingHostUpload, pendingUploadExists, movePendingUpload, sendPendingUpload } from './upload.js';
 import {
   json, readJson, allow, clientIp, hashIp, parseCookies, sessionCookie, legacyAdminCookieClear,
   normalisePhone, validateProfile, validateReview, validatePassword,
@@ -87,6 +88,13 @@ export async function handleApi(req, res, url) {
     if (!page) return json(res, 404, { error: 'not_found' });
     return json(res, 200, { page }, { 'cache-control': PAGE_CACHE_CONTROL });
   }
+
+  const pageJson = (page) => (page ? json(res, 200, { page }, { 'cache-control': PAGE_CACHE_CONTROL }) : json(res, 404, { error: 'not_found' }));
+  if (path === '/api/pages/home' && method === 'GET') return pageJson(buildHomePage());
+  if (path === '/api/pages/experiences' && method === 'GET') return pageJson(buildExperiencesPage(url.searchParams));
+  if (path === '/api/pages/places' && method === 'GET') return pageJson(buildPlacesPage());
+  if ((m = new RegExp(`^/api/pages/host/${SLUG}$`).exec(path)) && method === 'GET') return pageJson(buildHostPage(m[1]));
+  if ((m = /^\/api\/pages\/info\/(about|contact|terms|refund|privacy)$/.exec(path)) && method === 'GET') return pageJson(buildInfoPage(m[1]));
 
   if ((m = new RegExp(`^/api/tours/${ID}$`).exec(path)) && method === 'GET') {
     const tour = db.getTourDetail(m[1]);
@@ -304,6 +312,15 @@ export async function handleApi(req, res, url) {
     const user = requireUser(req, res);
     if (!user) return;
     return json(res, 200, { profiles: db.listUserProfiles(user.id) });
+  }
+
+  if ((m = /^\/api\/me\/bookings\/([^/]+)$/.exec(path)) && method === 'GET') {
+    const user = requireUser(req, res);
+    if (!user) return;
+    let ref = '';
+    try { ref = decodeURIComponent(m[1]); } catch { /* malformed: not found */ }
+    const booking = db.getUserBookingByRef(user.id, ref);
+    return booking ? json(res, 200, { booking }, { 'cache-control': 'private, no-store' }) : json(res, 404, { error: 'not_found' });
   }
 
   if (path === '/api/me/reviews' && method === 'GET') {
@@ -901,6 +918,31 @@ export async function handleApi(req, res, url) {
         entries.push({ hostId, role, sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : entries.length });
       }
       return json(res, 200, { hosts: db.setTourHosts(tourId, entries) });
+    }
+
+    // --- admin: site settings («صفحهٔ اول و تنظیمات») ----------------------------
+    if (path === '/api/admin/settings' && method === 'GET') {
+      return json(res, 200, {
+        settings: settings.getSettings(),
+        fields: Object.fromEntries(Object.entries(settings.SETTINGS).map(([k, d]) => [k, { kind: d.kind, max: d.max || null }])),
+        footerPaths: settings.FOOTER_PATHS,
+        maxVideoBytes: MAX_VIDEO_BYTES
+      });
+    }
+    if (path === '/api/admin/settings' && method === 'PUT') {
+      const body = await readJson(req, 128 * 1024);
+      if (!body.ok) return json(res, 400, { error: body.error });
+      if (!body.value || typeof body.value !== 'object' || Array.isArray(body.value)) return json(res, 422, { error: 'validation_failed', fields: { values: 'type' } });
+      const check = settings.validateSettings(body.value.values);
+      if (!check.ok) return json(res, 422, { error: 'validation_failed', fields: check.errors });
+      const { settings: saved, orphaned } = settings.writeSettings(check.value);
+      for (const p of orphaned) deleteUploadedFile(p); // replaced hero / explainer files nothing else uses
+      return json(res, 200, { settings: saved });
+    }
+    if (path === '/api/admin/upload-video' && method === 'POST') {
+      const result = await handleVideoUpload(req);
+      if (!result.ok) return json(res, result.status, { error: result.error });
+      return json(res, result.status, { ok: true, path: result.path });
     }
 
     if (path === '/api/admin/upload' && method === 'POST') {

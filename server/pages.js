@@ -1,104 +1,65 @@
-import { readFileSync, statSync } from 'node:fs';
-import { getTourDetail } from './db.js';
-import { renderTourDocument, sendDocument } from './render.js';
+import {
+  renderTourDocument, renderHomeDocument, renderExperiencesDocument, renderPlacesDocument, renderHostDocument,
+  renderInfoDocument, renderScreenDocument, renderNotFound, renderServerError, sendDocument
+} from './render.js';
+import { HOST_SLUG_RE } from './util.js';
 
-// /tour/<slug> is rendered by the server as a full HTML page (render.js: view
-// model -> shared templates), so crawlers and visitors without JavaScript get
-// the real content, title and Open Graph tags.
-//
-// If rendering ever throws, and FRONTEND_INDEX_FILE points at the deployed
-// index.html, the previous mechanism below is the safety net: that file is
-// served with the per-tour tags filled in and the SPA renders the page itself.
+// Public pages are rendered by the server as full HTML (render.js: view model ->
+// shared templates), so crawlers and visitors without JavaScript get the real
+// content, title and Open Graph tags. If rendering ever throws, the visitor gets the
+// generic error page (never a stack trace).
 
-const INDEX_FILE = (process.env.FRONTEND_INDEX_FILE || '').trim();
-const SITE_ORIGIN = (process.env.SITE_ORIGIN || 'https://chaacme.ir').trim().replace(/\/+$/, '');
-const DEFAULT_IMAGE = '/images/cover-app-chaacme.png';
-
-// Same shape the admin enforces on tour ids.
 export const TOUR_PATH_RE = /^\/tour\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/;
 
-const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
-  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-));
-
-// A tour's cover must be a site-relative path; anything else (another host, a
-// protocol-relative //host) falls back to the default cover.
-function absoluteImage(photoPath) {
-  const p = typeof photoPath === 'string' && photoPath.startsWith('/') && !photoPath.startsWith('//')
-    ? photoPath : DEFAULT_IMAGE;
-  return SITE_ORIGIN + p;
-}
-
-function describe(tour) {
-  const text = String(tour.description || tour.tags || '').replace(/\s+/g, ' ').trim();
-  return text.length > 160 ? text.slice(0, 157) + '…' : text;
-}
-
-// Replace-with-function so `$&`-style sequences in tour text are never
-// interpreted by String.replace.
-function setContent(html, tagPattern, content) {
-  return html.replace(tagPattern, (_m, open) => `${open}${escHtml(content)}">`);
-}
-
-/** Pure: returns the shell HTML with title / OG / Twitter / canonical set for one tour. */
-export function injectTourMeta(html, tour, origin = SITE_ORIGIN) {
-  const title = `${tour.name} — CHAACME`;
-  const desc = describe(tour);
-  const url = `${origin}/tour/${encodeURIComponent(tour.id)}`;
-  const image = absoluteImage(tour.photoPath);
-
-  let out = html.replace(/<title>[^<]*<\/title>/, () => `<title>${escHtml(title)}</title>`);
-  out = setContent(out, /(<meta property="og:title" content=")[^"]*">/, title);
-  out = setContent(out, /(<meta name="twitter:title" content=")[^"]*">/, title);
-  out = setContent(out, /(<meta property="og:description" content=")[^"]*">/, desc);
-  out = setContent(out, /(<meta name="twitter:description" content=")[^"]*">/, desc);
-  out = setContent(out, /(<meta property="og:url" content=")[^"]*">/, url);
-  out = setContent(out, /(<meta property="og:image" content=")[^"]*">/, image);
-  out = setContent(out, /(<meta name="twitter:image" content=")[^"]*">/, image);
-  out = out.replace(/<meta property="og:type" content="website">/, '<meta property="og:type" content="article">');
-  if (!/rel="canonical"/.test(out)) {
-    out = out.replace('</title>', () => `</title>\n<link rel="canonical" href="${escHtml(url)}">`);
+function renderOrError(req, res, build) {
+  try {
+    sendDocument(req, res, build());
+  } catch (err) {
+    console.error('[chaacme-platform] page render failed', err);
+    if (res.headersSent) { res.end(); return; }
+    sendDocument(req, res, renderServerError());
   }
-  return out;
 }
 
-let cache = { mtimeMs: 0, html: '' };
-function readShell() {
-  const { mtimeMs } = statSync(INDEX_FILE);
-  if (mtimeMs !== cache.mtimeMs) cache = { mtimeMs, html: readFileSync(INDEX_FILE, 'utf8') };
-  return cache.html;
+const INFO_PATHS = { '/about': 'about', '/contact': 'contact', '/terms': 'terms', '/refund': 'refund', '/privacy': 'privacy' };
+const SCREEN_PATHS = { '/login': 'login', '/signup': 'signup', '/account': 'account', '/become-host': 'become-host', '/booking/result': 'booking-result' };
+const PARTNER_PATH_RE = /^\/partner(?:\/(?:experiences|propose)|\/profile\/[a-z0-9-]+)?$/;
+const HOST_PATH_RE = /^\/host\/([^/]+)\/?$/;
+// URLs the old single-page app used for an experience; they now live at /tour/<slug>.
+const OLD_TOUR_RE = /^\/(?:tours|experiences|experience)\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/;
+
+function redirect(res, location) {
+  res.writeHead(301, { location, 'cache-control': 'public, max-age=3600' });
+  res.end();
 }
 
 /** Returns true when it handled the request. */
-export function handleTourPage(req, res, url) {
+export function handlePage(req, res, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
-  if (!url.pathname.startsWith('/tour/')) return false;
-  const m = TOUR_PATH_RE.exec(url.pathname);
+  const p = url.pathname;
+  const trimmed = p.length > 1 ? p.replace(/\/+$/, '') : p;
 
-  try {
-    sendDocument(req, res, renderTourDocument(m ? m[1] : null));
+  let m;
+  if (p.startsWith('/tour/')) {
+    m = TOUR_PATH_RE.exec(p);
+    renderOrError(req, res, () => renderTourDocument(m ? m[1] : null));
     return true;
-  } catch (err) {
-    console.error('[chaacme-platform] tour page render failed', err);
-    if (res.headersSent) { res.end(); return true; }
   }
-  return serveShellFallback(req, res, m);
-}
-
-function serveShellFallback(req, res, m) {
-  if (!INDEX_FILE) return false;
-  let shell;
-  try { shell = readShell(); } catch { return false; } // unreadable file: let nginx's fallback serve it
-
-  // A malformed slug or an unknown/hidden tour still gets the plain SPA shell
-  // (so the visitor sees the app's own "not available" page) but with a 404
-  // status and no per-tour tags.
-  const tour = m ? getTourDetail(m[1]) : null;
-  const body = tour ? injectTourMeta(shell, tour) : shell;
-  res.writeHead(tour ? 200 : 404, {
-    'content-type': 'text/html; charset=utf-8',
-    'cache-control': 'no-cache'
-  });
-  res.end(req.method === 'HEAD' ? undefined : body);
-  return true;
+  if ((m = OLD_TOUR_RE.exec(p))) { redirect(res, `/tour/${m[1]}`); return true; }
+  if (trimmed === '/') { renderOrError(req, res, () => renderHomeDocument()); return true; }
+  if (trimmed === '/experiences') { renderOrError(req, res, () => renderExperiencesDocument(url.searchParams)); return true; }
+  if (trimmed === '/places') { renderOrError(req, res, () => renderPlacesDocument()); return true; }
+  if (Object.hasOwn(INFO_PATHS, trimmed)) { renderOrError(req, res, () => renderInfoDocument(INFO_PATHS[trimmed])); return true; }
+  if (Object.hasOwn(SCREEN_PATHS, trimmed)) { renderOrError(req, res, () => renderScreenDocument(SCREEN_PATHS[trimmed])); return true; }
+  if (PARTNER_PATH_RE.test(trimmed)) { renderOrError(req, res, () => renderScreenDocument('partner')); return true; }
+  if (p.startsWith('/host/')) {
+    m = HOST_PATH_RE.exec(p);
+    let slug = null;
+    try { slug = m ? decodeURIComponent(m[1]) : null; } catch { slug = null; }
+    renderOrError(req, res, () => renderHostDocument(slug && HOST_SLUG_RE.test(slug) ? slug : null));
+    return true;
+  }
+  // anything else under this service that is not an API / asset / image path is a page that does not exist
+  if (!p.startsWith('/images/')) { renderOrError(req, res, () => renderNotFound({})); return true; }
+  return false;
 }

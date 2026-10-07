@@ -60,15 +60,17 @@ export const isSafeHtml = (value) => value instanceof SafeHtml;
 export function toHtmlString(value) { return render(value); }
 
 const SITE_PATH = /^\/(?!\/)[^\s\\]*$/;
+// In-page links (the admin's hash routes: #/hosts, #/tours/x/edit). A fragment cannot carry a scheme or a host.
+const FRAGMENT = /^#[A-Za-z0-9_\-./?=&%~]*$/;
 
 /**
- * For href / src values built from data. Only same-site absolute paths and
- * http(s) URLs pass; everything else (javascript:, data:, //host, relative
- * junk) becomes `fallback`. Escaping still happens in html``.
+ * For href / src values built from data. Only same-site absolute paths, in-page
+ * #fragments and http(s) URLs pass; everything else (javascript:, data:, //host,
+ * relative junk) becomes `fallback`. Escaping still happens in html``.
  */
 export function safeUrl(value, fallback = '#') {
   const s = typeof value === 'string' ? value.trim() : '';
-  if (SITE_PATH.test(s)) return s;
+  if (SITE_PATH.test(s) || FRAGMENT.test(s)) return s;
   try {
     const u = new URL(s);
     if (u.protocol === 'https:' || u.protocol === 'http:') return s;

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { html, raw, join, safeUrl, jsonForScript, toHtmlString, isSafeHtml } from '../deploy/assets/js/shared/html.js';
+import { header } from '../deploy/assets/js/shared/components/header.js';
 import { formatNumberFa, formatDateFa, formatDateRangeFa, toFaDigits } from '../deploy/assets/js/shared/format.js';
 
 const PAYLOAD = `<script>alert("x")</script> & ' "`;
@@ -45,6 +46,19 @@ test('safeUrl allows site paths and http(s) only', () => {
     assert.equal(safeUrl(bad), '#', String(bad));
   }
   assert.equal(safeUrl('javascript:1', ''), '');
+});
+
+test('safeUrl keeps in-page #fragments (the admin routes) and still refuses anything that carries a scheme or a host', () => {
+  for (const ok of ['#/hosts', '#/tours/desert-parthian/edit', '#/hosts/new?kind=place']) assert.equal(safeUrl(ok), ok);
+  for (const bad of ['#javascript:alert(1)', '# x', '#"onclick="x', '#<b>']) assert.equal(safeUrl(bad), '#', bad);
+});
+
+test('the admin header keeps the #/... route of every link (they used to collapse to "#" and the admin could not be navigated)', () => {
+  const links = [['tours', 'تجربه‌ها', '#/tours'], ['hosts', 'همکاران', '#/hosts'], ['settings', 'صفحهٔ اول', '#/settings']].map(([key, label, href]) => ({ key, label, href }));
+  const out = toHtmlString(header({ variant: 'admin', label: 'ادمین', authSlot: false, links, active: 'hosts' }));
+  for (const l of links) assert.ok(out.includes(`<a href="${l.href}"`), l.href);
+  assert.ok(!/<a href="#"/.test(out), 'no dead link');
+  assert.ok(out.includes('<a href="#/hosts" aria-current="page">'));
 });
 
 test('jsonForScript cannot close the script tag', () => {

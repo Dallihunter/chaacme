@@ -198,6 +198,50 @@ expect() { # <name> <actual> <expected>
   if [ "$2" = "$3" ]; then log "  ok   $1 ($2)"; else log "  FAIL $1 (got $2, want $3)"; return 1; fi
 }
 
+# --- rendered-page checks ---------------------------------------------------------------------------
+# fetch_page captures status, headers and body into variables FIRST; the checks then test those variables with
+# bash substring matches. Never `curl ... | grep -q`: under `set -o pipefail` grep -q exits on the first match and
+# closes the pipe, curl gets SIGPIPE/exit 23 while it is still writing, and pipefail reports the whole pipeline as
+# failed -- a page that IS rendered read as "not rendered" (seen for real on the host, 3 times in 5 on /tour/).
+PAGE_CODE=""; PAGE_HEAD=""; PAGE_BODY=""
+fetch_page() { # <path> -> PAGE_CODE, PAGE_HEAD (CR stripped), PAGE_BODY
+  local hf bf
+  hf="$(mktemp)"; bf="$(mktemp)"
+  PAGE_CODE="$(curl -s -m 10 --resolve "$SITE_HOST:$SITE_PORT:127.0.0.1" -D "$hf" -o "$bf" -w '%{http_code}' "$(site_url "$1")" || true)"
+  PAGE_HEAD="$(tr -d '\r' < "$hf")"
+  PAGE_BODY="$(cat "$bf")"
+  rm -f "$hf" "$bf"
+}
+# What every page of the site must carry: a title, a canonical link and an og:title (screens carry the title only).
+PUBLIC_MARKS=('<title>' 'rel="canonical"' 'property="og:title"')
+
+page_check() { # <path> <status> <marker>...   fetches <path>; fails on another status or a missing marker
+  local path="$1" want="$2" m ok=1 shown=""
+  shift 2
+  fetch_page "$path"
+  if [ "$PAGE_CODE" != "$want" ]; then log "  FAIL GET $path is $PAGE_CODE, want $want"; return 1; fi
+  for m in "$@"; do
+    shown="$shown $m"
+    if [[ "$PAGE_BODY" != *"$m"* ]]; then log "  FAIL GET $path ($want) does not carry:$m  -- not rendered by the app? ($(printf '%s' "$PAGE_BODY" | wc -c) bytes, sha $(printf '%s' "$PAGE_BODY" | sha256sum | cut -c1-12))"; ok=0; fi
+  done
+  [ "$ok" -eq 1 ] || return 1
+  log "  ok   GET $path is $want, rendered by the app (carries${shown:- nothing required})"
+}
+page_cache() { # public|private   checks the Cache-Control of the page fetched last
+  local want="$1" h="${PAGE_HEAD,,}"
+  case "$want" in
+    public) [[ "$h" == *'cache-control: public, max-age=60'* ]] ;;
+    private) [[ "$h" == *'cache-control: no-cache'* ]] ;;
+  esac || { log "  FAIL the last page's Cache-Control is not the $want policy"; return 1; }
+  log "  ok   Cache-Control is the $want policy"
+}
+page_check_either() { # <path>   an info page: 200 with the page, or 404 with the designed 404 page; anything else fails
+  fetch_page "$1"
+  if [ "$PAGE_CODE" = 200 ] && [[ "$PAGE_BODY" == *'<title>'* && "$PAGE_BODY" == *'class="ex-main'* ]]; then log "  ok   GET $1 is 200, rendered by the app"
+  elif [ "$PAGE_CODE" = 404 ] && [[ "$PAGE_BODY" == *'class="tp-main tp-404'* ]]; then log "  ok   GET $1 is the designed 404 (not written yet)"
+  else log "  FAIL GET $1 answers $PAGE_CODE and is not one of the app's pages (nginx not proxying it?)"; return 1; fi
+}
+
 # Walks every key of a JSON document and fails on any key in the banned list.
 json_banned_keys() { # <label> <comma-separated keys> <json>
   if printf '%s' "$3" | BANNED="$2" node -e '
@@ -246,24 +290,24 @@ coord_scan() { # <label> <json>
 run_post_checks() {
   rc=0
   log "--- post-checks ---"
-  expect "GET / is 200" "$(site /)" 200 || rc=1
-
-  local body missing=0 marker
-  body="$(site_body /)"
-  for marker in 'id="page-host"' 'id="page-become-host"' 'id="page-partner"'; do
-    # Pure bash substring test, deliberately NOT `printf ... | grep -q`: under
-    # `set -o pipefail` grep -q exits 0 on the first match and closes the pipe,
-    # printf dies with SIGPIPE (141), and pipefail then reports the whole
-    # pipeline as failed -- so a marker that IS present reads as missing.
-    if [[ "$body" == *"$marker"* ]]; then log "  ok   / contains $marker"; else log "  FAIL / missing $marker"; missing=1; rc=1; fi
+  # --- every page of the site is rendered by the app (nginx must proxy it: deploy/nginx-site.conf.example) ---
+  # These are gates, not warnings: a release that broke the renderer, or an nginx change that lost a
+  # proxy location (the static fallback would answer 200 with the wrong page), must not pass.
+  page_check / 200 "${PUBLIC_MARKS[@]}" 'class="hm-main' || rc=1
+  page_cache public || rc=1
+  page_check /experiences 200 "${PUBLIC_MARKS[@]}" 'class="ex-main' || rc=1
+  page_check /places 200 "${PUBLIC_MARKS[@]}" 'class="ex-main' || rc=1
+  # the screens behind login: a server-rendered shell the browser fills in; never cached (it sits in front of private data)
+  local sp
+  for sp in /login /signup /account /become-host /booking/result /partner; do
+    page_check "$sp" 200 '<title>' 'class="sc-main' || rc=1
+    page_cache private || rc=1
   done
-  if [ "$missing" -eq 1 ]; then
-    # Say what was actually served, so a stale-content failure is
-    # distinguishable from a genuinely wrong build.
-    log "    served by /: $(printf '%s' "$body" | wc -c) bytes, sha $(printf '%s' "$body" | sha256sum | cut -c1-12)"
-    log "    on disk:     $(stat -c %s "$WEB_ROOT/index.html") bytes, sha $(sha256sum "$WEB_ROOT/index.html" | cut -c1-12)"
-    log "    /index.html: sha $(site_body /index.html | sha256sum | cut -c1-12)"
-  fi
+  # the info pages are 404 until an admin writes them; either way the app (not the static fallback) answers
+  for sp in /about /contact /terms /refund /privacy; do
+    page_check_either "$sp" || rc=1
+  done
+  page_check /deploycheck-no-such-page 404 'class="tp-main tp-404' || rc=1
 
   expect "GET /api/tours is 200" "$(site /api/tours)" 200 || rc=1
   tours_json="$(site_body /api/tours)"
@@ -293,10 +337,11 @@ run_post_checks() {
   expect "GET /api/me/applications is 401 when logged out" "$(site /api/me/applications)" 401 || rc=1
 
   expect "GET /api/hosts/does-not-exist is 404" "$(site /api/hosts/does-not-exist)" 404 || rc=1
-  expect "GET /become-host is 200" "$(site /become-host)" 200 || rc=1
+  expect "GET /api/pages/home is 200" "$(site /api/pages/home)" 200 || rc=1
+  expect "GET /api/pages/experiences is 200" "$(site /api/pages/experiences)" 200 || rc=1
+  expect "GET /api/pages/places is 200" "$(site /api/pages/places)" 200 || rc=1
   expect "GET /admin/ is 200" "$(site /admin/)" 200 || rc=1
   # --- partner panel ---
-  expect "GET /partner is 200" "$(site /partner)" 200 || rc=1
   expect "GET /api/partner/profiles is 401 when logged out" "$(site /api/partner/profiles)" 401 || rc=1
   expect "GET /api/partner/proposals is 401 when logged out" "$(site /api/partner/proposals)" 401 || rc=1
   expect "GET /api/admin/host-revisions is 401 when logged out" "$(site /api/admin/host-revisions)" 401 || rc=1
@@ -320,12 +365,18 @@ run_post_checks() {
     hj="$(site_body "/api/hosts/$slug")"
     json_banned_keys "/api/hosts/$slug" "$PRIVATE_KEYS" "$hj" || rc=1
     coord_scan "/api/hosts/$slug" "$hj" || rc=1
+    # the page view model shows capacity, house rules and credentials publicly; the rest stays private
+    hj="$(site_body "/api/pages/host/$slug")"
+    json_banned_keys "/api/pages/host/$slug" "seekingPlaceTypes,acceptsExperienceTypes,seeking_place_types,accepts_experience_types,contactPhone,contact_phone,userId,user_id,latitude,longitude" "$hj" || rc=1
+    coord_scan "/api/pages/host/$slug" "$hj" || rc=1
+    # one profile page, rendered by the app (place or person: the template branches on kind)
+    if [ "$n" -eq 0 ]; then page_check "/host/$slug" 200 "${PUBLIC_MARKS[@]}" 'class="pf-main' || rc=1; fi
     n=$((n + 1))
   done <<< "$slugs"
   [ "$n" -gt 0 ] || log "  info no active host profile to scan"
 
-  # /tour/<id> is rendered by the app as full HTML (server/render.js) once nginx proxies /tour/ to it
-  # (deploy/nginx-tour.conf.example); until then nginx's SPA fallback serves the plain app shell.
+  # /tour/<id> is rendered by the app as full HTML (server/render.js); nginx proxies it to the app
+  # (deploy/nginx-site.conf.example).
   local tid
   tid="$(printf '%s' "$tours_json" | node -e '
     let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
@@ -333,15 +384,27 @@ run_post_checks() {
       process.stdout.write(t ? t.id : "");
     });' 2>/dev/null || true)"
   if [ -n "$tid" ]; then
-    expect "GET /tour/$tid is 200" "$(site "/tour/$tid")" 200 || rc=1
-    if [ "$(site_body "/tour/$tid" | sha256sum)" = "$(site_body / | sha256sum)" ]; then
-      log "  info /tour/$tid serves the plain app shell (server-rendered tour pages are not routed to the app yet)"
-    elif site_body "/tour/$tid" | grep -q 'class="tp-title"'; then
-      log "  ok   /tour/$tid is server-rendered"
+    page_check "/tour/$tid" 200 "${PUBLIC_MARKS[@]}" 'class="tp-title"' || rc=1
+    page_cache public || rc=1
+    # a stylesheet URL taken from the page itself must be served (nginx must proxy /assets/ to the app)
+    local asset=""
+    if [[ "$PAGE_BODY" =~ href=\"(/assets/[^\"]+\.css[^\"]*)\" ]]; then asset="${BASH_REMATCH[1]}"; fi
+    if [ -n "$asset" ]; then
+      fetch_page "$asset"
+      if [ "$PAGE_CODE" = 200 ] && [[ "${PAGE_HEAD,,}" == *'content-type: text/css'* ]]; then log "  ok   the page's stylesheet $asset is served as text/css"; else log "  FAIL the page's stylesheet $asset answers $PAGE_CODE (nginx must proxy /assets/ to the app)"; rc=1; fi
     else
-      log "  WARN /tour/$tid is neither the plain app shell nor the server-rendered page"
+      log "  FAIL /tour/$tid links no /assets/ stylesheet"; rc=1
     fi
   fi
+  # a tour that is not public (draft) and a slug that does not exist are both the designed 404 page, never a 200
+  local draft
+  draft="$(sqlite3 -readonly "$STATE_DB" "select id from tours where status not in ('published','coming_soon') order by id limit 1;" 2>/dev/null || true)"
+  if [[ "$draft" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+    page_check "/tour/$draft" 404 'class="tp-main tp-404' || rc=1
+  else
+    log "  info no draft tour to check"
+  fi
+  page_check /tour/deploycheck-no-such-tour 404 'class="tp-main tp-404' || rc=1
 
   # --- cross-site write guard and cookie flags ---
   # Every state-changing /api request must come from the site's own origin (403 otherwise) with a JSON
@@ -373,7 +436,7 @@ run_post_checks() {
   else
     log "  FAIL user session cookie flags are wrong (want HttpOnly, Secure, SameSite=Lax, Path=/): ${usr:-<no matching Set-Cookie>}"; rc=1
   fi
-  if printf '%s\n' "$hdr" | grep -qi 'SameSite=None'; then log "  FAIL a session cookie is SameSite=None"; rc=1; fi
+  if [[ "${hdr,,}" == *'samesite=none'* ]]; then log "  FAIL a session cookie is SameSite=None"; rc=1; fi
 
   # Hygiene, not a deploy gate: whether backup URLs are blocked is an nginx
   # concern that has been turned on and off independently of any deploy, and a
